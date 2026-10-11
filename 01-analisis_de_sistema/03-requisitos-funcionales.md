@@ -1,6 +1,6 @@
 # 03 - Requisitos Funcionales
 
-Cada RF indica la spec donde se implementa. Los estados siguen la convención del documento de descubrimiento v3.1: **Confirmado** = lo dijo explícitamente el usuario. **Supuesto** = propuesta de diseño que hay que validar. **Pendiente** = aún no decidido.
+Cada RF indica la spec donde se implementa. Los estados siguen la convención del documento de descubrimiento v3.1:
 
 | ID | Requisito | Estado | Spec |
 |---|---|---|---|
@@ -53,7 +53,7 @@ Cada RF indica la spec donde se implementa. Los estados siguen la convención de
 
 | ID | Requisito | Estado | Spec |
 |---|---|---|---|
-| **RF-20** | Cargar una sola vez el stock inicial de cada técnico el día de implementación. La forma de carga (Excel o formulario) está pendiente | Confirmado (carga única), **Pendiente** (forma) | 005 |
+| **RF-20** | Cargar una sola vez el stock inicial de cada técnico el día de implementación. La forma de carga (Excel o formulario) está pendiente | Confirmado | 005 |
 
 ### Solicitud de asignación (spec 006)
 
@@ -70,7 +70,7 @@ Cada RF indica la spec donde se implementa. Los estados siguen la convención de
 
 | ID | Requisito | Estado | Spec |
 |---|---|---|---|
-| **RF-27** | El Excel se envía por correo al buzón del almacén de la región, con reintentos si falla | Confirmado (envío), **Supuesto** (reintentos) | 007 |
+| **RF-27** | El Excel se envía por correo al buzón del almacén de la región, con reintentos si falla | Confirmado  | 007 |
 | **RF-28** | Registrar cada envío: destinatario, fecha y archivo exacto enviado | Supuesto | 007 |
 | **RF-29** | El Responsable de almacén confirma o rechaza la solicitud dentro del sistema con un comentario del error si se rechaza | Confirmado | 007 |
 | **RF-30** | Estados de la solicitud: Borrador, Enviada, Confirmada, Rechazada, Cancelada | Supuesto | 007 |
@@ -90,7 +90,7 @@ Cada RF indica la spec donde se implementa. Los estados siguen la convención de
 | **RF-34** | El técnico origen y el destino no pueden ser el mismo | Supuesto | 009 |
 | **RF-35** | El origen solo puede ceder materiales y series que tiene asignados, descontando lo reservado | Supuesto | 009 |
 | **RF-36** | Lo que sale debe cuadrar con lo que entra, por material y por serie. Si no cuadra, se rechaza todo | Supuesto | 009 |
-| **RF-37** | El Responsable de almacén acepta o rechaza el traspaso. Al aceptar, las series cambian de técnico. Al rechazar, no cambia nada | Confirmado (acepta o rechaza), **Supuesto** (efecto) | 009 |
+| **RF-37** | El Responsable de almacén acepta o rechaza el traspaso. Al aceptar, las series cambian de técnico. Al rechazar, no cambia nada | Confirmado | 009 |
 | **RF-38** | Un traspaso no modifica el stock general del tenant | Confirmado | 009 |
 
 ### Conciliación con el reporte de Lari (spec 010)
