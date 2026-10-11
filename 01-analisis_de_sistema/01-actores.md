@@ -1,7 +1,6 @@
 # 01 - Actores
 
-Actores que interactúan con el sistema, derivados de la sección 2 "Actores" de `01-notas-de-descubrimiento.md` v3.1. Los IDs y estados se conservan tal como aparecen en el documento fuente.
-
+Actores que interactúan con el sistema.
 ## Actores principales (usuarios del sistema)
 
 | Actor | Rol en el sistema | Responsabilidades principales | Estado |
@@ -17,7 +16,7 @@ Quien la opera en el sistema es la cuenta de **Responsable de almacén**, creada
 
 ## Roles dentro del tenant (ACT-01)
 
-Son permisos dentro del tenant, no actores separados. Cada usuario del tenant tiene un solo rol. `[Supuesto, pregunta 14]`
+Son permisos dentro del tenant, no actores separados. Cada usuario del tenant tiene un solo rol. 
 
 | Rol | Puede | No puede |
 |---|---|---|
@@ -33,12 +32,3 @@ Son permisos dentro del tenant, no actores separados. Cada usuario del tenant ti
 | **Contrata principal** | Entidad externa que provee materiales, recibe devoluciones y emite el reporte diario de stock que se importa al sistema. *(Fuente antigua; no considerada actor en v3.1; reportado como hueco)* |
 | **Cliente final** | Destinatario de la instalación; origen de equipos retirados por avería o migración. *(Fuente antigua; no considerado actor en v3.1; reportado como hueco)* |
 
-## Notas
-
-- El **Técnico de campo** no se autentica directamente al sistema; su actividad se registra a través del Subcontratista y del Almacenero. *[Confirmado]*
-- La **Contrata principal** no usa la aplicación, pero sus documentos (guías de remisión, reportes de stock, paradas) son entradas críticas del sistema. *(Fuente antigua; eliminada como actor por regla del documento v3.1; reportado como hueco)*
-- **Regla 6 del documento de descubrimiento:** usar los nombres de rol Operador, Aprobador, Responsable del tenant, Responsable de almacén, Administrador de plataforma. **No usar "administrador"** para los roles de tenant ni de almacén.
-- **Regla 1 del documento de descubrimiento:** extraer solo ítems con estado Confirmado o Supuesto. Los Pendiente van a la sección 10 como preguntas.
-- **Hueco reportado:** la sección 12 (ideas no confirmadas) no se extrae como requisito.
-
----
