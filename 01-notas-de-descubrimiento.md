@@ -323,30 +323,6 @@ El glosario completo está en la sección 7 de `00-principios.md`. Los términos
 
 ---
 
-## 10. Preguntas abiertas
-
-Las preguntas marcadas como bloqueantes impiden cerrar los RF indicados.
-
-
-2. **¿El recojo debe corresponder a una asignación previa de Lari, o puede registrarse libremente?** Bloqueante para RF-14 y RF-16.
-3. **¿El almacén responde dentro del sistema o por correo?** Bloqueante para RF-29 y ACT-03.
-4. **¿Cuál es el formato real del reporte de conciliación y a qué hora llega?** Bloqueante para RF-39 a RF-48 y para la spec 010.
-5. **¿El primer Excel de ejemplo (Z32 con LA6790 y LA8749) era una devolución, una desasignación o un error?** Afecta a RF-33 y a la definición de devoluciones.
-6. **¿La devolución de un técnico al tenant usa Z32?** Bloqueante si se incluyen devoluciones.
-7. **¿Un envío de traspaso puede tener varios técnicos destino?** Afecta a RF-33 y RF-36.
-8. **¿Lari puede cambiar el lote de un material después de creado?** Afecta a RF-09 y RES-12.
-9. **¿Los límites de longitud (descripción 100, lote 50) y el lote en mayúsculas son correctos?** Afecta a RF-06.
-10. **Resuelta:** el superusuario y el administrador de plataforma son el mismo actor, ACT-02. Afecta a RF-51 y RF-58.
-11. **¿Quién libera las series reservadas si una solicitud queda sin respuesta?** Afecta a RF-30 y RF-31.
-12. **¿Cuál es el volumen real de series por técnico y de solicitudes por día?** Afecta a RNF-09, RNF-10 y RNF-11.
-13. **¿La carga del stock inicial es por Excel o por formulario?** Bloqueante para RF-20.
-14. **¿Un usuario del tenant puede tener más de un rol (Operador y Aprobador a la vez)?** Propuesta: no, un solo rol por usuario. Afecta a ACT-01 y RF-44.
-15. **¿Quién puede desactivar un tenant, y qué pasa con su stock al hacerlo?** Afecta a RF-57.
-16. **¿Una cuenta de Responsable de almacén puede responder solicitudes de más de una región?** Propuesta: no. Afecta a RF-53 y RES-19.
-17. **¿El Responsable del tenant puede crear otro Responsable del tenant?** Afecta a RF-55.
-
----
-
 ## 11. Fuentes
 
 - Conversación de diseño con el usuario (decisiones de las secciones 2 a 10).
@@ -359,8 +335,6 @@ Las preguntas marcadas como bloqueantes impiden cerrar los RF indicados.
 
 - Historial por serie (kardex).
 - Devoluciones de técnico al tenant.
-- Motivo de rechazo y cancelación de solicitudes.
-- Alertas por solicitudes sin respuesta.
 - Panel de control.
 - Reportes exportables.
 - Captura de series con la cámara del celular.
