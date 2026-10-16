@@ -25,3 +25,4 @@ Propiedades no funcionales inferidas de los requerimientos.
 | **RNF-19** | Idioma | Interfaz y documentación en español | Confirmado | — |
 | **RNF-20** | Seguridad | Los privilegios de ACT-02 son un rol con alcance explícito y limitado. Ningún mecanismo técnico que omita los permisos (superusuario de base de datos o de framework) puede usarse para operar datos de tenants | Supuesto | — |
 | **RNF-21** | Seguridad | Las cuentas de ACT-02 y de Responsable de almacén requieren autenticación de dos factores | Supuesto | — |
+| **RNF-22** | Disponibilidad | El sistema mantiene disponibles las operaciones críticas y comunica los errores de forma controlada cuando un componente falla | Supuesto | — |
