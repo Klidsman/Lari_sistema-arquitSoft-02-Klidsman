@@ -1,7 +1,8 @@
 # Decisiones arquitectónicas
 
+Registro de decisiones arquitectónicas (ADR). Cada decisión responde a uno o más drivers de `06-driver-arquitectonicos.md` y deja constancia de su justificación y estado. Los IDs siguen el formato ADR- y el estado puede ser Propuesta, Aceptada o Pendiente.
 
-| ID | Decisión arquitectónica | Driver relacionado | Justificación | Resultado |
+| ID | Decisión arquitectónica | Origen | ¿Por qué influye en la arquitectura? | Resultado |
 |---|---|---|---|---|
 | ADR-001 | Monolito modular con worker separado | DRV-02, DRV-05 | Las operaciones de stock deben ser transaccionales y los picos nocturnos no deben bloquear la web. Los microservicios obligarían a usar sagas para cada operación de stock | **Propuesta.** Una base de datos y una transacción por operación de stock. Web y worker escalan por separado |
 | ADR-002 | Multitenencia con base y esquema compartidos | DRV-01, DRV-10 | Son 100 tenants pequeños. Un esquema o una base por tenant son costosos de operar | **Propuesta.** Toda tabla operativa lleva `tenant_id`. Cada tabla nueva declara si es de tenant o global |
@@ -18,3 +19,5 @@
 | ADR-013 | Excel y tareas pesadas en el worker | DRV-05, DRV-08 | Hasta 100 reportes en la misma franja y archivos grandes | **Propuesta.** Cola con límite de concurrencia por tenant. Procesamiento por filas. Archivo original guardado con su hash |
 | ADR-014 | Privilegios del Administrador de plataforma | DRV-11 | ACT-02 crea cuentas, pero no debe operar inventario ni aprobar conciliaciones | **Propuesta.** Rol de aplicación con permisos explícitos. Sin superusuario de base de datos ni de framework. Dos factores de autenticación |
 | ADR-015 | Stack tecnológico | DRV-01, DRV-02, DRV-08 | Se necesitan RLS, transacciones y manejo de Excel sin costo de licencia | **Pendiente.** Propuesta: Python, Django LTS, PostgreSQL, Celery con Redis, HTMX, openpyxl y pytest |
+| ADR-016 | Logística inversa: devolución y baja de equipos | DRV-12 | Los equipos vuelven del técnico o se dan de baja (avería, migración) y deben actualizar el stock sin alterar la región ni el stock general del tenant | **Propuesta.** La devolución y la baja son movimientos nuevos del libro inmutable (ADR-009). La devolución regresa la serie a Disponible del tenant; la baja la retira del stock disponible y no se reasigna (RES-20). El acta a Lari se genera como salida Excel (RES-21) |
+| ADR-017 | Consumo de fungibles y reportes mensuales desde el reporte de Lari | DRV-13 | El consumo de fungibles y los totales mensuales se derivan del reporte de Lari; el sistema no mide consumo propio | **Propuesta.** El consumo se calcula como stock inicial menos el remanente reportado (RES-22) dentro del flujo de conciliación (ADR-012). Los cortes y la exportación de reportes se generan en el worker como salidas Excel (RES-23, ADR-013) |
