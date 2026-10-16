@@ -13,7 +13,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Intenta ver u operar datos de otro tenant a través de una URL, un formulario o un archivo Excel. |
 | Condición | El sistema está en operación normal y el usuario está autenticado. |
 | Respuesta Esperada | El sistema usa el tenant de la identidad autenticada e ignora el ajeno; si no puede resolverlo, rechaza la operación sin revelar datos de otro tenant. |
-| Medida | Propuesta por validar: 0 accesos o modificaciones a datos de otro tenant. |
+| Medida |  0 accesos o modificaciones a datos de otro tenant. |
 | Verificación | Pruebas de aislamiento en cada spec que toque datos de tenant. |
 | Estado | Pendiente de aprobar la medida y de cubrir con pruebas todas las operaciones. |
 
@@ -26,7 +26,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Envía un `tenant_id` distinto al de su sesión en una petición o en un Excel. |
 | Condición | El sistema está en operación normal. |
 | Respuesta Esperada | El sistema descarta el valor del cliente y aplica el tenant de la identidad autenticada. |
-| Medida | Propuesta por validar: 0 operaciones aplicadas a un tenant distinto al de la sesión. |
+| Medida |  0 operaciones aplicadas a un tenant distinto al de la sesión. |
 | Verificación | Prueba: un `tenant_id` ajeno en la petición no cambia el tenant de la operación. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -39,7 +39,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Se ejecuta una consulta sin contexto de tenant definido. |
 | Condición | El sistema está en operación normal. |
 | Respuesta Esperada | La base de datos no devuelve ninguna fila. |
-| Medida | Propuesta por validar: 0 filas devueltas sin contexto de tenant. |
+| Medida |  0 filas devueltas sin contexto de tenant. |
 | Verificación | Prueba: una consulta sin tenant definido no devuelve filas. |
 | Estado | Pendiente de aprobar la medida y de activar la seguridad por fila. |
 
@@ -52,7 +52,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Intenta registrar un recojo, crear una asignación o aprobar una conciliación, incluso forzando la petición. |
 | Condición | El sistema está en operación normal. |
 | Respuesta Esperada | El sistema rechaza la operación; los privilegios de ACT-02 son explícitos y limitados. |
-| Medida | Propuesta por validar: 0 operaciones de inventario permitidas a ACT-02. |
+| Medida |  0 operaciones de inventario permitidas a ACT-02. |
 | Verificación | Prueba: la cuenta de ACT-02 no puede operar inventario aunque se fuerce la petición. |
 | Estado | Pendiente de aprobar la medida y de definir los permisos explícitos. |
 
@@ -65,7 +65,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Inicia sesión sin presentar el segundo factor. |
 | Condición | Inicio de sesión. |
 | Respuesta Esperada | El sistema deniega el acceso. |
-| Medida | Propuesta por validar: 0 accesos a cuentas sensibles sin segundo factor. |
+| Medida |  0 accesos a cuentas sensibles sin segundo factor. |
 | Verificación | Prueba de inicio de sesión sin segundo factor. |
 | Estado | Pendiente de aprobar la medida y de elegir el mecanismo de doble factor. |
 
@@ -78,7 +78,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Ocurre a mitad de una operación de stock. |
 | Condición | Operación normal. |
 | Respuesta Esperada | La operación se aplica completa o no se aplica; no queda estado parcial. |
-| Medida | Propuesta por validar: 0 estados parciales tras un fallo. |
+| Medida |  0 estados parciales tras un fallo. |
 | Verificación | Prueba de fallo a mitad de una operación de stock. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -91,7 +91,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Ingresa una serie que ya existe en el sistema. |
 | Condición | Carga de series (recojo, asignación o conciliación). |
 | Respuesta Esperada | El sistema rechaza la serie con el mismo mensaje de duplicado en todos los casos, sin revelar el tenant ni la región. |
-| Medida | Propuesta por validar: 1 mensaje único; 0 revelaciones de tenant o región. |
+| Medida |  1 mensaje único; 0 revelaciones de tenant o región. |
 | Verificación | Prueba: la restricción única global se aplica y el mensaje es idéntico en todos los casos. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -104,7 +104,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Mueven el mismo material o la misma serie al mismo tiempo. |
 | Condición | Concurrencia. |
 | Respuesta Esperada | El sistema aplica una y rechaza la otra; ninguna deja stock negativo ni una serie en dos estados. |
-| Medida | Propuesta por validar: 0 stock negativo y 0 series en dos estados. |
+| Medida |  0 stock negativo y 0 series en dos estados. |
 | Verificación | Pruebas de concurrencia y restricciones en la base de datos. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -117,7 +117,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Realiza cualquier movimiento o ajuste de stock. |
 | Condición | Operación normal. |
 | Respuesta Esperada | El sistema registra usuario, fecha, valor anterior y valor nuevo. |
-| Medida | Propuesta por validar: 100% de los movimientos y ajustes registrados. |
+| Medida |  100% de los movimientos y ajustes registrados. |
 | Verificación | Verificación de los registros por operación. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -130,7 +130,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Envía o carga un Excel. |
 | Condición | Envío al almacén o carga del reporte de Lari. |
 | Respuesta Esperada | El sistema guarda el archivo original con su huella (hash). |
-| Medida | Propuesta por validar: 1 archivo y su hash por operación. |
+| Medida |  1 archivo y su hash por operación. |
 | Verificación | Revisar que cada envío y cada carga tengan su archivo y su hash guardados. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -169,7 +169,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Se alcanza el volumen previsto: 100 tenants, 1.000 a 2.000 técnicos y 3 a 4 millones de movimientos al año. |
 | Condición | Operación normal. |
 | Respuesta Esperada | El sistema opera sin degradación perceptible. |
-| Medida | Propuesta por validar: soportar el volumen de referencia sin degradación. |
+| Medida |  soportar el volumen de referencia sin degradación. |
 | Verificación | Prueba de volumen con datos representativos. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -182,7 +182,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Falla al enviar el Excel al almacén. |
 | Condición | Envío al almacén. |
 | Respuesta Esperada | El sistema reintenta el envío y conserva el registro; la solicitud no se pierde. |
-| Medida | Propuesta por validar: 0 solicitudes enviadas sin registro de envío. |
+| Medida |  0 solicitudes enviadas sin registro de envío. |
 | Verificación | Simular el fallo del correo y comprobar el registro y los reintentos. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -195,7 +195,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Cambia o prueba una regla de negocio. |
 | Condición | Desarrollo y pruebas. |
 | Respuesta Esperada | La regla se puede probar sin depender del Excel ni del correo. |
-| Medida | Propuesta por validar: pruebas de reglas sin infraestructura externa. |
+| Medida |  pruebas de reglas sin infraestructura externa. |
 | Verificación | Ejecutar las pruebas del núcleo de reglas sin Excel ni correo. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -208,7 +208,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Añade un criterio de aceptación a una spec. |
 | Condición | Desarrollo y pruebas. |
 | Respuesta Esperada | Cada criterio de aceptación tiene al menos una prueba automatizada. |
-| Medida | Propuesta por validar: 1 prueba por criterio. |
+| Medida |  1 prueba por criterio. |
 | Verificación | Revisar la suite y comprobar la cobertura de los criterios. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -221,7 +221,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Cambia los códigos Z31, Z32, PR05, BE03 o la longitud de serie. |
 | Condición | Operación normal. |
 | Respuesta Esperada | El sistema aplica el cambio por configuración, sin modificar código. |
-| Medida | Propuesta por validar: 0 despliegues de código por cambio de parámetro. |
+| Medida |  0 despliegues de código por cambio de parámetro. |
 | Verificación | Cambiar un parámetro y comprobar el efecto sin desplegar. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -234,7 +234,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Importa o exporta un Excel. |
 | Condición | Intercambio con Lari. |
 | Respuesta Esperada | El sistema conserva columnas y formato idénticos a los de Lari. |
-| Medida | Propuesta por validar: coincidencia total con el ejemplo real de Lari. |
+| Medida |  coincidencia total con el ejemplo real de Lari. |
 | Verificación | Validar los archivos contra el ejemplo real de Lari. |
 | Estado | Pendiente de aprobar la medida y de obtener el ejemplo definitivo. |
 
@@ -247,7 +247,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Ingresa series por pegado o escaneo. |
 | Condición | Ingreso de series. |
 | Respuesta Esperada | El sistema no exige digitarlas una a una y muestra los errores por fila antes de guardar. |
-| Medida | Propuesta por validar: 0 renglones con error guardados. |
+| Medida |  0 renglones con error guardados. |
 | Verificación | Prueba de ingreso por pegado con filas válidas e inválidas. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -260,7 +260,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Elige un material o un técnico en un formulario. |
 | Condición | Formularios de recojo, asignación o traspaso. |
 | Respuesta Esperada | El sistema completa descripción, lote y NIF automáticamente y no los deja editar. |
-| Medida | Propuesta por validar: 100% de los campos derivados autocompletados y no editables. |
+| Medida |  100% de los campos derivados autocompletados y no editables. |
 | Verificación | Prueba de autocompletado y de no edición de los campos derivados. |
 | Estado | Pendiente de aprobar la medida. |
 
@@ -273,11 +273,11 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Usa la interfaz o lee la documentación. |
 | Condición | Operación normal. |
 | Respuesta Esperada | La interfaz y la documentación se presentan en español. |
-| Medida | Propuesta por validar: 100% de los textos en español. |
+| Medida |  100% de los textos en español. |
 | Verificación | Revisión de los textos de interfaz y documentación. |
 | Estado | Pendiente de aprobar la medida. |
 
-### ESC-22 — Disponibilidad
+### ESC-22 — Disponibilidad (RNF-22)
 
 | Elemento | Descripción |
 |---|---|
@@ -286,6 +286,6 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Estímulo | Intenta operar durante la campaña o la franja de conciliación, o cuando falla un componente. |
 | Condición | El sistema está publicado y cuenta con monitoreo. |
 | Respuesta Esperada | El sistema mantiene disponibles las operaciones que puede atender y comunica los errores de forma controlada cuando un servicio necesario no responde. |
-| Medida | Propuesta por validar: disponibilidad mensual de 99,5 % para las operaciones críticas. |
+| Medida |  disponibilidad mensual de 99,5 % para las operaciones críticas. |
 | Verificación | Revisar los registros de monitoreo y calcular los periodos de disponibilidad e interrupción. |
 | Estado | Pendiente de aprobar la meta, definir las operaciones críticas y establecer las condiciones de mantenimiento. |
