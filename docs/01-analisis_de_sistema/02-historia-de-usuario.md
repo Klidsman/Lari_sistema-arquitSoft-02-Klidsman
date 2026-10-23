@@ -37,7 +37,7 @@
 - **HU-18** (RF-39): Como **tenant (ACT-01)**, quiero cargar el reporte diario de la contrata (Excel, CSV o texto tabulado), para iniciar la conciliación.
 - **HU-19** (RF-42): Como **tenant (ACT-01)**, quiero que el sistema compare series asignadas vs. series reportadas por la contrata, para detectar diferencias.
 - **HU-20** (RF-45): Como **tenant (ACT-01)**, quiero que las series ya no reportadas se actualicen a estado instalado automáticamente, para reflejar la liquidación.
-- **HU-21** (RF-64): Como **tenant (ACT-01)**, quiero que el consumo de fungibles se calcule (stock inicial − remanente reportado), para imputarlo a la producción del día.
+- **HU-21** (RF-64): Como **tenant (ACT-01)**, quiero que el stock de fungibles se actualice a la cantidad reportada por Lari.
 - **HU-22** (RF-42, RF-43): Como **tenant (ACT-01)**, quiero alertas visuales categorizadas de discrepancias, para identificar material ajeno o técnicos con inconsistencias.
 
 ## Módulo 6: Logística Inversa y Devoluciones

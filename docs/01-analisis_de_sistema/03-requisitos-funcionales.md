@@ -112,7 +112,7 @@ Cada RF indica la spec donde se implementa. Los estados siguen la convención de
 | **RF-46** | Al aprobar, cada ajuste registra valor anterior y valor nuevo |
 | **RF-47** | Si el stock de un técnico cambió entre la carga y la aprobación, el sistema recalcula y exige revisar de nuevo |
 | **RF-48** | Se rechaza el archivo completo si contiene técnicos que no pertenecen al tenant o a la región del reporte |
-| **RF-64** | El consumo de fungibles se calcula como el stock inicial menos el remanente reportado |
+| **RF-64** | El stock de fungibles se actualiza a la cantidad reportada por Lari |
 
 ### Logística inversa y devoluciones (spec 011)
 
