@@ -9,9 +9,9 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Elemento | Descripción |
 |---|---|
 | Atributo de calidad | Seguridad |
-| Fuente | Usuario de un tenant |
+| Fuente | Cuenta del tenant |
 | Estímulo | Intenta ver u operar datos de otro tenant a través de una URL, un formulario o un archivo Excel. |
-| Condición | El sistema está en operación normal y el usuario está autenticado. |
+| Condición | El sistema está en operación normal y la cuenta está autenticada. |
 | Respuesta Esperada | El sistema usa el tenant de la identidad autenticada e ignora el ajeno; si no puede resolverlo, rechaza la operación sin revelar datos de otro tenant. |
 | Medida |  0 accesos o modificaciones a datos de otro tenant. |
 | Verificación | Pruebas de aislamiento en cada spec que toque datos de tenant. |
@@ -22,7 +22,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Elemento | Descripción |
 |---|---|
 | Atributo de calidad | Seguridad |
-| Fuente | Usuario de un tenant |
+| Fuente | Cuenta del tenant |
 | Estímulo | Envía un `tenant_id` distinto al de su sesión en una petición o en un Excel. |
 | Condición | El sistema está en operación normal. |
 | Respuesta Esperada | El sistema descarta el valor del cliente y aplica el tenant de la identidad autenticada. |
@@ -87,7 +87,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Elemento | Descripción |
 |---|---|
 | Atributo de calidad | Integridad |
-| Fuente | Usuario de un tenant |
+| Fuente | Cuenta del tenant |
 | Estímulo | Ingresa una serie que ya existe en el sistema. |
 | Condición | Carga de series (recojo, asignación o conciliación). |
 | Respuesta Esperada | El sistema rechaza la serie con el mismo mensaje de duplicado en todos los casos, sin revelar el tenant ni la región. |
@@ -152,7 +152,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Elemento | Descripción |
 |---|---|
 | Atributo de calidad | Rendimiento |
-| Fuente | Usuario de un tenant |
+| Fuente | Cuenta del tenant |
 | Estímulo | Pega miles de series en el formulario. |
 | Condición | Ingreso de series. |
 | Respuesta Esperada | La vista previa responde con fluidez y muestra el estado de cada fila. |
@@ -243,7 +243,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Elemento | Descripción |
 |---|---|
 | Atributo de calidad | Usabilidad |
-| Fuente | Usuario de un tenant |
+| Fuente | Cuenta del tenant |
 | Estímulo | Ingresa series por pegado o escaneo. |
 | Condición | Ingreso de series. |
 | Respuesta Esperada | El sistema no exige digitarlas una a una y muestra los errores por fila antes de guardar. |
@@ -256,7 +256,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Elemento | Descripción |
 |---|---|
 | Atributo de calidad | Usabilidad |
-| Fuente | Usuario de un tenant |
+| Fuente | Cuenta del tenant |
 | Estímulo | Elige un material o un técnico en un formulario. |
 | Condición | Formularios de recojo, asignación o traspaso. |
 | Respuesta Esperada | El sistema completa descripción, lote y NIF automáticamente y no los deja editar. |
@@ -282,7 +282,7 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Elemento | Descripción |
 |---|---|
 | Atributo de calidad | Disponibilidad |
-| Fuente | Usuario de un tenant |
+| Fuente | Cuenta del tenant |
 | Estímulo | Intenta operar durante la campaña o la franja de conciliación, o cuando falla un componente. |
 | Condición | El sistema está publicado y cuenta con monitoreo. |
 | Respuesta Esperada | El sistema mantiene disponibles las operaciones que puede atender y comunica los errores de forma controlada cuando un servicio necesario no responde. |

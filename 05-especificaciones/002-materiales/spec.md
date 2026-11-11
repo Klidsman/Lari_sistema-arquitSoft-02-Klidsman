@@ -7,7 +7,7 @@
   Excepción documentada al aislamiento multitenant (catálogo compartido).
 
 ## Dependencias
-- Spec 001: usuarios, roles y región del usuario.
+- Spec 001: cuentas de acceso y región del usuario.
 - Reglas: `03-reglas-de-dominio/catalogo-de-materiales.md` y `auditoria.md`.
 
 ## Objetivo

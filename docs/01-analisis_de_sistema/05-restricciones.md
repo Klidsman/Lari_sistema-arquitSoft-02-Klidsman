@@ -4,7 +4,7 @@ Restricciones técnicas y operativas impuestas por el negocio o el contexto. Der
 
 | ID | Categoría | Descripción |
 |---|---|---|
-| RES-18 | Seguridad y Acceso | Solo el Administrador de plataforma (ACT-02) crea las cuentas de usuario del tenant (ACT-01) y del Almacén (ACT-03) |
+| RES-18 | Seguridad y Acceso | Solo el Administrador de plataforma (ACT-02) crea la cuenta única del tenant (ACT-01) y las cuentas de Almacén (ACT-03) |
 | RES-19 | Seguridad y Acceso | Una cuenta de Almacén (ACT-03) tiene alcance de una sola región y no ve ni responde solicitudes de otra región |
 | RES-13 | Seguridad y Acceso | Los formularios no permiten editar NIF, Movimiento, Centro, Almacén, lote ni descripción |
 | RES-14 | Integridad Documental | Los movimientos y ajustes de stock no se borran; una corrección se hace con un movimiento nuevo |

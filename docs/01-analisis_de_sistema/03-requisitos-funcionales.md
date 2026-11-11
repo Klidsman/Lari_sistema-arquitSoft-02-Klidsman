@@ -8,19 +8,19 @@ Cada RF indica la spec donde se implementa. Los estados siguen la convención de
 |---|---|
 | **RF-01** | Cada tenant pertenece a exactamente una región |
 | **RF-02** | Cada región tiene un almacén con Centro, Almacén y buzón de correo |
-| **RF-03** | Un usuario de tenant solo ve y opera datos de su tenant |
+| **RF-03** | La cuenta del tenant solo ve y opera datos de su tenant |
 | **RF-04** | La cuenta de Responsable de almacén ve y responde solo las solicitudes de su región |
-| **RF-05** | El Responsable del tenant gestiona los usuarios de su tenant (ver RF-55) |
-| **RF-51** | Solo ACT-02 crea regiones, almacenes, tenants y cuentas de Responsable del tenant y de Responsable de almacén |
-| **RF-52** | Un tenant no opera hasta que tenga una cuenta de Responsable del tenant activa |
+| **RF-05** | Cada tenant tiene una sola cuenta operativa con todas las funciones de su propio tenant |
+| **RF-51** | Solo ACT-02 crea regiones, almacenes, tenants, la cuenta única de cada tenant y las cuentas de Responsable de almacén |
+| **RF-52** | Un tenant no opera hasta que su cuenta única esté activa |
 | **RF-53** | Una cuenta de Responsable de almacén pertenece a una sola región y no ve ni responde solicitudes de otra |
-| **RF-54** | Al crear una cuenta, el sistema envía una invitación al correo del usuario para definir su contraseña |
-| **RF-55** | El tenant asigna y concilia reportes |
+| **RF-54** | Al crear una cuenta, el sistema envía una invitación al correo de la cuenta para definir su contraseña |
+| **RF-55** | El tenant no crea cuentas ni subcuentas; el Administrador de plataforma crea su cuenta única |
 | **RF-56** | Desactivar una cuenta retira su acceso de inmediato y conserva su historial |
-| **RF-57** | Desactivar un tenant suspende sus operaciones. Sus datos y su stock se conservan sin cambios |
+| **RF-57** | Suspender un tenant bloquea sus operaciones. Sus datos y su stock se conservan sin cambios |
 | **RF-58** | ACT-02 no registra recojos, asignaciones ni traspasos, y no aprueba conciliaciones |
 | **RF-59** | Toda alta de región, tenant o cuenta, cambio de rol y desactivación queda registrada con usuario, fecha y valores |
-| **RF-60** | Una cuenta pertenece a un solo tenant (roles de tenant) o a una sola región (Responsable de almacén). Las cuentas de ACT-02 no pertenecen a ninguno |
+| **RF-60** | Una cuenta pertenece a un solo tenant (cuenta del tenant) o a una sola región (Responsable de almacén). Las cuentas de ACT-02 no pertenecen a ninguno |
 
 ### Catálogo de materiales (spec 002)
 
@@ -128,6 +128,20 @@ Cada RF indica la spec donde se implementa. Los estados siguen la convención de
 |---|---|
 | **RF-68** | Generar un corte mensual con totales de solicitados, asignados, liquidados o instalados, y el porcentaje no justificado (merma) |
 | **RF-69** | Exportar a Excel los reportes de auditoría y de conciliación mensual |
+
+### Registro de materiales (spec 013)
+
+| ID | Requisito |
+|---|---|
+| **RF-70** | Tener una opción “Registrar materiales” para el tenant, independiente de la conciliación del Excel del almacén |
+| **RF-71** | Mantener un catálogo fijo de materiales habilitados por tenant |
+| **RF-72** | Registrar un saldo inicial mensual por material, con herencia automática del saldo final del mes anterior |
+| **RF-73** | Registrar despachos del almacén uno por uno, vinculados a un recojo del sistema y sin superar su cantidad |
+| **RF-74** | Registrar una orden de liquidación única por técnico `LAXXXX` y mes; si ya existe, abrirla para editar |
+| **RF-75** | Registrar el uso de materiales por orden y técnico, con cantidades enteras ≥ 0; vacío o 0 no suma |
+| **RF-76** | Generar un reporte mensual por material con saldo inicial, despachos, usado y saldo final, más detalle por técnico |
+| **RF-77** | Registrar historial de fecha, usuario, valor anterior y nuevo al editar una orden, saldo o despacho |
+| **RF-78** | Aislar completamente los datos de registro de materiales entre tenants |
 
 ### Auditoría (transversal)
 

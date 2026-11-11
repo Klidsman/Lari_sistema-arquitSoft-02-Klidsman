@@ -7,6 +7,11 @@
 - **HU-02** (RF-12, RF-13): Como **tenant (ACT-01)**, quiero registrar a mis técnicos con su NIF (LAxxxx), para poder asignarles materiales.
 - **HU-03** (RF-44): Como **tenant (ACT-01)**, quiero aprobar o rechazar conciliación realizada con el reporte.
 - **HU-04** (RF-04): Como **Almacén (ACT-03)**, quiero ver solo las solicitudes de mi región, para responderlas.
+- **HU-34** (RF-01, RF-51): Como **Administrador de plataforma (ACT-02)**, quiero registrar un tenant asignado a una región, para que opere con el almacén de su región.
+- **HU-35** (RF-51, RF-52, RF-54): Como **Administrador de plataforma (ACT-02)**, quiero crear la cuenta única del tenant y enviarle una invitación, para que el tenant pueda empezar a operar.
+- **HU-36** (RF-53, RF-54): Como **Administrador de plataforma (ACT-02)**, quiero crear las cuentas de Responsable de almacén limitadas a su región, para que respondan solo sus solicitudes.
+- **HU-37** (RF-05, RF-55): Como **tenant (ACT-01)**, quiero operar con una sola cuenta que tenga todas las funciones de mi tenant, para trabajar sin subcuentas ni roles internos.
+- **HU-38** (RF-56, RF-57, RF-59): Como **Administrador de plataforma (ACT-02)**, quiero desactivar cuentas y suspender tenants, y consultar el registro de esas acciones, para retirar accesos y auditar los cambios.
 
 ## Módulo 2: Catálogo y Gestión del Almacén Central
 
@@ -52,5 +57,12 @@
 - **HU-27** (RF-28): Como **Administrador de plataforma (ACT-02)** o **Almacén (ACT-03)**, quiero buscar y descargar Excels históricos verificando su hash SHA-256, para garantizar que no fueron alterados.
 - **HU-28** (RF-68): Como **Administrador de plataforma (ACT-02)**, quiero un corte mensual con totales (solicitados, asignados, liquidados/instalados, % no justificado/merma).
 - **HU-29** (RF-69): Como **tenant (ACT-01) o Administrador de plataforma (ACT-02)**, quiero exportar reportes de auditoría y conciliación mensual en Excel.
+
+## Módulo 8: Registro de materiales
+
+- **HU-30** (RF-70, RF-74, RF-75): Como **tenant (ACT-01)**, quiero registrar el material usado por cada técnico en una orden, para llevar el consumo mensual por técnico y por material.
+- **HU-31** (RF-71, RF-72): Como **tenant (ACT-01)**, quiero cargar el saldo inicial de cada mes y usar el saldo final anterior como referencia, para mantener continuidad entre meses.
+- **HU-32** (RF-73): Como **tenant (ACT-01)**, quiero registrar despachos del almacén vinculados a un recojo, para que el saldo mensual se calcule con información respaldada.
+- **HU-33** (RF-76, RF-77, RF-78): Como **tenant (ACT-01)**, quiero ver el reporte mensual con detalle por técnico, historial de cambios y aislamiento de mis datos, para controlar y auditar mis materiales.
 
 ---
