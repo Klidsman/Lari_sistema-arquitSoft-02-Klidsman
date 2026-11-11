@@ -44,7 +44,7 @@ backend y, cuando la base de datos lo permita, también en ella mediante segurid
 Un tenant NUNCA DEBE ver ni modificar datos de otro. El catálogo de materiales es la única
 entidad compartida y su código es único global. Un intento de acceso a un dato ajeno DEBE
 tratarse como dato inexistente, sin revelar su existencia ni su propietario. Suspender un
-tenant DEBE bloquear su cuenta y sus operaciones, conservando sus datos y su stock.
+tenant DEBE bloquear su cuenta y sus operaciones, conservando sus datos y su stock
 
 **Rationale**: la plataforma aloja subcontratistas competidores sobre una base compartida;
 una fuga entre tenants destruye la confianza del negocio y no es recuperable.
