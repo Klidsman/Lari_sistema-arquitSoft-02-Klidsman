@@ -44,7 +44,7 @@ backend y, cuando la base de datos lo permita, también en ella mediante segurid
 Un tenant NUNCA DEBE ver ni modificar datos de otro. El catálogo de materiales es la única
 entidad compartida y su código es único global. Un intento de acceso a un dato ajeno DEBE
 tratarse como dato inexistente, sin revelar su existencia ni su propietario. Suspender un
-tenant DEBE bloquear su cuenta y sus operaciones, conservando sus datos y su stock.
+tenant DEBE bloquear su cuenta y sus operaciones, conservando sus datos y su stock
 
 **Rationale**: la plataforma aloja subcontratistas competidores sobre una base compartida;
 una fuga entre tenants destruye la confianza del negocio y no es recuperable.
@@ -72,7 +72,7 @@ stock general ni el total del tenant. NO SE DEBE asignar más de lo disponible, 
 lo reservado en asignaciones pendientes. Los materiales seriados generan una fila por serie
 con Cantidad 1; los no seriados generan una fila con la cantidad digitada por el tenant. El
 lote es un atributo fijo e informativo del material y NO separa el stock. El stock inicial
-de técnicos se carga una sola vez, el día de implementación, sin pasar por el stock general.
+de técnicos se carga una sola vez, el día de implementación, sin pasar por el stock general
 Un equipo dado de baja sale del stock disponible y NO se reasigna.
 
 **Rationale**: estas invariantes son la definición misma del inventario; cualquier
