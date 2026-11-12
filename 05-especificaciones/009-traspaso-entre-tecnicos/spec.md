@@ -188,6 +188,6 @@ Entonces reinicia el conteo en el técnico destino (RF-62)
 - La validación de disponibilidad consulta el stock del técnico origen
 - El cuadre se valida al crear la solicitud (no solo al confirmar)
 - La generación del Excel de dos hojas usa openpyxl
-- El cambio de técnico de series requiere actualizar la FK de técnico en el modelo de series
+- El cambio de técnico de series actualiza `series.Serie.tecnico` y reinicia `series.Serie.asignada_en`; la migración de esos campos se coordina con las specs 004/005/008/011
 - El stock general no se toca en ningún momento
 - La actualización de stock técnico se hace con las funciones de spec 008

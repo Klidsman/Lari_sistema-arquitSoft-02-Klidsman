@@ -57,7 +57,7 @@ la solicitud y **no** implementa el rechazo.
 **Propósito**: crear la app, registrarla, preparar fixtures, comprobar la infraestructura RLS y
 confirmar que las correcciones documentales están aplicadas.
 
-- [ ] T001 Verificar los prerrequisitos en `config/settings/base.py`, `acceso/models.py`, `tenants/models.py`, `materiales/models.py`, `tecnicos/models.py`, `series/models.py`, `asignaciones/models.py`, `asignaciones/services.py` y `auditoria/services.py`: `AUTH_USER_MODEL="acceso.Usuario"`, `ContextoUsuarioMiddleware`, `Material.es_seriado`/`lote`, `Tecnico.tenant`/`nif`/`activo`, `Serie.estado` con `DISPONIBLE`/`RESERVADA`/`ASIGNADA`, `SolicitudAsignacion.estado`/`confirmada_en`, `LineaAsignacion.material`/`serie`/`cantidad`, `confirmar_solicitud` y `auditoria.services.registrar_cambio`; detenerse y reportar si falta alguno
+- [ ] T001 Verificar los prerrequisitos en `config/settings/base.py`, `acceso/models.py`, `tenants/models.py`, `materiales/models.py`, `tecnicos/models.py`, `series/models.py`, `asignaciones/models.py`, `asignaciones/services.py` y `auditoria/services.py`: `AUTH_USER_MODEL="acceso.Usuario"`, `ContextoUsuarioMiddleware`, `Material.es_seriado`/`lote`, `Tecnico.tenant`/`nif`/`activo`, `Serie.estado` con `DISPONIBLE`/`RESERVADA`/`ASIGNADA` y campos `tecnico`/`asignada_en`, `SolicitudAsignacion.estado`/`confirmada_en`, `LineaAsignacion.material`/`serie`/`cantidad`, `confirmar_solicitud` y `auditoria.services.registrar_cambio`; detenerse y reportar si falta alguno
 - [ ] T002 Crear el esqueleto de la app `stock` en `stock/__init__.py`, `stock/apps.py`, `stock/models.py`, `stock/services.py` y `stock/migrations/__init__.py`, y registrar `"stock"` en `INSTALLED_APPS` de `config/settings/base.py`
 - [ ] T003 [P] Extender `conftest.py` con fixtures sobre PostgreSQL: `region_stock`, `tenant_stock`, `tenant_stock_otro`, `tecnico_stock`, `tecnico_stock_otro_tenant`, `material_seriado`, `material_no_seriado`, `stock_general`, `stock_tecnico`, `solicitud_enviada_series`, `solicitud_enviada_no_seriada`, `solicitud_enviada_mixta` y `registro_cambios_stock`
 - [ ] T004 [P] Comprobar si la infraestructura RLS de 001 está disponible en `config/settings/base.py` y en las migraciones de `tenants`; si no lo está, registrar la deuda en `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/research.md` y no crear una infraestructura paralela
@@ -129,7 +129,7 @@ material B; verificar series `ASIGNADA`, técnico 10→15 en A y 0→50 en B, ge
 - [ ] T032 [US1] Implementar en `stock/services.py` `actualizar_stock_confirmacion_asignacion(solicitud, actor)`: validar `solicitud.estado == "ENVIADA"`, existencia de líneas, técnico del mismo tenant, series `RESERVADA` del tenant/material, cantidades no seriadas `> 0` y stock general suficiente antes de escribir
 - [ ] T033 [US1] Implementar en `stock/services.py` la agregación por material: series suman 1 cada una y líneas no seriadas suman su `cantidad`; agrupar en un diccionario por `material_id` sin una consulta por línea
 - [ ] T034 [US1] Implementar en `stock/services.py` los bloqueos en orden estable: `select_for_update` del `Tenant`, de `StockGeneral` por `tenant` y `material_id` ascendente, de `StockTecnico` del mismo tenant por `material_id` ascendente y de `Serie` por `id` ascendente; no bloquear la solicitud, que ya bloquea 007
-- [ ] T035 [US1] Implementar en `stock/services.py` la transición de cada serie `RESERVADA→ASIGNADA` y su auditoría `Serie/estado`, dentro de la misma transacción y con el actor de la sesión
+- [ ] T035 [US1] Implementar en `stock/services.py` la transición de cada serie `RESERVADA→ASIGNADA`, fijar `tecnico = solicitud.tecnico` y `asignada_en = ahora`, y auditar `Serie/estado`, `Serie/tecnico` y `Serie/asignada_en`, dentro de la misma transacción y con el actor de la sesión
 - [ ] T036 [US1] Implementar en `stock/services.py` las escrituras de stock por material: incrementar `StockTecnico` (crear con `tenant = solicitud.tenant` si no existe), decrementar `StockGeneral`, auditar ambos con valor anterior y nuevo, y devolver `ResultadoConfirmacionStock` con `confirmada_en` leído de la solicitud
 - [ ] T037 [US1] Asegurar en `stock/services.py` que la confirmación no escribe `SolicitudAsignacion.estado` ni `confirmada_en`, no libera series, no hace commit propio y propaga cualquier excepción para que 007 revierta toda la transacción
 - [ ] T038 [US1] Verificar en `asignaciones/services.py` que `confirmar_solicitud` llama a `stock.services.actualizar_stock_confirmacion_asignacion(solicitud, actor)` dentro de su `transaction.atomic`, después del bloqueo de la solicitud y antes de fijar `CONFIRMADA`/`confirmada_en`; si falta, coordinarlo con 007 sin duplicar la escritura de stock
@@ -169,22 +169,22 @@ exactamente como antes.
 
 ## Fase 5: US3 — Iniciar los días en mano (P3)
 
-**Objetivo**: los días en mano de los seriados se calculan desde la fecha de confirmación que fija
-007, sin que 008 cree un contador, campo o tabla adicional.
+**Objetivo**: los días en mano de los seriados se calculan desde `Serie.asignada_en`, que 008 fija al
+confirmar, sin crear un contador, campo o tabla adicional.
 
-**Prueba independiente**: confirmar una asignación de material seriado, leer `confirmada_en` y
+**Prueba independiente**: confirmar una asignación de material seriado, leer `Serie.asignada_en` y
 calcular los días en mano con la lógica de 006 para el día siguiente; debe mostrar 1 día.
 
 ### Pruebas de US3 (escribir primero, deben fallar)
 
-- [ ] T048 [US3] Prueba de **CA-05** en `tests/integration/test_stock_confirmacion.py`: `test_dias_en_mano_inician_en_confirmada_en`; `confirmada_en` queda fijado por 007 en la misma transacción y el cálculo de 006 con la fecha del día siguiente devuelve 1 día
-- [ ] T049 [US3] Prueba de no duplicación en `tests/integration/test_stock_confirmacion.py`: 008 no escribe `confirmada_en`, no crea campos `dias_en_mano` ni tablas de conteo, y una confirmación fallida no deja fecha de confirmación
-- [ ] T050 [P] [US3] Prueba de contrato del resultado en `tests/contract/test_stock_confirmacion_contrato.py`: `ResultadoConfirmacionStock.confirmada_en` es de solo lectura y coincide con `SolicitudAsignacion.confirmada_en` fijado por 007
+- [ ] T048 [US3] Prueba de **CA-05** en `tests/integration/test_stock_confirmacion.py`: `test_dias_en_mano_inician_en_serie_asignada_en`; `Serie.asignada_en` queda fijado al confirmar, `confirmada_en` lo fija 007 y el cálculo de 006 con la fecha del día siguiente devuelve 1 día
+- [ ] T049 [US3] Prueba de no duplicación en `tests/integration/test_stock_confirmacion.py`: 008 no crea campos `dias_en_mano` ni tablas de conteo, no escribe `confirmada_en` y una confirmación fallida no deja fecha de custodia
+- [ ] T050 [P] [US3] Prueba de contrato del resultado en `tests/contract/test_stock_confirmacion_contrato.py`: `ResultadoConfirmacionStock.confirmada_en` es de solo lectura, coincide con `SolicitudAsignacion.confirmada_en` fijado por 007 y las series confirmadas tienen `Serie.asignada_en`
 
 ### Implementación de US3
 
-- [ ] T051 [US3] Asegurar en `stock/services.py` que `ResultadoConfirmacionStock.confirmada_en` se lee de la solicitud y nunca se escribe desde 008; retirar cualquier campo o cálculo de días en mano si apareció durante la implementación
-- [ ] T052 [US3] Verificar en `asignaciones/services.py` y `asignaciones/models.py` que `confirmada_en` se fija solo en `confirmar_solicitud` de 007 y que 006 calcula los días a demanda; documentar la comprobación en `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/quickstart.md`
+- [ ] T051 [US3] Asegurar en `stock/services.py` que `ResultadoConfirmacionStock.confirmada_en` se lee de la solicitud y nunca se escribe desde 008; fijar `Serie.asignada_en` una sola vez y retirar cualquier contador de días en mano si apareció
+- [ ] T052 [US3] Verificar en `asignaciones/services.py`, `asignaciones/models.py` y los servicios de 006 que `confirmada_en` se fija solo en `confirmar_solicitud` de 007 y que los días se calculan desde `Serie.asignada_en`, con respaldo histórico; documentar la comprobación en `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/quickstart.md`
 - [ ] T053 [US3] Ejecutar `pytest tests/integration/test_stock_confirmacion.py tests/contract/test_stock_confirmacion_contrato.py` y verificar que CA-05 queda en verde
 
 **Checkpoint**: US3 funcional; los días en mano usan una única fuente y 008 no duplica el dato.
@@ -202,7 +202,7 @@ la auditoría y encontrar 5 registros `Serie/estado`, un `StockTecnico/cantidad`
 
 ### Pruebas de US4 (escribir primero, deben fallar)
 
-- [ ] T054 [US4] Prueba de **CA-06** para series en `tests/integration/test_stock_auditoria.py`: `test_auditoria_completa_de_series_y_stock`; exactamente un registro `Serie/estado` `RESERVADA→ASIGNADA` por serie, con actor, fecha y datos de la solicitud
+- [ ] T054 [US4] Prueba de **CA-06** para series en `tests/integration/test_stock_auditoria.py`: `test_auditoria_completa_de_series_y_stock`; exactamente un registro `Serie/estado` `RESERVADA→ASIGNADA`, uno `Serie/tecnico` y uno `Serie/asignada_en` por serie, con actor, fecha y datos de la solicitud
 - [ ] T055 [US4] Prueba de **CA-06** para stock en `tests/integration/test_stock_auditoria.py`: un registro `StockTecnico/cantidad` y uno `StockGeneral/cantidad` por material agregado, con valores anterior y nuevo iguales a los del resultado
 - [ ] T056 [US4] Prueba de actor y prohibiciones en `tests/integration/test_stock_auditoria.py`: el actor es el usuario de la sesión y nunca `None` ni el sistema; no hay contraseñas, tokens, secretos, binarios, rutas absolutas ni datos de otro tenant
 - [ ] T057 [US4] Prueba de no duplicación en `tests/integration/test_stock_auditoria.py`: el registro `SolicitudAsignacion/estado` aparece una sola vez y es el de 007; 008 no audita el estado de la solicitud ni el rechazo
@@ -242,7 +242,7 @@ la auditoría y encontrar 5 registros `Serie/estado`, un `StockTecnico/cantidad`
 - **Fundacional (Fase 2)**: depende de Setup; **bloquea** las historias y debe completarse antes de 004 y 005.
 - **US1 (Fase 3)**: depende de Fundacional, de 004 (`Serie`), de 006 (`SolicitudAsignacion`/`LineaAsignacion`) y de la transacción de 007.
 - **US2 (Fase 4)**: depende de US1 y de la auditoría de 007.
-- **US3 (Fase 5)**: depende de US1 y de `confirmada_en` de 007.
+- **US3 (Fase 5)**: depende de US1, de `Serie.asignada_en` y de `confirmada_en` de 007.
 - **US4 (Fase 6)**: depende de US1.
 - **Polish (Fase 7)**: depende de todas las historias deseadas.
 
@@ -320,7 +320,7 @@ T054 → T055 → T056 → T057 → T058 → T059 → T060
 1. Fundacional → 004 y 005 pueden implementarse.
 2. US1 → confirmación con movimiento de stock y series.
 3. US2 → garantía de reversión total.
-4. US3 → días en mano desde `confirmada_en`.
+4. US3 → días en mano desde `Serie.asignada_en`.
 5. US4 → auditoría completa.
 6. Polish → concurrencia, rendimiento, aislamiento y documentación.
 

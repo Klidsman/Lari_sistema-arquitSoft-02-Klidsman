@@ -87,7 +87,7 @@ Custodia actual de un técnico por material.
 
 | Entidad | Dueña | Uso en 008 |
 |---|---|---|
-| `series.Serie` | 004 | `RESERVADA→ASIGNADA`; validación de estado, tenant y material. |
+| `series.Serie` | 004 | `RESERVADA→ASIGNADA`; fija `tecnico` y `asignada_en`; validación de estado, tenant y material. |
 | `asignaciones.SolicitudAsignacion` | 006 | `estado="ENVIADA"`, `tenant`, `region`, `tecnico`, `confirmada_en`. 008 no lo modifica. |
 | `asignaciones.LineaAsignacion` | 006 | `material`, `serie`, `cantidad`; origen de la agregación. |
 | `tecnicos.Tecnico` | 003 | `tenant`, `nif`, `activo`; destinatario del stock. |
@@ -142,14 +142,16 @@ Solicitud con 5 series del material A y 50 unidades del material B:
 
 ```text
 DISPONIBLE ── seleccionar (006) ──▶ RESERVADA
-RESERVADA  ── confirmar (008) ───▶ ASIGNADA
+RESERVADA  ── confirmar (008) ───▶ ASIGNADA (tecnico, asignada_en)
 RESERVADA  ── rechazar (007) ────▶ DISPONIBLE
 ASIGNADA   ── devolución (011) ──▶ DISPONIBLE
 ```
 
-- 008 solo ejecuta `RESERVADA→ASIGNADA` al confirmar.
+- 008 solo ejecuta `RESERVADA→ASIGNADA` al confirmar y fija `tecnico = solicitud.tecnico` y
+  `asignada_en = ahora`.
 - La transición es irreversible dentro de 008; para liberar se requiere devolución o traspaso.
 - Una serie que no está `RESERVADA`, o que no pertenece al tenant/material, aborta la confirmación.
+- 009 cambia `tecnico` y reinicia `asignada_en`; 011 limpia ambos al devolver.
 - No se crea otra tabla ni otro número de serie.
 
 ### Solicitud
@@ -204,6 +206,8 @@ ASIGNADA   ── devolución (011) ──▶ DISPONIBLE
 | Evento | Entidad / campo | Cuándo | Contenido |
 |---|---|---|---|
 | Serie asignada | `Serie/estado` | Confirmación | `RESERVADA→ASIGNADA`, serie, material, técnico |
+| Custodia | `Serie/tecnico` | Confirmación | Técnico anterior y nuevo |
+| Días en mano | `Serie/asignada_en` | Confirmación | Fecha anterior y nueva |
 | Stock técnico | `StockTecnico/cantidad` | Confirmación | Material, valor anterior, valor nuevo |
 | Stock general | `StockGeneral/cantidad` | Confirmación | Material, valor anterior, valor nuevo |
 | Recojo | `StockGeneral/cantidad` | 004 | Material, valor anterior, valor nuevo |
@@ -234,6 +238,6 @@ ASIGNADA   ── devolución (011) ──▶ DISPONIBLE
 | CA-02 | `StockTecnico.cantidad` | Técnico 10 + 5 series = 15 |
 | CA-03 | `StockGeneral.cantidad` | Tenant 100 − 5 series = 95 |
 | CA-04 | Transacción | Fallo en stock técnico revierte stock general, series y auditoría |
-| CA-05 | `SolicitudAsignacion.confirmada_en` | Días en mano calculados por 006 desde la confirmación |
+| CA-05 | `Serie.asignada_en` | 008 fija la fecha de custodia; 006 calcula desde ella y usa `confirmada_en` solo como respaldo histórico |
 | CA-06 | `RegistroCambio` | Serie, stock técnico y stock general auditados |
 | CA-07 | `StockGeneral`/`StockTecnico` | 50 no seriados: técnico +50, general −50 |

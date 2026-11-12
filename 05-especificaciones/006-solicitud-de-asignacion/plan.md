@@ -442,15 +442,17 @@ contienen lógica de negocio.
 
 ### Días en mano y alerta de cupo
 
-- `dias_en_mano_serie(linea, hoy=None)`:
-  - Exige que la solicitud esté `CONFIRMADA` y tenga `confirmada_en`.
-  - Devuelve `(hoy - confirmada_en.date()).days`; si no está confirmada, devuelve `None`.
+- `dias_en_mano_serie(serie, hoy=None)`:
+  - Exige `Serie.estado=ASIGNADA` y `Serie.asignada_en` no nulo.
+  - Devuelve `(hoy - serie.asignada_en.date()).days`; si falta la fecha, usa
+    `SolicitudAsignacion.confirmada_en` solo como respaldo histórico y devuelve `None` si tampoco
+    existe.
+  - No usa `fecha` de la solicitud.
 - `series_en_custodia_tecnico(tecnico)`:
-  - Recorre las líneas seriadas de solicitudes `CONFIRMADA` del técnico cuya `Serie.estado` sea
-    `ASIGNADA`; conserva la confirmación más reciente por serie.
-  - Devuelve una estructura con serie, material, `confirmada_en`, días en mano.
-  - 009/011 deberán actualizar la fuente de custodia cuando muevan o devuelvan series; hasta
-    entonces esta consulta cubre las asignaciones confirmadas por 007/008.
+  - Filtra `Serie.estado=ASIGNADA`, `Serie.tecnico=tecnico` y mismo tenant.
+  - Devuelve una estructura con serie, material, `Serie.asignada_en` y días en mano.
+  - 009 reinicia `Serie.asignada_en` al traspasar y 011 la limpia al devolver; 006 siempre lee la
+    custodia actual.
 - `calcular_alerta_cupo(tecnico)`:
   - Devuelve `AlertaCupo` si alguna serie en custodia supera
     `settings.DIAS_ALERTA_CUSTODIA` (20 por defecto).

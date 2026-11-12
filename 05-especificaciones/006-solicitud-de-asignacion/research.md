@@ -161,23 +161,25 @@ sobreasignación aun si dos solicitudes del mismo tenant se envían a la vez. La
 
 ---
 
-## 7. Días en mano desde la confirmación
+## 7. Días en mano desde la custodia actual
 
-**Decisión**: `dias_en_mano_serie(linea, hoy=None)` exige solicitud `CONFIRMADA` y
-`confirmada_en` no nulo, y devuelve `(hoy - confirmada_en.date()).days`. `confirmada_en` lo fija 007
-al confirmar. 006 no crea una fecha de asignación ni usa `fecha` de la solicitud para el conteo.
+**Decisión**: `dias_en_mano_serie(serie, hoy=None)` exige `Serie.estado=ASIGNADA` y
+`Serie.asignada_en` no nulo, y devuelve `(hoy - serie.asignada_en.date()).days`. 008 fija
+`Serie.asignada_en` al confirmar una asignación, 009 la reinicia al traspasar y 011 la limpia al
+devolver. Si una serie histórica no tiene `asignada_en`, se usa
+`SolicitudAsignacion.confirmada_en` solo como respaldo y se registra la deuda.
 
-**Rationale**: la spec y RF-61 dicen que el conteo inicia al aceptar el almacén. Usar `fecha` de la
-solicitud contaría días de espera de revisión que no son custodia del técnico. `confirmada_en` es la
-única marca fiable del inicio.
+**Rationale**: la spec y RF-61 dicen que el conteo inicia al aceptar el almacén, pero debe reiniciarse
+cuando la serie cambia de técnico (RF-62, CA-09 de 009). `confirmada_en` de la asignación original no
+sirve después de un traspaso; `Serie.asignada_en` es la única marca de la custodia actual.
 
 **Alternativas consideradas**:
 - Usar `fecha` de la solicitud: arranca antes de la aceptación. Rechazada.
-- Agregar `fecha_asignacion` en la línea: duplica la marca de la solicitud y puede desincronizarse.
-  Rechazada.
+- Seguir usando `confirmada_en`: no se reinicia con los traspasos. Rechazada.
+- Agregar un contador `dias_en_mano`: se desincroniza. Rechazada.
 
-**Consecuencia**: 006 deja el campo `confirmada_en` en el modelo y lo documenta como escrito por
-007; las pruebas de 006 lo fijan con fixture.
+**Consecuencia**: 006 lee `Serie.asignada_en` y deja `confirmada_en` como respaldo histórico; las
+pruebas de 006 fijan ambos con fixtures. La corrección se coordina con 004/005/008/009/011.
 
 ---
 

@@ -18,7 +18,9 @@ La auditoría es inmutable y compartida con el resto del sistema; 008 no crea un
 | Momento | Dentro de la transacción de confirmación |
 | Extra | Material y técnico de la solicitud, para trazabilidad legible |
 
-Se escribe **un registro por cada serie** confirmada.
+Se escribe **un registro por cada serie** confirmada. Además se audita `Serie/tecnico` (anterior y
+nuevo) y `Serie/asignada_en` (anterior y nueva) por cada serie, porque 008 fija la custodia y el
+inicio de los días en mano.
 
 ### Stock del técnico
 
