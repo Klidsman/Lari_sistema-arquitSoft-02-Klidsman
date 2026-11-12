@@ -257,10 +257,10 @@ Entonces el sistema alerta y bloquea la descarga
 ## 11. Consideraciones de Implementación
 
 - El envío de correos se implementa con Celery + Redis para procesamiento asíncrono
-- Las notificaciones en tiempo real usan WebSocket o SSE
+- Las notificaciones en tiempo real usan SSE sobre `StreamingHttpResponse` con pub/sub de Redis (ver `plan.md` y `research.md`)
 - La verificación de hash SHA-256 se hace al descargar el archivo
 - La actualización de stock al confirmar se implementa en spec 008
 - El conteo de días en mano se inicia al confirmar (RF-61)
 - El buzón del almacén es un parámetro de la región (configurado en spec 001)
-- Los reintentos de correo se configuran con backoff exponencial
+- Los reintentos de correo son 3 reintentos además del intento inicial (4 intentos en total), con intervalo fijo de 5 minutos y sin backoff exponencial
 - La bandeja de despachos usa polling o push para actualizaciones en tiempo real
