@@ -1,5 +1,145 @@
 # Plan técnico: 001 Tenants, regiones y acceso
 
+**Branch**: `001-tenants-y-acceso` | **Date**: 2026-11-11 | **Spec**: `05-especificaciones/001-tenants-y-acceso/spec.md`
+
+**Input**: Spec en `05-especificaciones/001-tenants-y-acceso/spec.md`
+
+## Summary
+
+Implementar la base de identidad y alcance del sistema: regiones con su almacén central,
+tenants con una única cuenta operativa, cuentas de Administrador de plataforma y de
+Responsable de almacén, invitación por correo, autenticación de dos factores y auditoría
+inmutable. El diseño usa un modelo de usuario personalizado con rol y referencias opcionales
+a tenant o región, aislamiento derivado de la sesión (nunca del cliente), revocación
+inmediata mediante versión de sesión y restricciones de base de datos como fuente de verdad
+ante altas concurrentes.
+
+## Technical Context
+
+**Language/Version**: Python 3.12+ (fijado por la constitución y ADR-015)
+
+**Primary Dependencies**: Django LTS 5.x, HTMX, Celery con Redis, `pyotp` (TOTP) y
+`cryptography` (cifrado del secreto TOTP). Dependencias adicionales justificadas en
+`research.md`.
+
+**Storage**: PostgreSQL 16+ con seguridad por fila (RLS) como respaldo del filtrado de
+aplicación; Redis como broker de Celery.
+
+**Testing**: pytest, pytest-django y pruebas de integración contra PostgreSQL (sin SQLite
+para RLS y restricciones condicionales).
+
+**Target Platform**: servidor Linux (Gunicorn + Nginx), aplicación web server-rendered con
+HTMX; desarrollo local en Windows o Linux.
+
+**Project Type**: aplicación web monolítica modular Django (un solo despliegue y worker
+separado).
+
+**Performance Goals**: overhead del middleware de contexto menor a 50 ms p95 por petición;
+listados administrativos paginados (50 filas); envío de invitaciones asíncrono para no
+bloquear el alta.
+
+**Constraints**: aislamiento multitenant no negociable; tenant y región solo desde la sesión;
+revocación de sesiones inmediata; auditoría de solo inserción; segundo factor obligatorio
+para Administrador de plataforma y Responsable de almacén; sin eliminación física de
+regiones, tenants ni cuentas.
+
+**Scale/Scope**: ~100 tenants con una cuenta cada uno; 3 roles; 16 rutas HTTP; 6 entidades
+(`Region`, `Almacen`, `Tenant`, `Usuario`, `Invitacion`, `RegistroCambio`).
+
+## Constitution Check
+
+*GATE: verificado antes de la Fase 0 y re-evaluado después de la Fase 1.*
+
+| Principio | Resultado | Evidencia / decisión |
+|---|---|---|
+| I. Aislamiento multitenant (NO NEGOCIABLE) | PASA | Tenant y región salen de `request.usuario`; middleware y servicios revalidan alcance; RLS en PostgreSQL; acceso ajeno se trata como inexistente |
+| II. Jerarquía Región → Tenant → Técnico | PASA | `Region → Almacen` 1:1; `Tenant → Region` obligatoria; una cuenta por tenant; Responsable de almacén con una región; Administrador sin tenant ni región |
+| III. Invariantes de stock | N/A | Esta spec no modifica stock |
+| IV. Identidad y unicidad de series | N/A | Esta spec no gestiona series |
+| V. Integridad transaccional | PASA | Altas, invitaciones, auditoría, cambios de rol y suspensiones en `transaction.atomic`; correo después del commit |
+| VI. Auditoría inmutable y trazabilidad | PASA | `RegistroCambio` de solo inserción, en la misma transacción; nunca guarda contraseñas, tokens ni secretos |
+| VII. Autoridad del reporte de Lari | N/A | Esta spec no procesa conciliaciones |
+| VIII. Spec-driven, pruebas y simplicidad | PASA | Cada criterio de aceptación tiene prueba; se usan las dependencias del stack y solo dos adicionales justificadas |
+
+Sin violaciones que justificar. `Complexity Tracking` queda vacío.
+
+## Project Structure
+
+### Documentation (this feature)
+
+```text
+05-especificaciones/001-tenants-y-acceso/
+├── plan.md              # Este archivo
+├── research.md          # Fase 0
+├── data-model.md        # Fase 1
+├── quickstart.md        # Fase 1
+├── contracts/           # Fase 1
+│   ├── http-endpoints.md
+│   └── auditoria-registro.md
+└── tasks.md             # Fase 2 (/speckit.tasks, no se crea aquí)
+```
+
+### Source Code (repository root)
+
+```text
+manage.py
+config/
+├── settings/
+│   ├── base.py
+│   ├── dev.py
+│   ├── prod.py
+│   └── test.py
+├── urls.py
+├── celery.py
+└── wsgi.py
+
+tenants/
+├── models.py            # Region, Almacen, Tenant
+├── services.py
+├── forms.py
+├── views.py
+├── urls.py
+├── admin.py
+└── migrations/
+
+acceso/
+├── models.py            # Usuario, Invitacion
+├── managers.py
+├── services.py
+├── authentication.py
+├── middleware.py
+├── forms.py
+├── views.py
+├── urls.py
+├── management/commands/crear_admin_plataforma.py
+└── migrations/
+
+auditoria/
+├── models.py            # RegistroCambio
+├── services.py
+├── views.py
+├── urls.py
+└── migrations/
+
+templates/
+├── acceso/
+├── tenants/
+├── auditoria/
+└── base.html
+
+static/
+tests/
+├── unit/
+├── integration/
+└── contract/
+```
+
+**Structure Decision**: proyecto Django único en la raíz del repositorio. Cada spec futura
+agrega su propia app (`catalogo`, `tecnicos`, etc.) sin cambiar el despliegue. `config/`
+concentra settings, URLs y Celery; las reglas de negocio viven en `services.py` de cada app,
+nunca en las vistas. `tests/` se separa por tipo para que las pruebas de contrato HTTP y las
+de integración con PostgreSQL sean explícitas.
+
 ## Referencias
 - Spec: `05-especificaciones/001-tenants-y-acceso/spec.md`
 - Reglas: `03-reglas-de-dominio/regiones-y-tenants.md`, `auditoria.md`
@@ -434,3 +574,24 @@ Además, pruebas de base de datos:
 - **Suspensión de tenant:** bloquea el acceso y las operaciones, pero no borra ni modifica datos. El stock se conserva.
 - **Sin eliminación:** no se borran regiones, tenants ni cuentas; se desactivan o suspenden. Esto preserva la trazabilidad.
 - **Concurrencia:** las restricciones únicas de la base de datos son la fuente de verdad ante altas simultáneas.
+
+## Complexity Tracking
+
+> Sin violaciones a la constitución. La complejidad añadida está cubierta por el stack y las
+> ADR vigentes: modelo de usuario personalizado (ADR-019) y versión de sesión para revocación
+> inmediata (ADR-008, ADR-019). Las dos dependencias adicionales (`pyotp` y `cryptography`)
+> se justifican en `research.md`.
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| Ninguna | — | — |
+
+## Artefactos de diseño
+
+| Artefacto | Contenido |
+|---|---|
+| `research.md` | Decisiones técnicas y alternativas: usuario personalizado, TOTP, invitaciones, revocación de sesión, RLS, correo asíncrono y concurrencia |
+| `data-model.md` | Entidades, campos, relaciones, restricciones, índices y transiciones de estado |
+| `contracts/http-endpoints.md` | Contrato de las rutas, roles, peticiones, respuestas y errores |
+| `contracts/auditoria-registro.md` | Contrato del registro de auditoría y datos que nunca se almacenan |
+| `quickstart.md` | Escenarios ejecutables de validación extremo a extremo |
