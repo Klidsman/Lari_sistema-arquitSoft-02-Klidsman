@@ -46,6 +46,8 @@ Una serie puede estar en uno de los siguientes estados:
 - Las series ingresan al sistema mediante un **recojo** registrado por el tenant
 - El recojo registra qué series fueron retiradas del almacén central de la región
 - Al registrarse, las series quedan en estado **Disponible** en el stock general del tenant
+- Excepción de implementación: el **stock inicial de técnicos** también crea series, pero nacen en estado **Asignada** y se asignan directamente al técnico sin pasar por el stock general
+- El stock inicial se carga una sola vez por tenant; después solo se corrige por edición o por los flujos normales
 
 ### 5.2 Selección para Asignación
 - El tenant selecciona series del inventario general (solo estado Disponible)

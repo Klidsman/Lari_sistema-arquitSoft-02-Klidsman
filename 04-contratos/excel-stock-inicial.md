@@ -8,7 +8,7 @@ El stock inicial de técnicos se carga una sola vez el día de implementación d
 
 ## 2. Formato del Archivo
 
-- **Formato:** Excel (.xlsx o .xls)
+- **Formato:** Excel (.xlsx). El formato binario `.xls` no se acepta: debe abrirse y guardarse como `.xlsx` antes de cargarlo.
 - **Uso:** Solo se puede cargar una vez por tenant
 - **Momento:** Día de implementación del sistema
 
@@ -19,11 +19,11 @@ El Excel debe tener las siguientes columnas:
 | Columna | Descripción | ¿Se lee? |
 |---|---|---|
 | Material | Código del material | **Sí** |
-| Lote | Lote del material | **Sí** |
+| Lote | Lote del material | **Informativo**; prevalece el lote del catálogo |
 | Libre utilización | Stock de material (cantidad) | **Sí** |
 | Número de serie | Serie del material (si aplica) | **Sí** |
 | Nº ident.fis.1 | Identificador del técnico (LAXXXX) | **Sí** |
-| Texto breve material | Descripción del material | **Sí** |
+| Texto breve material | Descripción del material | **Informativo**; prevalece la descripción del catálogo |
 
 **Nota:** El formato es idéntico al reporte de Lari para facilitar la migración.
 
@@ -32,11 +32,14 @@ El Excel debe tener las siguientes columnas:
 | Columna del Excel | Campo en el sistema | Descripción |
 |---|---|---|
 | Material | Código de material | Código que identifica el material en el catálogo |
-| Lote | Lote | Lote del material |
+| Lote | Lote (catálogo) | Se lee del archivo, pero el valor guardado es `material.lote` |
 | Libre utilización | Cantidad | Stock de material (para no seriados) |
 | Número de serie | Serie | Serie individual (para seriados) |
 | Nº ident.fis.1 | NIF del técnico | Identificador del técnico (formato LAXXXX) |
-| Texto breve material | Descripción | Descripción del material |
+| Texto breve material | Descripción (catálogo) | Se lee del archivo, pero prevalece `material.descripcion` |
+
+**Nota:** el lote y la descripción del catálogo son la fuente de verdad. Los valores del Excel son
+informativos y no generan error si difieren; el lote no separa stock.
 
 ## 5. Interpretación de los Datos
 
@@ -46,11 +49,13 @@ El Excel debe tener las siguientes columnas:
 - La columna "Libre utilización" se ignora para seriados
 - El sistema valida que la serie tenga el formato correcto (12 caracteres alfanuméricos A-Z, 0-9)
 - La serie se asigna al técnico indicado en "Nº ident.fis.1"
+- El lote guardado es el del catálogo, no el de la columna "Lote"
 
 ### 5.2 Materiales No Seriados
 - Se identifican porque no tienen valor en la columna "Número de serie"
 - La columna "Libre utilización" indica la cantidad de stock
 - El sistema asigna esa cantidad al técnico indicado en "Nº ident.fis.1"
+- Varias filas del mismo técnico y material se suman en una sola línea
 
 ### 5.3 Identificación del Técnico
 - La columna "Nº ident.fis.1" contiene el identificador del técnico (formato LAXXXX)
@@ -61,7 +66,7 @@ El Excel debe tener las siguientes columnas:
 ## 6. Validaciones del Excel
 
 El sistema valida que:
-- El archivo sea un Excel válido (.xlsx o .xls)
+- El archivo sea un Excel válido (`.xlsx`; los `.xls` deben guardarse como `.xlsx`)
 - El archivo tenga las columnas requeridas (Material, Lote, Libre utilización, Número de serie, Nº ident.fis.1, Texto breve material)
 - Los códigos de material existan en el catálogo
 - Las series (cuando están presentes) tengan el formato correcto (12 caracteres alfanuméricos A-Z, 0-9)
@@ -73,7 +78,7 @@ El sistema valida que:
 
 ## 7. Proceso de Carga
 
-1. El tenant carga el archivo Excel (.xlsx o .xls)
+1. El tenant carga el archivo Excel (`.xlsx`; si está en `.xls`, lo guarda como `.xlsx`)
 2. El sistema valida el formato y las columnas
 3. El sistema valida cada fila (técnico, material, serie, cantidad)
 4. Si hay errores, se muestran al usuario y no se carga nada
@@ -95,9 +100,8 @@ El sistema valida que:
 ## 9. Alternativa: Formulario
 
 Además del Excel, el sistema permite cargar el stock inicial por formulario:
-- Un formulario por técnico
-- El usuario selecciona el técnico de la lista
-- Ingresa los materiales, series o cantidades
+- El formulario tiene secciones por técnico: el usuario selecciona el técnico de la lista y agrega sus materiales, series o cantidades
+- Varias secciones se guardan como una sola carga, para respetar la carga única por tenant
 - Similar al formulario de recojo, pero asigna directamente al técnico
 - Ambas opciones (Excel y formulario) cargan el mismo tipo de datos
 

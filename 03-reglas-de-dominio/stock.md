@@ -40,6 +40,7 @@ Los traspasos **no modifican** el stock general del tenant.
 El stock de un técnico sube con:
 - **Asignaciones confirmadas** por el almacén central
 - **Traspasos recibidos** de otros técnicos del mismo tenant
+- **Stock inicial de técnicos**, cargado una sola vez el día de implementación; se asigna directamente al técnico y no pasa por el stock general (ver §7)
 
 ### 3.4 Stock por Técnico - Decrementos
 El stock de un técnico baja con:
