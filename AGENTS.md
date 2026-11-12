@@ -17,8 +17,8 @@ Si un documento contradice la constitución, se corrige el documento **antes** d
 - Comandos disponibles en `.opencode/commands/speckit.*.md` (`/speckit.specify`, `plan`,
   `tasks`, `implement`, `analyze`, `checklist`, `clarify`, `converge`, `constitution`).
 - Scripts en PowerShell: `.specify/scripts/powershell/*.ps1`.
-- Las features viven en `05-especificaciones/NNN-nombre/`. `001` y `002` tienen diseño
-  completo; `003`–`013` solo tienen `spec.md` y `plan.md`; solo `001` tiene `tasks.md`.
+- Las features viven en `05-especificaciones/NNN-nombre/`. `001`, `002` y `003` tienen diseño
+  completo; `004`–`013` solo tienen `spec.md` y `plan.md`; `001` y `002` tienen `tasks.md`.
 - **Gotcha crítico**: `.specify/feature.json` fija la feature activa
   (`05-especificaciones/001-tenants-y-acceso`). Los scripts la usan aunque pidas otra en el
   prompt. Para trabajar en otra feature, exporta el override antes de ejecutarlos:
@@ -82,7 +82,7 @@ Si un documento contradice la constitución, se corrige el documento **antes** d
 ## Mapa mínimo
 
 - `05-especificaciones/NNN-*/spec.md` — qué; `plan.md` — cómo; `tasks.md` — ejecución.
-- `05-especificaciones/001-tenants-y-acceso/` y `002-materiales/` — únicos diseños completos
-  (`research.md`, `data-model.md`, `contracts/`, `quickstart.md`).
+- `05-especificaciones/001-tenants-y-acceso/`, `002-materiales/` y `003-tecnicos/` — diseños
+  completos (`research.md`, `data-model.md`, `contracts/`, `quickstart.md`).
 - `03-reglas-de-dominio/` — reglas de negocio; `04-contratos/` — formatos Excel y actas.
 - `docs/` — análisis, arquitectura, C4 y ADR.

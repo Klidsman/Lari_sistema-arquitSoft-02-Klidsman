@@ -7,9 +7,9 @@ Las specs deben implementarse en este orden debido a las dependencias:
 1. **Spec 001 - Tenants y Acceso** (base de todo el sistema)
 2. **Spec 002 - Materiales** (catálogo compartido)
 3. **Spec 003 - Técnicos** (depende de tenants)
-4. **Spec 004 - Recojo de Materiales** (depende de técnicos y materiales)
-5. **Spec 008 - Confirmación y Actualización de Stock** (servicio compartido, sin UI)
-6. **Spec 005 - Stock Inicial de Técnicos** (depende de técnicos, materiales y stock)
+4. **Spec 004 - Recojo de Materiales** (depende de materiales; no depende de técnicos; su prerrequisito de stock, la parte fundacional de la spec 008, se implementa antes de este paso)
+5. **Spec 008 - Confirmación y Actualización de Stock** (servicio compartido, sin UI; su parte fundacional `StockGeneral` es prerrequisito de 004 y la confirmación de asignaciones se completa después de 007)
+6. **Spec 005 - Stock Inicial de Técnicos** (depende de técnicos, materiales, la app `series` de 004 y el núcleo de stock de 008: `StockTecnico` e incremento/decremento; no usa `StockGeneral`)
 7. **Spec 006 - Solicitud de Asignación** (depende de técnicos, materiales y stock)
 8. **Spec 007 - Envío y Revisión del Almacén** (depende de asignaciones)
 9. **Spec 009 - Traspaso entre Técnicos** (depende de técnicos, materiales y stock)
@@ -154,6 +154,11 @@ Las specs deben implementarse en este orden debido a las dependencias:
 ---
 
 ## Spec 005 - Stock Inicial de Técnicos
+
+**Dependencias:** 001, 002, 003, la app `series` de 004 y la parte fundacional de 008
+(`StockTecnico`, `incrementar_stock_tecnico`, `decrementar_stock_tecnico`). 005 no modifica
+`StockGeneral` y no crea otra tabla de series. El reinicio del stock inicial es un comando de
+gestión, no una ruta HTTP.
 
 ### Fase 1: Modelos
 - [ ] Crear app `stock_inicial`

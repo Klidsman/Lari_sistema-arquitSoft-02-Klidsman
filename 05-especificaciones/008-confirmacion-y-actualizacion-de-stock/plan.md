@@ -13,6 +13,13 @@
 - Integración con `asignaciones` (spec 007) para la confirmación.
 - No se modifican recojos, traspasos ni conciliaciones.
 
+> **Dependencia de las specs 004 y 005:** la parte fundacional de esta spec
+> (`StockGeneral`, `incrementar_stock_general`, `StockTecnico`, `incrementar_stock_tecnico` y
+> `decrementar_stock_tecnico`) debe existir antes de implementar el recojo (004) y el stock inicial
+> de técnicos (005). 004 consume `StockGeneral` e `incrementar_stock_general`; 005 consume
+> `StockTecnico` y los servicios de incremento/decremento, y nunca toca `StockGeneral`. La
+> confirmación de asignaciones de esta spec puede completarse después de 007.
+
 ## Modelo de datos
 
 ```python
