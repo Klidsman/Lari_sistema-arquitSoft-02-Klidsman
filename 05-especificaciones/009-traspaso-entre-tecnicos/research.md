@@ -172,8 +172,9 @@ pendientes; las deudas documentales se listan al final.
 
 ## Correcciones documentales necesarias
 
-1. `004-recojo-de-materiales/data-model.md`: añadir `Serie.tecnico`, `Serie.asignada_en`, restricción
-   de coherencia e índices.
+1. `004-recojo-de-materiales/data-model.md`, `plan.md` y `tasks.md`: añadir `Serie.tecnico`,
+   `Serie.asignada_en`, restricción de coherencia e índices, y ampliar `crear_serie` con
+   `tecnico`/`asignada_en`.
 2. `005-stock-inicial-de-tecnicos/data-model.md` y `plan.md`: fijar `tecnico` y `asignada_en` al crear
    series `ASIGNADA`.
 3. `006-solicitud-de-asignacion/plan.md`, `research.md` y `tasks.md`: calcular días en mano desde

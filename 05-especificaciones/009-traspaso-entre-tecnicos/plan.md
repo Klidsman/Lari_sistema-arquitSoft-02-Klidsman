@@ -642,7 +642,7 @@ Estas correcciones se aplican antes de implementar 009 (principio VIII):
 
 | Documento | Corrección |
 |---|---|
-| `004-recojo-de-materiales/data-model.md` | Añadir `Serie.tecnico`, `Serie.asignada_en`, restricción de coherencia e índices; documentar que 005/008/009/011 los actualizan. |
+| `004-recojo-de-materiales/data-model.md`, `plan.md` y `tasks.md` | Añadir `Serie.tecnico`, `Serie.asignada_en`, restricción de coherencia e índices; ampliar `crear_serie(..., tecnico, asignada_en)`; documentar que 005/008/009/011 los actualizan. |
 | `005-stock-inicial-de-tecnicos/data-model.md` y `plan.md` | Al crear una serie `ASIGNADA`, fijar `tecnico` y `asignada_en` desde la línea y la carga. |
 | `006-solicitud-de-asignacion/plan.md`, `research.md` y `tasks.md` | Calcular días en mano desde `Serie.asignada_en`, con respaldo en `confirmada_en` solo para datos históricos; actualizar pruebas. |
 | `008-confirmacion-y-actualizacion-de-stock/plan.md`, `data-model.md`, `contracts/` y `tasks.md` | Al confirmar, fijar `Serie.tecnico = solicitud.tecnico` y `Serie.asignada_en = ahora`, auditar ambos campos y probarlo. |
