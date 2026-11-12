@@ -128,7 +128,8 @@ tests/
 │   ├── test_traspaso_concurrencia.py
 │   └── test_traspaso_auditoria.py
 └── contract/
-    └── test_traspaso_http.py
+    ├── test_traspaso_http.py
+    └── test_traspaso_servicios_contrato.py
 ```
 
 También se modifican:
