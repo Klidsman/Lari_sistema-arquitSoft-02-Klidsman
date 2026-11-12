@@ -137,6 +137,7 @@ Reglas:
 
 | Aspecto | Uso en 005 |
 |---|---|
+| `tenant` | Copiado de `tecnico.tenant` por 008; obligatorio para RLS y aislamiento. |
 | `tecnico`, `material` | Clave lógica única. |
 | `cantidad` | Se incrementa o decrementa solo con los servicios de 008. |
 | Auditoría | `StockTecnico/cantidad` con valor anterior y nuevo, escrita por 008. |
