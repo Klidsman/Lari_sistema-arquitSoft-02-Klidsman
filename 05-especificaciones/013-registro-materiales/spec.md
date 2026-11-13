@@ -65,8 +65,9 @@ Permitir que cada tenant registre el material usado por sus técnicos en cada or
 - Se identifica por tenant, técnico, número de orden y periodo.
 - El número de orden es obligatorio.
 - El periodo se obtiene de la fecha de liquidación.
-- Una orden es única por técnico y mes.
-- Si la cuenta del tenant ingresa una orden que ya existe para ese técnico y mes, se abre para editar; no se crea un duplicado.
+- Una orden es única por tenant, técnico, periodo y número de orden.
+- Un técnico puede tener varias órdenes en el mismo mes si los números son distintos.
+- Si la cuenta del tenant ingresa una orden que ya existe para esa clave, se abre para editar; no se crea un duplicado.
 - La misma orden puede existir en otro técnico o en otro mes.
 
 ### Uso de material
@@ -81,7 +82,7 @@ Permitir que cada tenant registre el material usado por sus técnicos en cada or
 1. **Aislamiento multitenant.** Un tenant nunca ve ni modifica órdenes, saldos, despachos, usos o reportes de otro tenant.
 2. **Catálogo fijo por tenant.** Cada tenant solo opera con sus materiales habilitados.
 3. **Periodo de la orden.** El periodo de uso se obtiene únicamente de la fecha de liquidación de la orden.
-4. **Unicidad de la orden.** No puede existir más de una orden con el mismo número para el mismo técnico y mes.
+4. **Unicidad de la orden.** No puede existir más de una orden con el mismo número para el mismo tenant, técnico y mes; un técnico puede tener varias órdenes en el mes con números distintos.
 5. **Edición de orden existente.** Si al ingresar una orden se encuentra una coincidencia, se abre para editar y se registra el historial de los cambios.
 6. **Cantidades válidas.** Toda cantidad debe ser un entero mayor o igual a 0. No se aceptan negativos, decimales ni texto.
 7. **Saldo inicial mensual.** Cada mes puede tener un saldo inicial manual por material.
