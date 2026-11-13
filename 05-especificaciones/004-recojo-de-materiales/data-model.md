@@ -186,7 +186,7 @@ identidad y estado.
 | `region` | FK `tenants.Region` | No | `PROTECT`, `related_name="series"`; se fija desde `tenant.region`; inmutable |
 | `material` | FK `materiales.Material` | No | `PROTECT`, `related_name="series"`; material al que pertenece la unidad; inmutable |
 | `lote` | `CharField(50)` | No | Opcional; copia del lote del material al crear la serie; informativo |
-| `estado` | `CharField(10)` | No | `DISPONIBLE`, `RESERVADA` o `ASIGNADA`; por defecto `DISPONIBLE` |
+| `estado` | `CharField(10)` | No | `DISPONIBLE`, `RESERVADA`, `ASIGNADA`, `INSTALADA` o `INACTIVA`; por defecto `DISPONIBLE` |
 | `tecnico` | FK `tecnicos.Tecnico` | Sí | `PROTECT`, `related_name="series"`; custodio actual; nulo si no está asignada |
 | `asignada_en` | `DateTimeField` | Sí | Inicio de la custodia actual; lo fijan 005/008/009 y lo limpia 011 |
 | `creado_por` | FK `Usuario` | No | `PROTECT`, `related_name="+"`; cuenta que registró la serie |
@@ -198,9 +198,10 @@ identidad y estado.
 
 - `unique(numero)` — unicidad global, fuente de verdad ante altas concurrentes.
 - `CheckConstraint(serie_formato)`: `numero ~ '^[A-Z0-9]{12}$'`.
-- `CheckConstraint(serie_estado_valido)`: `estado IN ('DISPONIBLE', 'RESERVADA', 'ASIGNADA')`.
+- `CheckConstraint(serie_estado_valido)`: `estado IN ('DISPONIBLE', 'RESERVADA', 'ASIGNADA',
+  'INSTALADA', 'INACTIVA')`.
 - `CheckConstraint(serie_tecnico_coherente_estado)`: `ASIGNADA` exige `tecnico` y `asignada_en` no
-  nulos; `DISPONIBLE` y `RESERVADA` exigen ambos nulos.
+  nulos; `DISPONIBLE`, `RESERVADA`, `INSTALADA` e `INACTIVA` exigen ambos nulos.
 - La pertenencia de `tecnico` al mismo `tenant` de la serie se valida en los servicios de
   005/008/009; no se puede expresar con un `CheckConstraint` entre tablas.
 - El patrón de aplicación proviene de `settings.SERIE_PATRON`; la restricción de base usa el valor
@@ -230,7 +231,9 @@ identidad y estado.
 |---|---|---|
 | `DISPONIBLE` | Está en el stock general del tenant y puede asignarse | Ninguna; es el estado inicial |
 | `RESERVADA` | Está reservada en una asignación pendiente | No la implementa 004; pertenece a 006/007 |
-| `ASIGNADA` | Está en posesión de un técnico | No la implementa 004; pertenece a 008/011 |
+| `ASIGNADA` | Está en posesión de un técnico | No la implementa 004; pertenece a 008/009/011 |
+| `INSTALADA` | Liquidada/instalada; ya no está en custodia | La implementa 010 al aprobar la conciliación |
+| `INACTIVA` | Recuperada o dada de baja; no vuelve al stock | La implementa 011 al registrar la baja |
 
 ```text
 (no existe) ── recojo (004) ──▶ DISPONIBLE
@@ -238,8 +241,9 @@ identidad y estado.
 DISPONIBLE ── reserva (006) ──▶ RESERVADA
 RESERVADA ── confirmación (008) ──▶ ASIGNADA
 RESERVADA ── rechazo (007) ──▶ DISPONIBLE
+ASIGNADA ── conciliación (010) ──▶ INSTALADA
 ASIGNADA ── devolución (011) ──▶ DISPONIBLE
-ASIGNADA ── baja (011) ──▶ fuera del stock disponible
+ASIGNADA/DISPONIBLE ── baja (011) ──▶ INACTIVA
 ```
 
 - 004 crea `DISPONIBLE` con el valor por defecto de `crear_serie`.
@@ -247,7 +251,9 @@ ASIGNADA ── baja (011) ──▶ fuera del stock disponible
   posesión del técnico y no pasa por el stock general.
 - 006–011 agregan las demás transiciones; 004 y 005 no las implementan.
 - 005 crea `ASIGNADA` con `tecnico` y `asignada_en`; 008 los fija al confirmar una asignación; 009
-  cambia `tecnico` y reinicia `asignada_en` al traspasar; 011 los limpia al devolver a `DISPONIBLE`.
+  cambia `tecnico` y reinicia `asignada_en` al traspasar; 010 marca `INSTALADA` y limpia ambos al
+  liquidar; 011 los limpia al devolver a `DISPONIBLE` y al dar de baja a `INACTIVA`.
+- `INSTALADA` e `INACTIVA` son terminales: no vuelven a `DISPONIBLE` ni se reasignan.
 - Una serie no cambia de tenant, región ni material.
 - Una serie dada de baja no vuelve al stock disponible; la regla pertenece a 011.
 
