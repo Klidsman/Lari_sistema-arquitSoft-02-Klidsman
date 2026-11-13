@@ -184,7 +184,7 @@ caracteres, auditoría de envío y reserva, y `StockGeneral`/`StockTecnico` sin 
 ## Fase 5: US3 — Días en mano y alerta de cupo (P3)
 
 **Objetivo**: una vez confirmada la asignación por 007, el sistema calcula los días en mano de cada
-serie desde `confirmada_en` y alerta al tenant, sin bloquear, si algún equipo seriado supera 20
+serie desde `Serie.asignada_en` y alerta al tenant, sin bloquear, si algún equipo seriado supera 20
 días. La alerta se evalúa por equipo, no por suma de días.
 
 **Prueba independiente**: con una solicitud `CONFIRMADA` cuyo `confirmada_en` es de hace 25 días y
@@ -364,7 +364,7 @@ Task: "Concurrencia en tests/integration/test_asignacion_concurrencia.py"
 | CA-05 | US2 | T049 series pasan a `RESERVADA` |
 | CA-06 | US2 | T050, T051 metadatos y hash del Excel |
 | CA-07 | US1 | T032 NIF copiado del técnico, no editable |
-| CA-08 | US3 | T071 días desde `confirmada_en` |
+| CA-08 | US3 | T071 días desde `Serie.asignada_en` |
 | CA-09 | US3 | T072, T074 alerta de cupo |
 | CA-10 | US1 | T028, T030 serie `ASIGNADA` no aparece |
 | CA-11 | US1 | T028, T030 serie `RESERVADA` no aparece |

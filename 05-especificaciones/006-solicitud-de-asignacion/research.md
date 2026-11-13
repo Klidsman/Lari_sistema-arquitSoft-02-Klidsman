@@ -17,7 +17,7 @@ en `plan.md`, `data-model.md` y `contracts/`.
 | ¿Quién mueve el stock físico? | 007/008 al confirmar; 006 solo lee `StockGeneral` | 4 |
 | ¿Cuándo se genera el Excel? | En la transición `BORRADOR`→`ENVIADA`, nunca al guardar borrador | 5 |
 | ¿Cómo se evita sobreasignar con envíos concurrentes? | `transaction.atomic` + `select_for_update` sobre tenant, stock y series en orden de id | 6 |
-| ¿Desde cuándo se cuentan los días en mano? | Desde `SolicitudAsignacion.confirmada_en`, fijado por 007 | 7 |
+| ¿Desde cuándo se cuentan los días en mano? | Desde `Serie.asignada_en`; `confirmada_en` es respaldo histórico | 7 |
 | ¿La alerta suma días de todos los equipos? | No; se evalúa por equipo seriado y se alerta si alguno supera 20 días | 8 |
 | ¿Cómo se valida en tiempo real? | Fragmentos HTML/HTMX, sin JSON ni API REST | 9 |
 | ¿Qué permisos se usan? | Roles explícitos; solo `USUARIO_TENANT` activo con tenant activo | 10 |
@@ -323,7 +323,7 @@ la deuda se registra y no se inventa una RLS paralela.
 | Riesgo / deuda | Impacto | Mitigación |
 |---|---|---|
 | Excel huérfano si el proceso muere entre la escritura y el commit | Archivo sin solicitud | Limpieza por mantenimiento documentada; no se degrada la transacción por un fallo de disco |
-| 009/011 mueven series sin actualizar la fuente de custodia | Días en mano incorrectos | Corrección documental en los planes de 009 y 011 |
+| 009/011 mueven series sin actualizar la fuente de custodia | Días en mano incorrectos | 009 reinicia `Serie.asignada_en`; 011 la limpia; corregido en los planes de 009 y 011 |
 | RLS de 001 no disponible | Aislamiento solo de aplicación | Se registra y se mantiene el filtro obligatorio |
 | 007 no implementada al validar 006 | CA-08/CA-09 sin flujo real | Fixture de confirmación y contrato explícito en `plan.md` |
 | Redacción de `spec.md` §5.5, §11 y CA-01 | Ambigüedad de generación y alerta | Correcciones documentales listadas en `plan.md` |

@@ -47,7 +47,7 @@ Cabecera de la solicitud. Pertenece a un solo tenant, una región y un técnico.
 | `excel_hash` | `CharField(64)` | No | SHA-256 hexadecimal; vacío hasta el envío |
 | `excel_generado_en` | `DateTimeField` | Sí | Se fija al generar el Excel |
 | `enviada_en` | `DateTimeField` | Sí | Se fija en la transición a `ENVIADA` |
-| `confirmada_en` | `DateTimeField` | Sí | Lo fija 007 al confirmar; base de días en mano |
+| `confirmada_en` | `DateTimeField` | Sí | Lo fija 007 al confirmar; respaldo histórico de días en mano |
 | `creado_por` | FK `acceso.Usuario` | No | `PROTECT`, `related_name="solicitudes_asignacion_creadas"` |
 | `creado_en` | `DateTimeField` | No | `auto_now_add` |
 | `actualizado_por` | FK `acceso.Usuario` | Sí | `PROTECT`, `related_name="solicitudes_asignacion_actualizadas"` |
@@ -68,7 +68,8 @@ Cabecera de la solicitud. Pertenece a un solo tenant, una región y un técnico.
 - `tecnico.tenant` debe ser igual a `tenant`; se valida en el servicio y se prueba.
 - `excel_ruta`, `excel_hash` y `excel_generado_en` quedan vacíos mientras está `BORRADOR`.
 - Una solicitud `ENVIADA` no se edita; su Excel es inmutable.
-- `confirmada_en` solo lo escribe 007. Si una solicitud `CONFIRMADA` no lo tiene, los días en mano
+- `confirmada_en` solo lo escribe 007. Es respaldo histórico: la fuente actual es
+  `Serie.asignada_en`. Si una solicitud `CONFIRMADA` no lo tiene, los días en mano
   no se calculan y se reporta como inconsistencia de datos.
 
 ### `asignaciones.LineaAsignacion`
@@ -173,7 +174,7 @@ Reglas:
 
 | Cálculo | Fuente | Regla |
 |---|---|---|
-| Días en mano de una serie | `SolicitudAsignacion.confirmada_en` | `(hoy − confirmada_en.date()).days`; solo si la solicitud está `CONFIRMADA` |
+| Días en mano de una serie | `Serie.asignada_en` | `(hoy − serie.asignada_en.date()).days`; solo si la serie está `ASIGNADA`; `confirmada_en` es respaldo histórico |
 | Series en custodia | Líneas seriadas de solicitudes `CONFIRMADA` cuya `Serie.estado = ASIGNADA` | Se conserva la confirmación más reciente por serie |
 | Alerta de cupo | `settings.DIAS_ALERTA_CUSTODIA` (20) | Se alerta si **algún** equipo seriado supera el umbral; no se suman días entre equipos |
 | Efecto de la alerta | Ninguno sobre el estado | Se muestra como aviso; no bloquea crear ni enviar |
@@ -193,7 +194,7 @@ Reglas:
 | `obtener_detalle_solicitud(tenant, id)` | `select_related` de técnico y `prefetch_related` de líneas, material y serie | Detalle sin N+1 |
 | `calcular_reservado(tenant, material)` | Solicitudes `ENVIADA` | Disponibilidad |
 | `series_disponibles_para_asignacion(tenant, material, q, excluir_ids)` | `tenant`, `material`, `DISPONIBLE` | Selector HTMX |
-| `series_en_custodia_tecnico(tecnico)` | Solicitudes `CONFIRMADA`, serie `ASIGNADA` | Días en mano y alerta |
+| `series_en_custodia_tecnico(tecnico)` | `Serie.estado=ASIGNADA`, `Serie.tecnico=tecnico` | Días en mano y alerta desde `Serie.asignada_en` |
 | `totales_solicitud(solicitud)` | Líneas de la solicitud | `total_lineas`, `total_series`, `total_cantidad` |
 
 - `total_lineas` cuenta todas las líneas.
@@ -243,7 +244,7 @@ Reglas:
 | CA-05 | `Serie.estado` | Al enviar, cada serie seleccionada pasa a `RESERVADA` |
 | CA-06 | `excel_ruta`, `excel_hash`, `excel_generado_en` | Metadatos Z31, centro, almacén y NIF en el Excel |
 | CA-07 | `Tecnico.nif` | El NIF se copia del técnico y el formulario no lo acepta |
-| CA-08 | `confirmada_en` | Días en mano desde la confirmación, no desde `fecha` |
+| CA-08 | `Serie.asignada_en` | Días en mano desde la custodia actual, no desde `fecha`; `confirmada_en` respalda datos históricos |
 | CA-09 | `series_en_custodia_tecnico` | Alerta si algún equipo supera 20 días |
 | CA-10 | `series_disponibles_para_asignacion` | Una serie `ASIGNADA` no aparece |
 | CA-11 | `series_disponibles_para_asignacion` | Una serie `RESERVADA` no aparece |
