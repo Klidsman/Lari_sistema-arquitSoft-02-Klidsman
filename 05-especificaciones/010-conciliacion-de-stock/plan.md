@@ -155,6 +155,7 @@ class Conciliacion(models.Model):
     motivo_rechazo = models.TextField(blank=True, default="")
     huella_stock = models.CharField(max_length=64)
     requiere_revision = models.BooleanField(default=False)
+    ajustes_aplicados = models.PositiveIntegerField(default=0)
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
                                    related_name="conciliaciones_creadas")
     aprobado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
@@ -385,8 +386,9 @@ Viven en `conciliaciones/services.py`; las vistas solo orquestan.
        `0`.
      - Seriados: fijar `StockTecnico` al número de series `ASIGNADA` del técnico/material; usar
        008 para el delta.
-     - Cambiar a `APROBADA`, `fecha_aprobacion`, `aprobado_por`, `requiere_revision=False`; auditar
-       `Conciliacion/estado`.
+     - Cambiar a `APROBADA`, `fecha_aprobacion`, `aprobado_por`, `requiere_revision=False`,
+       `ajustes_aplicados` con el total de series creadas/reasignadas/instaladas y ajustes de
+       cantidad; auditar `Conciliacion/estado`.
   5. **No** toca `StockGeneral`; no elimina series.
   6. Devuelve `ResultadoConciliacion` con conteos y ajustes.
 

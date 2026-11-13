@@ -52,6 +52,7 @@ erDiagram
 | `motivo_rechazo` | `TextField` | No | `blank=True, default=""`; opcional |
 | `huella_stock` | `CharField(64)` | No | Huella canónica del stock/series afectados |
 | `requiere_revision` | `BooleanField` | No | `default=False`; se activa tras un recálculo por cambios |
+| `ajustes_aplicados` | `PositiveIntegerField` | No | `default=0`; total de series creadas/reasignadas/instaladas y ajustes de cantidad al aprobar |
 | `creado_por` | FK `acceso.Usuario` | No | `PROTECT`, `related_name="conciliaciones_creadas"` |
 | `aprobado_por` | FK `acceso.Usuario` | Sí | `PROTECT`, `related_name="conciliaciones_aprobadas"` |
 | `actualizado_por` | FK `acceso.Usuario` | Sí | `PROTECT`, `related_name="+"` |
