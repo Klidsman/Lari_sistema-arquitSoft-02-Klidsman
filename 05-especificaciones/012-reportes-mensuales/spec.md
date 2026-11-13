@@ -42,18 +42,24 @@ Permitir que el Administrador de plataforma y los tiles generen reportes mensual
   - Liquidados/Instalados: total de materiales liquidados o instalados en el mes
   - Porcentaje no justificado (merma): calculado como (no justificado / asignados) * 100
 - El corte se puede generar por tenant o global (todos los tenants)
-- El corte se puede generar por mes y año específicos
+- El corte se puede generar por mes y año específicos y se guarda para consulta histórica
+- Solicitados: unidades de solicitudes enviadas, confirmadas o rechazadas en el mes
+- Asignados: unidades de solicitudes confirmadas en el mes
+- Liquidados/Instalados: series que pasaron a `INSTALADA` en el mes
+- Devueltos: series devueltas en el mes
 
 ### 5.2 Cálculo de Merma
 - La merma se calcula como: `(no justificado / asignados) * 100`
-- No justificado = asignados - (liquidados + instalados + devueltos)
-- El porcentaje indica la proporción de materiales que no fueron justificados
+- No justificado = `max(0, asignados - (liquidados + instalados + devueltos))`
+- Si `asignados = 0`, el porcentaje es `0`
+- El porcentaje indica la proporción de materiales que no fueron justificados y nunca es negativo
 
 ### 5.3 Exportación a Excel (RF-69)
 - El sistema permite exportar reportes de auditoría mensual a Excel
 - El sistema permite exportar reportes de conciliación mensual a Excel
 - El Excel contiene los datos detallados del mes
 - El formato es estandarizado y compatible con los sistemas de Lari
+- Los Excel se generan a demanda y se descargan; no se persisten en el servidor
 
 ## 6. Requisitos No Funcionales
 
@@ -129,10 +135,10 @@ Entonces el archivo contiene todas las conciliaciones del mes
 
 ## 9. Reglas de Negocio
 
-1. El corte mensual calcula totales de solicitados, asignados, liquidados/instalados
-2. La merma se calcula como porcentaje de no justificados sobre asignados
-3. La exportación a Excel genera archivos estandarizados
-4. Los reportes pueden ser por tenant o globales
+1. El corte mensual calcula totales de solicitados, asignados, liquidados/instalados y devueltos
+2. La merma se calcula como porcentaje de no justificados sobre asignados y se acota a 0
+3. La exportación a Excel genera archivos estandarizados en memoria
+4. Los reportes pueden ser por tenant o globales; el global es solo del Administrador
 
 ## 10. Consideraciones de Implementación
 
