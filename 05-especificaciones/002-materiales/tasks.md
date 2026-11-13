@@ -166,7 +166,7 @@ Proyecto Django único en la raíz: la app nueva es `materiales/`; las plantilla
 - [ ] T042 [P] Agregar `tests/contract/test_material_sin_borrado.py`: ninguna ruta de materiales acepta `DELETE` (todas `405`) y no existe URL de borrado en `materiales/urls.py`
 - [ ] T043 [P] Agregar `tests/integration/test_material_rendimiento.py` con `django_assert_num_queries` para el listado, la búsqueda y el fragmento, evitando N+1 en `materiales/views.py`
 - [ ] T044 [P] Ejecutar `pytest --cov=materiales` y cerrar brechas hasta cubrir cada criterio de aceptación de `spec.md`
-- [ ] T045 [P] Corregir las referencias documentales a `catalogo`: `05-especificaciones/013-registro-materiales/plan.md` (`catalogo.Material` → `materiales.Material`) y la mención de `catalogo` en `05-especificaciones/001-tenants-y-acceso/plan.md`
+- [ ] T045 [P] Verificar que `05-especificaciones/013-registro-materiales/` use `materiales.Material` y corregir cualquier mención restante a `catalogo`; revisar también la mención de `catalogo` en `05-especificaciones/001-tenants-y-acceso/plan.md`
 - [ ] T046 [P] Completar `03-reglas-de-dominio/catalogo-de-materiales.md` con las reglas vigentes de `05-especificaciones/002-materiales/spec.md` (hoy está vacío)
 - [ ] T047 Ejecutar los escenarios manuales 1–11 de `05-especificaciones/002-materiales/quickstart.md` contra PostgreSQL y registrar el resultado
 - [ ] T048 Ejecutar la suite completa (`pytest`) sobre PostgreSQL y confirmar los criterios de salida de `quickstart.md`, incluida la ausencia de secretos en auditoría y la ausencia de rutas de borrado
