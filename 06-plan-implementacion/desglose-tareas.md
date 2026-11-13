@@ -353,39 +353,40 @@ gestión, no una ruta HTTP.
 ## Spec 013 - Registro de Materiales
 
 ### Fase 1: Modelos
-- [ ] Crear app `registro_materiales`
-- [ ] Implementar modelo `MaterialHabilitado`
-- [ ] Implementar modelo `SaldoInicialPeriodo`
-- [ ] Implementar modelo `DespachoAlmacen`
-- [ ] Implementar modelo `OrdenLiquidacion`
-- [ ] Implementar modelo `UsoMaterialOrden`
-- [ ] Implementar modelo `RegistroCambio` (si no existe)
-- [ ] Crear migraciones
+- [ ] Verificar/crear app `registro_materiales`
+- [ ] Reutilizar `MaterialHabilitado`, `SaldoInicialPeriodo`, `DespachoAlmacen`, `OrdenLiquidacion` y `UsoMaterialOrden`
+- [ ] Implementar `CargaOrdenes` para carga masiva y deshacer
+- [ ] Implementar `AdvertenciaUso`
+- [ ] Implementar `CierreMensual`, `SaldoMensualMaterial` y `JustificacionCierre`
+- [ ] Crear migraciones y RLS
 
 ### Fase 2: Servicios
-- [ ] Implementar servicio de cálculo de periodo
-- [ ] Implementar servicio de validación de cantidad
-- [ ] Implementar servicio de guardar orden
-- [ ] Implementar servicio de registrar saldo inicial
-- [ ] Implementar servicio de registrar despacho
-- [ ] Implementar servicio de cálculo de saldo inicial efectivo
-- [ ] Implementar servicio de cálculo de saldo final
-- [ ] Implementar servicio de reporte mensual
+- [ ] Implementar normalización, deduplicación y resumen de carga masiva
+- [ ] Implementar confirmación y deshacer de carga
+- [ ] Implementar búsqueda de orden y guardado de usos
+- [ ] Implementar bloqueo de saldo negativo
+- [ ] Implementar advertencia de cantidad atípica
+- [ ] Implementar saldo inicial, herencia y lectura de despachos
+- [ ] Implementar dashboard y pendientes
+- [ ] Implementar checklist, cierre, snapshot y reapertura
+- [ ] Implementar exportación Excel/CSV
 
 ### Fase 3: Vistas y UI
-- [ ] Implementar vista de registro por orden
-- [ ] Implementar vista de contexto de orden (HTMX)
-- [ ] Implementar vista de guardado de orden
-- [ ] Implementar vista de historial de cambios
-- [ ] Implementar vista de entradas manuales
-- [ ] Implementar vista de saldo inicial
-- [ ] Implementar vista de despachos
-- [ ] Implementar vista de reporte mensual
+- [ ] Implementar menú del módulo
+- [ ] Implementar carga masiva con preview y resumen
+- [ ] Implementar panel de pendientes
+- [ ] Implementar registro de materiales
+- [ ] Implementar entradas y saldo inicial
+- [ ] Implementar dashboard
+- [ ] Implementar cierre y reapertura
+- [ ] Implementar exportación
 
 ### Fase 4: Pruebas
-- [ ] Pruebas de modelos
-- [ ] Pruebas de servicios
-- [ ] Pruebas de vistas
+- [ ] Pruebas de modelos y restricciones
+- [ ] Pruebas de carga masiva
+- [ ] Pruebas de materiales y bloqueo negativo
+- [ ] Pruebas de saldos, dashboard y exportación
+- [ ] Pruebas de cierre y reapertura
 - [ ] Pruebas de aislamiento multitenant
 
 ---
