@@ -5,17 +5,51 @@ La auditoría es inmutable y compartida; 013 no crea un modelo propio.
 
 ## Eventos obligatorios
 
-### Catálogo habilitado
+### Carga masiva
 
 | Campo | Valor |
 |---|---|
-| Entidad | `MaterialHabilitado` |
-| ID entidad | `material_habilitado.id` |
-| Campo | `alta` o `activo` |
-| Valor anterior | vacío o estado anterior |
-| Valor nuevo | material, activo |
-| Actor | `USUARIO_TENANT` de la sesión |
-| Extra | Tenant |
+| Entidad | `CargaOrdenes` |
+| ID entidad | `carga.id` |
+| Campo | `alta` |
+| Valor anterior | vacío |
+| Valor nuevo | técnico, periodo, leídas, nuevas, omitidas, otro técnico, hash |
+| Actor | `USUARIO_TENANT` |
+
+### Deshacer carga
+
+| Campo | Valor |
+|---|---|
+| Entidad | `CargaOrdenes` |
+| ID entidad | `carga.id` |
+| Campo | `deshecha` |
+| Valor anterior | activa |
+| Valor nuevo | deshecha, motivo |
+| Actor | `USUARIO_TENANT` |
+
+### Orden
+
+| Campo | Valor |
+|---|---|
+| Entidad | `OrdenLiquidacion` |
+| ID entidad | `orden.id` |
+| Campo | `alta`, `numero_orden`, `fecha_instalacion` o `periodo` |
+| Valor anterior | vacío o anterior |
+| Valor nuevo | nuevo |
+| Actor | `USUARIO_TENANT` |
+| Extra | Técnico, carga |
+
+### Uso
+
+| Campo | Valor |
+|---|---|
+| Entidad | `UsoMaterialOrden` |
+| ID entidad | `uso.id` |
+| Campo | `alta` o `cantidad` |
+| Valor anterior | vacío o cantidad anterior |
+| Valor nuevo | material, cantidad |
+| Actor | `USUARIO_TENANT` |
+| Extra | Orden, técnico |
 
 ### Saldo inicial
 
@@ -26,67 +60,64 @@ La auditoría es inmutable y compartida; 013 no crea un modelo propio.
 | Campo | `alta` o `cantidad` |
 | Valor anterior | vacío o cantidad anterior |
 | Valor nuevo | material, periodo, cantidad |
-| Actor | `USUARIO_TENANT` de la sesión |
+| Actor | `USUARIO_TENANT` |
 
-### Orden de liquidación
-
-| Campo | Valor |
-|---|---|
-| Entidad | `OrdenLiquidacion` |
-| ID entidad | `orden.id` |
-| Campo | `alta`, `numero_orden`, `fecha_liquidacion` o `periodo` |
-| Valor anterior | vacío o valor anterior |
-| Valor nuevo | valor nuevo |
-| Actor | `USUARIO_TENANT` de la sesión |
-| Extra | Técnico |
-
-### Uso de material
+### Catálogo habilitado
 
 | Campo | Valor |
 |---|---|
-| Entidad | `UsoMaterialOrden` |
-| ID entidad | `uso.id` |
-| Campo | `alta` o `cantidad` |
-| Valor anterior | vacío o cantidad anterior |
-| Valor nuevo | material, cantidad |
-| Actor | `USUARIO_TENANT` de la sesión |
-| Extra | Orden, técnico |
+| Entidad | `MaterialHabilitado` |
+| ID entidad | `material_habilitado.id` |
+| Campo | `alta` o `activo` |
+| Valor anterior | vacío o estado anterior |
+| Valor nuevo | material, activo |
+| Actor | `USUARIO_TENANT` |
 
-Se escribe un registro por línea creada o modificada. Una línea que pasa a 0 se audita con valor
-nuevo 0; no se borra.
-
-### Despacho del almacén
+### Advertencia
 
 | Campo | Valor |
 |---|---|
-| Entidad | `DespachoAlmacen` |
-| ID entidad | `despacho.id` |
-| Campo | `alta`, `fecha` o `cantidad` |
-| Valor anterior | vacío o valor anterior |
-| Valor nuevo | recojo, línea, material, fecha, cantidad |
-| Actor | `USUARIO_TENANT` de la sesión |
+| Entidad | `AdvertenciaUso` |
+| ID entidad | `advertencia.id` |
+| Campo | `alta` o `resuelta` |
+| Valor anterior | vacío o pendiente |
+| Valor nuevo | tipo, mensaje, justificación |
+| Actor | `USUARIO_TENANT` |
+
+### Cierre y reapertura
+
+| Campo | Valor |
+|---|---|
+| Entidad | `CierreMensual` |
+| ID entidad | `cierre.id` |
+| Campo | `alta`, `cerrado` o `reabierto` |
+| Valor anterior | estado anterior |
+| Valor nuevo | `CERRADO`/`ABIERTO`, versión, backup_ref/motivo |
+| Actor | `USUARIO_TENANT` |
+
+### Justificación de cierre
+
+| Campo | Valor |
+|---|---|
+| Entidad | `JustificacionCierre` |
+| ID entidad | `justificacion.id` |
+| Campo | `alta` |
+| Valor anterior | vacío |
+| Valor nuevo | tipo, referencia, motivo |
+| Actor | `USUARIO_TENANT` |
 
 ## Reglas
 
-- La auditoría es síncrona y transaccional: si falla, se revierte el cambio.
-- El actor es el usuario de la sesión; nunca `None`.
-- `tenant` se puebla desde el actor/entidad; nunca se acepta del cliente.
-- Los registros son inmutables: no se editan ni se borran desde 013.
+- Auditoría síncrona y transaccional; si falla, se revierte la operación.
+- `tenant` se puebla desde la entidad/actor.
 - No se auditan secretos, binarios, rutas ni datos de otro tenant.
-- No se auditan los cálculos del reporte (solo lectura).
-
-## Consulta
-
-- El historial de una orden se consulta por `OrdenLiquidacion` y sus `UsoMaterialOrden` del tenant.
-- No se crea una pantalla de auditoría general en 013.
-- La auditoría global se consulta con 001 según el rol.
+- No se audita cada descarga de Excel/CSV; son de solo lectura.
+- El historial de una orden incluye orden y usos.
 
 ## Pruebas de contrato
 
-- Habilitar/deshabilitar produce el evento correspondiente.
-- Crear/editar saldo produce alta/cantidad con valor anterior/nuevo.
-- Crear/editar orden produce alta y cambios de número/fecha/periodo.
-- Crear/editar uso produce alta/cantidad; el 0 se conserva y audita.
-- Crear/editar despacho produce alta/fecha/cantidad.
+- Carga, deshacer, orden, uso, saldo, catálogo, advertencia y cierre generan sus eventos.
+- Cada cambio tiene valor anterior y nuevo.
+- El cierre con reapertura conserva ambos eventos.
 - Un fallo de auditoría revierte la operación.
-- Ningún registro contiene secretos ni datos de otro tenant.
+- Ningún registro contiene datos de otro tenant.

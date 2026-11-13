@@ -1,6 +1,7 @@
 # Contrato: servicios de registro de materiales
 
-Los servicios viven en `registro_materiales/services.py`; las vistas solo orquestan.
+Los servicios viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.py` y
+`exportacion.py`. Las vistas solo orquestan.
 
 ## Tipos
 
@@ -9,8 +10,29 @@ Los servicios viven en `registro_materiales/services.py`; las vistas solo orques
 | `tenant` | `tenants.Tenant` de la sesión |
 | `tecnico` | `tecnicos.Tecnico` del tenant |
 | `periodo` | `YYYY-MM` |
-| `cantidades` | Diccionario `material_id -> cantidad` |
+| `texto` | Texto pegado de órdenes |
+| `cantidades` | `material_id -> cantidad` |
 | `actor` | `acceso.Usuario` de la sesión |
+
+```python
+@dataclass(frozen=True)
+class ListaNormalizada:
+    ordenes: list[str]
+    rechazadas: list[str]
+
+@dataclass(frozen=True)
+class ResumenCarga:
+    leidas: int
+    nuevas: int
+    omitidas: int
+    tambien_otro_tecnico: int
+
+@dataclass(frozen=True)
+class ArchivoReporte:
+    nombre: str
+    contenido: bytes
+    content_type: str
+```
 
 ## Excepciones
 
@@ -23,153 +45,189 @@ Los servicios viven en `registro_materiales/services.py`; las vistas solo orques
 | `CantidadInvalida` | “La cantidad debe ser un número entero mayor o igual a 0” |
 | `NumeroOrdenInvalido` | “El número de orden es obligatorio y debe tener entre 1 y 30 caracteres alfanuméricos” |
 | `PeriodoInvalido` | “El periodo debe tener el formato AAAA-MM” |
-| `RecojoNoExiste` | “El recojo no pertenece a tu tenant” |
-| `LineaRecojoNoExiste` | “La línea de recojo no pertenece al recojo” |
-| `MaterialNoCoincide` | “El material no coincide con la línea de recojo” |
-| `DespachoExcedeRecojo` | “La cantidad despachada supera la cantidad del recojo” |
-| `TecnicoNoCoincide` | “El técnico de la línea no coincide con el técnico de la orden” |
+| `SaldoInsuficiente` | “El uso supera el disponible del mes” |
+| `PeriodoCerrado` | “El mes está cerrado; solicita reapertura” |
+| `CargaNoDeshacible` | “No se puede deshacer: hay órdenes con materiales registrados” |
+| `CierreBloqueado` | “El cierre tiene pendientes sin resolver o justificar” |
+| `BackupRequerido` | “Debes registrar la referencia del respaldo antes de cerrar” |
 | `NoEncontrado` | “El registro no existe” |
 
-## Periodos y cantidades
+## Normalización y carga masiva
 
-### `periodo_de_fecha(fecha) -> str`
+### `procesar_lista(texto) -> ListaNormalizada`
 
-- Devuelve `YYYY-MM` según la zona configurada.
+- Quita espacios al inicio y al final.
+- Descarta líneas vacías.
+- Rechaza líneas con espacios internos, tabs, comas, punto y coma o más de un token.
+- Deduplica sin distinguir mayúsculas/minúsculas.
+- Conserva el original y devuelve el normalizado para comparar.
 
-### `validar_periodo(periodo) -> None`
+### `previsualizar_carga(tenant, tecnico, periodo, texto) -> ResumenCarga`
 
-- Exige `^[0-9]{4}-(0[1-9]|1[0-2])$`; si no, `PeriodoInvalido`.
+- Compara con las órdenes del técnico y periodo.
+- Cuenta nuevas, omitidas y cuántas también existen para otro técnico.
+- No escribe en base.
 
-### `normalizar_numero_orden(valor) -> str`
+### `confirmar_carga(tenant, tecnico, periodo, texto, actor) -> CargaOrdenes`
 
-- `strip`, mayúsculas y sin espacios internos.
-- Exige 1–30 alfanuméricos (`^[A-Z0-9]{1,30}$`); si no, `NumeroOrdenInvalido`.
+- Vuelve a normalizar y calcular el resumen.
+- En `transaction.atomic`: crea `CargaOrdenes` y solo las órdenes nuevas.
+- Las órdenes existentes no cambian de técnico ni de estado.
+- No modifica materiales ni saldos.
 
-### `validar_cantidad(valor, permitir_vacio=False) -> int`
+### `deshacer_carga(carga, actor, motivo="") -> CargaOrdenes`
 
-- Normaliza espacios.
-- Vacío → 0 si `permitir_vacio`; si no, `CantidadInvalida`.
-- Rechaza negativos, decimales y texto; devuelve entero `>=0`.
+- Solo si las órdenes creadas por el lote no tienen usos con cantidad > 0.
+- Elimina las órdenes del lote y audita `CargaOrdenes/deshecha`.
+- Si alguna tiene materiales, `CargaNoDeshacible` con la lista.
 
-## Catálogo
+## Órdenes y materiales
 
-### `materiales_habilitados(tenant, incluir_inactivos=False) -> QuerySet`
+### `buscar_orden(tenant, tecnico, periodo, numero) -> OrdenLiquidacion | None`
 
-- Filtra por tenant; por defecto solo activos.
-- Ordena por `orden`, `material.codigo`.
+- Compara `numero_normalizado` en mayúsculas.
+- Filtra por tenant, técnico y periodo.
+- Búsqueda exacta, sin distinguir mayúsculas/minúsculas.
 
-### `habilitar_material(tenant, material, actor) -> MaterialHabilitado`
+### `guardar_uso(orden, fecha_instalacion, cantidades, actor) -> OrdenLiquidacion`
 
-- Crea o reactiva; audita `MaterialHabilitado/alta` o `/activo`.
+1. Exige mes abierto (`CierreMensual.estado != CERRADO`).
+2. Valida fecha, técnico, materiales habilitados/activos y cantidades.
+3. Calcula el periodo de la fecha; si cambia, revalida `(tenant, tecnico, periodo, numero)`.
+4. Calcula por material:
+   - `disponible = saldo_inicial + despachos`.
+   - `uso_total` del periodo, excluyendo el uso actual de la orden.
+   - `uso_nuevo = uso_total + cantidad_nueva`.
+5. Si `uso_nuevo > disponible`, lanza `SaldoInsuficiente` con disponible, usado y faltante.
+6. Si `cantidad > factor * promedio_mensual_ultimos_3_cierres`, crea `AdvertenciaUso`
+   (`CANTIDAD_ATIPICA`). El promedio usa el total mensual usado por material, no el promedio por
+   orden. Sin historial no advierte.
+7. Crea/actualiza `UsoMaterialOrden`; las líneas existentes que pasan a 0 se conservan.
+8. Actualiza `fecha_instalacion` y `periodo` de la orden; audita.
+9. No toca stock.
 
-### `deshabilitar_material(tenant, material, actor) -> MaterialHabilitado`
+### `resolver_advertencia(advertencia, justificacion, actor) -> AdvertenciaUso`
 
-- Marca inactivo; audita `MaterialHabilitado/activo`; conserva historial.
-
-## Órdenes
-
-### `obtener_orden(tenant, tecnico, numero_orden, fecha) -> OrdenLiquidacion`
-
-- Normaliza número y periodo.
-- Busca por `(tenant, tecnico, periodo, numero_orden)`.
-- Devuelve la existente o una instancia sin guardar con el catálogo habilitado.
-
-### `guardar_orden(tenant, tecnico, numero_orden, fecha, cantidades, actor) -> OrdenLiquidacion`
-
-1. Valida cuenta, técnico, número, fecha y cantidades.
-2. Exige materiales habilitados/activos para líneas nuevas; permite editar líneas históricas de un
-   material que se deshabilitó después.
-3. `transaction.atomic`:
-   - Bloquear `Tenant` y la orden existente con `select_for_update`.
-   - Calcular periodo y crear/actualizar la orden; revalidar unicidad de la nueva clave.
-   - Crear/actualizar `UsoMaterialOrden`; las líneas que pasan a 0 se conservan con 0; no se borran.
-   - Auditar orden y cada cambio de uso.
-4. Si la clave ya existe por concurrencia, recargar la orden y actualizarla sin duplicar.
-5. Devolver la orden.
+- Exige `justificacion` no vacía.
+- Marca `resuelta=True`, `justificacion`, `resuelta_por`, `resuelta_en`.
+- Audita `AdvertenciaUso/resuelta`.
+- No modifica el uso ni el saldo.
 
 ### `historial_orden(tenant, orden_id) -> QuerySet[RegistroCambio]`
 
-- Filtra por tenant, entidad `OrdenLiquidacion`/`UsoMaterialOrden` y sus IDs.
+- Filtra por tenant, entidad/ID de orden y usos.
 - Ordena por fecha descendente.
 
 ## Saldos
 
-### `registrar_saldo_inicial(tenant, material, periodo, cantidad, actor) -> SaldoInicialPeriodo`
+### `registrar_saldo_inicial(tenant, material, periodo, cantidad, actor)`
 
+- Exige mes abierto.
 - Valida material habilitado/activo, periodo y cantidad.
-- Crea o actualiza el saldo manual; audita alta y cambio.
+- Crea/actualiza; audita.
+- No permite un saldo que deje el mes en negativo si ya hay uso.
 
 ### `saldo_inicial_efectivo(tenant, material, periodo) -> int`
 
 - Manual si existe.
-- Si no, saldo final del periodo anterior; si no hay datos anteriores, 0.
-- Itera desde el periodo más antiguo con datos; cachea por request.
+- Si no, el `SaldoMensualMaterial` del cierre anterior.
+- Si no hay cierre, el saldo final calculado del mes anterior.
+- Si no hay datos, 0.
 
 ### `saldo_final(tenant, material, periodo) -> int`
 
 - `inicial + despachos - usado`.
-- Puede ser negativo; no lanza excepción.
+- Puede ser negativo en el dashboard; el guardado de uso impide generarlo.
 
-## Despachos
+### `despachos_del_periodo(tenant, periodo) -> dict[material_id, int]`
 
-### `registrar_despacho(tenant, recojo, recojo_linea, material, fecha, cantidad, actor) -> DespachoAlmacen`
+- Agrega `DespachoAlmacen` por material y mes.
+- Solo lectura.
+- No crea, edita ni borra despachos.
+- `validar_periodo_abierto(tenant, periodo)` se invoca también desde el servicio existente de alta/edición de `DespachoAlmacen`; si el mes está cerrado, `PeriodoCerrado`.
 
-- Valida cuenta, tenant del recojo/línea, material de la línea, fecha y cantidad.
-- `transaction.atomic`: bloquea `Tenant` y `LineaRecojo`, suma despachos existentes (excluyendo el
-  editado) y verifica que no superen `recojo_linea.cantidad`.
-- Crea el despacho; audita `DespachoAlmacen/alta`.
+## Dashboard
 
-### `actualizar_despacho(despacho, fecha, cantidad, actor) -> DespachoAlmacen`
+### `dashboard_mensual(tenant, periodo, tecnico=None, material=None, desde=None, hasta=None)`
 
-- Valida pertenencia, fecha y cantidad.
-- Recalcula la suma de la línea excluyendo el despacho; actualiza fecha/cantidad y audita.
+- Materiales habilitados activos más los que tengan datos.
+- Por material: inicial, despachos, usado, final y alerta.
+- Detalle por técnico.
+- Totales de órdenes y técnicos con uso.
+- Sin N+1.
 
-### `despachos_del_periodo(tenant, periodo)` y `recojos_del_tenant(tenant, q="")`
+## Pendientes
 
-- Consultas de solo lectura para entradas y selectores.
+### `ordenes_pendientes(tenant, periodo=None, dias=None)`
 
-## Reporte
+- Órdenes sin usos con cantidad > 0.
+- Filtro por antigüedad y técnico.
+- Ordenadas por antigüedad.
 
-### `reporte_mensual(tenant, periodo) -> ReporteMensual`
+## Cierre
 
-- Materiales: habilitados activos más los que tengan saldo, despacho o uso en el periodo.
-- Por material: `saldo_inicial`, `despachos`, `usado`, `saldo_final`.
-- Detalle por técnico: NIF y cantidad usada por material.
-- `saldo_final < 0` marca `alerta=True`.
-- Agregaciones y `select_related`; sin N+1.
+### `lista_chequeo(tenant, periodo) -> list[PendienteCierre]`
 
-```python
-@dataclass(frozen=True)
-class FilaMaterial:
-    material_id: int
-    codigo: str
-    descripcion: str
-    saldo_inicial: int
-    despachos: int
-    usado: int
-    saldo_final: int
-    alerta: bool
+- Órdenes sin materiales.
+- Materiales con saldo negativo.
+- Advertencias sin resolver.
 
-@dataclass(frozen=True)
-class ReporteMensual:
-    periodo: str
-    filas: list[FilaMaterial]
-    detalle_tecnicos: list[DetalleTecnico]
-```
+### `justificar_pendiente(cierre, tipo, referencia, motivo, actor)`
+
+- Crea `JustificacionCierre`.
+- No modifica el dato original.
+- Si el tipo es `ADVERTENCIA`, marca la advertencia como resuelta con la misma justificación.
+
+### `validar_backup_ref(backup_ref) -> None`
+
+- No vacío.
+- Formato `backups/<archivo>` o referencia emitida por `respaldar_bd`.
+- Si no es válido, lanza `BackupRequerido`.
+
+### `cerrar_mes(tenant, periodo, backup_ref, actor) -> CierreMensual`
+
+- Exige checklist resuelto/justificado.
+- Exige `backup_ref` y ejecuta `validar_backup_ref`.
+- En `transaction.atomic`: `CERRADO`, snapshot por material, auditoría.
+- No permite cerrar si falta backup.
+- Al reabrir y recerrar, reemplaza el snapshot con auditoría de valores anteriores; conserva la versión anterior en el historial de auditoría.
+
+### `reabrir_mes(cierre, motivo, actor) -> CierreMensual`
+
+- Exige motivo.
+- `ABIERTO`, versión +1, actor/fecha, auditoría.
+- Un mes cerrado rechaza usos, saldos y despachos con `PeriodoCerrado`.
+
+## Exportación
+
+### `exportar_reporte_mensual(tenant, periodo, formato) -> ArchivoReporte`
+
+- `formato` `xlsx` o `csv`.
+- Incluye inicial, despachos, usado, final y detalle por técnico.
+- Solo datos del tenant.
+
+### `exportar_detalle_ordenes(tenant, periodo, formato) -> ArchivoReporte`
+
+- Técnico, orden, fecha, materiales y cantidades.
+- Solo datos del tenant.
 
 ## Reglas transversales
 
 - Toda escritura ocurre en una transacción y audita en la misma transacción.
 - Nunca se acepta `tenant` del cliente.
-- 013 no lee ni escribe stock, series ni conciliaciones.
-- No se borran órdenes, usos, saldos ni despachos.
+- 013 no lee ni escribe stock, series, asignaciones, traspasos ni conciliaciones.
+- `DespachoAlmacen` es de solo lectura.
+- No se borran datos, salvo deshacer una carga sin materiales.
 - No se usan permisos Django por cadena.
 
 ## Pruebas de contrato
 
-- Cada firma, retorno y excepción coincide con este documento.
-- Una orden existente se devuelve para editar; no se duplica.
-- Un uso con 0 se conserva y no suma.
-- Un despacho no supera la línea de recojo.
-- El saldo final es la fórmula documentada y la herencia funciona.
-- Ningún servicio modifica stock ni expone datos de otro tenant.
+- Normalización, deduplicación y resumen.
+- Carga idempotente y deshacer sin materiales.
+- Uso 0 no suma; uso que supera disponible se bloquea.
+- Advertencia atípica no bloquea; `resolver_advertencia` la marca resuelta.
+- Saldo final, herencia y bloqueo de saldo inicial negativo.
+- Dashboard y pendientes.
+- Cierre bloqueado, cierre con backup válido y reapertura.
+- Un despacho no se edita en un mes cerrado.
+- Exportación Excel/CSV solo del tenant.

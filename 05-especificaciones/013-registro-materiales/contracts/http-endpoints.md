@@ -5,81 +5,111 @@ Todas las rutas exigen sesión y rol `USUARIO_TENANT`. El tenant sale de la sesi
 
 | Ruta | Método | Respuesta |
 |---|---|---|
-| `/registro-materiales/` | `GET` | `200` con pantalla de registro por orden |
-| `/registro-materiales/orden/contexto/` | `GET` | `200` fragmento HTMX con orden existente o catálogo |
-| `/registro-materiales/orden/guardar/` | `POST` | `302`/fragmento con éxito; `400` por validación |
-| `/registro-materiales/ordenes/<id>/historial/` | `GET` | `200` con historial de la orden y usos |
-| `/registro-materiales/materiales/` | `GET` | `200` con catálogo habilitado |
-| `/registro-materiales/materiales/<id>/activar/` | `POST` | `302`; activa el material |
-| `/registro-materiales/materiales/<id>/desactivar/` | `POST` | `302`; desactiva el material |
-| `/registro-materiales/entradas/` | `GET` | `200` con saldos y despachos del periodo |
-| `/registro-materiales/saldo-inicial/guardar/` | `POST` | `302`; `400` por validación |
-| `/registro-materiales/despachos/guardar/` | `POST` | `302`; `400` por validación |
-| `/registro-materiales/despachos/<id>/editar/` | `POST` | `302`; `400` por validación |
-| `/registro-materiales/recojos/buscar/` | `GET` | `200` fragmento/JSON con recojos y líneas del tenant |
-| `/registro-materiales/reporte/` | `GET` | `200` con reporte mensual |
+| `/registro-materiales/` | `GET` | Menú del módulo |
+| `/registro-materiales/ordenes/cargar/` | `GET` | Formulario de carga masiva |
+| `/registro-materiales/ordenes/cargar/preview/` | `POST` | Resumen antes de guardar |
+| `/registro-materiales/ordenes/cargar/` | `POST` | Confirma la carga |
+| `/registro-materiales/ordenes/cargas/<id>/deshacer/` | `POST` | Deshace la carga |
+| `/registro-materiales/ordenes/pendientes/` | `GET` | Órdenes sin materiales |
+| `/registro-materiales/catalogo/` | `GET`/`POST` | Catálogo habilitado; activar/desactivar |
+| `/registro-materiales/materiales/` | `GET` | Buscar orden y registrar materiales |
+| `/registro-materiales/materiales/contexto/` | `GET` | Fragmento HTMX con orden o catálogo |
+| `/registro-materiales/materiales/guardar/` | `POST` | Guardar uso |
+| `/registro-materiales/ordenes/<id>/historial/` | `GET` | Historial de la orden |
+| `/registro-materiales/entradas/` | `GET` | Saldo inicial y despachos del mes |
+| `/registro-materiales/saldo-inicial/guardar/` | `POST` | Guardar saldo inicial |
+| `/registro-materiales/dashboard/` | `GET` | Dashboard mensual |
+| `/registro-materiales/cierre/` | `GET` | Checklist y estado |
+| `/registro-materiales/cierre/cerrar/` | `POST` | Cerrar mes |
+| `/registro-materiales/cierre/reabrir/` | `POST` | Reabrir mes |
+| `/registro-materiales/cierre/justificar/` | `POST` | Justificar pendiente |
+| `/registro-materiales/advertencias/<id>/resolver/` | `POST` | Resolver o justificar advertencia |
+| `/registro-materiales/exportar/reporte/` | `GET` | Excel/CSV del reporte |
+| `/registro-materiales/exportar/ordenes/` | `GET` | Excel/CSV del detalle de órdenes |
 
-- No hay exportación Excel/PDF.
-- No hay `GET` para acciones de escritura; devuelven `405`.
-- Un recurso ajeno devuelve `404`; un rol incorrecto, `403`.
-- No se expone la existencia de datos de otro tenant.
+- No hay ruta para registrar despachos desde materiales; `DespachoAlmacen` se consulta.
+- No hay `GET` para acciones de escritura.
+- Un recurso ajeno devuelve `404`; un rol incorrecto `403`; mes cerrado `409`.
+- No se expone la ruta física de los archivos exportados.
 
-## Registro por orden
+## Carga masiva
 
 | Campo | Tipo | Obligatorio | Regla |
 |---|---|---|---|
 | `tecnico` | select | Sí | Técnico del tenant |
-| `numero_orden` | text | Sí | 1–30 alfanuméricos; se normaliza |
-| `fecha_liquidacion` | date | Sí | Define el periodo |
-| `cantidades[<material_id>]` | number | No | Entero ≥ 0; vacío = 0 |
+| `periodo` | select | Sí | `YYYY-MM`; por defecto el actual |
+| `texto` | textarea | Sí | Una orden por línea |
 
-- Al enviar el contexto, se devuelve la orden existente o el catálogo habilitado con 0.
-- Guardar conserva técnico/fecha, limpia número y enfoca el campo.
-- Cambiar de técnico reinicia el formulario.
-- Los materiales deshabilitados no aparecen para nuevas órdenes; las líneas históricas se muestran.
+- El preview devuelve leídas, nuevas, omitidas y también-existen-para-otro-técnico.
+- Confirmar crea solo las nuevas.
+- Deshacer solo si no hay materiales.
 
-## Entradas
+## Materiales
 
 | Campo | Tipo | Obligatorio | Regla |
 |---|---|---|---|
-| `periodo` | text/select | Sí | `YYYY-MM` |
+| `tecnico` | select | Sí | Técnico del tenant |
+| `periodo` | select | Sí | `YYYY-MM`; por defecto el actual |
+| `numero_orden` | text | Sí | Búsqueda exacta dentro del mes, sin distinguir mayúsculas |
+| `fecha_instalacion` | date | Sí | Por defecto hoy |
+| `cantidades[<material_id>]` | number | No | Entero ≥ 0; vacío = 0 |
+
+- Si la orden no existe en el mes seleccionado, se muestra el catálogo en 0 y se crea al guardar.
+- Si existe, se abre para editar.
+- Si el número existe para el mismo técnico en otro mes, no se muestra; se debe cambiar el mes.
+- El sistema puede rechazar por saldo insuficiente o mes cerrado.
+
+## Saldo inicial
+
+| Campo | Tipo | Obligatorio | Regla |
+|---|---|---|---|
+| `periodo` | select | Sí | `YYYY-MM` |
 | `material` | select | Sí | Habilitado |
 | `cantidad` | number | Sí | Entero ≥ 0 |
-| `recojo` | select | Sí | Del tenant |
-| `recojo_linea` | select | Sí | Del recojo |
-| `fecha` | date | Sí | Periodo del despacho |
 
-- El saldo inicial se guarda por material/periodo.
-- El despacho se valida contra la línea del recojo.
+- Los despachos se muestran en solo lectura desde `DespachoAlmacen`.
+- No hay formulario de despacho en esta pantalla.
 
-## Catálogo
+## Cierre
 
-- Lista los materiales del catálogo compartido con estado habilitado/inactivo.
-- Activar/desactivar no borra historial.
-- El tenant no puede crear materiales en 013.
+| Campo | Tipo | Obligatorio | Regla |
+|---|---|---|---|
+| `periodo` | select | Sí | `YYYY-MM` |
+| `backup_ref` | text | Sí al cerrar | Referencia emitida por `respaldar_bd`; no vacía y con formato válido |
+| `motivo` | text | Sí al reabrir | Motivo de reapertura |
+
+## Exportación
+
+| Parámetro | Valores |
+|---|---|
+| `formato` | `xlsx` o `csv` |
+| `tipo` | `reporte` o `ordenes` |
+| `periodo` | `YYYY-MM` |
+
+- `Content-Disposition` con nombre seguro.
+- No se persiste el archivo.
 
 ## Errores
 
 | Situación | Código | Mensaje |
 |---|---|---|
-| Sin sesión | `302` a login | — |
+| Sin sesión | `302` | — |
 | Rol incorrecto | `403` | “No tienes permiso para registrar materiales” |
 | Recurso ajeno | `404` | “El registro no existe” |
 | Cantidad inválida | `400` | “La cantidad debe ser un número entero mayor o igual a 0” |
 | Número inválido | `400` | “El número de orden es obligatorio y debe tener entre 1 y 30 caracteres alfanuméricos” |
 | Periodo inválido | `400` | “El periodo debe tener el formato AAAA-MM” |
-| Técnico ajeno | `400` | “El técnico no pertenece a tu tenant” |
-| Material no habilitado/inactivo | `400` | “El material no está habilitado para tu tenant” / “El material está deshabilitado” |
-| Técnico de línea distinto | `400` | “El técnico de la línea no coincide con el técnico de la orden” |
-| Recojo ajeno | `400` | “El recojo no pertenece a tu tenant” |
-| Línea ajena | `400` | “La línea de recojo no pertenece al recojo” |
-| Material distinto | `400` | “El material no coincide con la línea de recojo” |
-| Despacho excede línea | `400` | “La cantidad despachada supera la cantidad del recojo” |
+| Saldo insuficiente | `409` | “El uso supera el disponible del mes” |
+| Mes cerrado | `409` | “El mes está cerrado; solicita reapertura” |
+| Deshacer con materiales | `409` | “No se puede deshacer: hay órdenes con materiales registrados” |
+| Cierre con pendientes | `409` | “El cierre tiene pendientes sin resolver o justificar” |
+| Sin backup | `400` | “Debes registrar la referencia del respaldo antes de cerrar” |
 
 ## Pruebas de contrato
 
-- Cada ruta devuelve los códigos indicados para rol correcto, ajeno y validación fallida.
-- El formulario ignora `tenant_id` enviado.
-- El menú solo aparece para `USUARIO_TENANT`.
-- El contexto devuelve catálogo en 0 o la orden existente.
-- No hay rutas de exportación.
+- Rutas de carga, preview, confirmación y deshacer.
+- Rutas de materiales y validación de saldo negativo.
+- Rutas de entradas sin formulario de despacho.
+- Rutas de dashboard, cierre y reapertura.
+- Exportación Excel/CSV.
+- Ningún tenant ve datos de otro.
