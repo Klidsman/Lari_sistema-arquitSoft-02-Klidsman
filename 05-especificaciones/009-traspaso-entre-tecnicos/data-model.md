@@ -122,7 +122,7 @@ erDiagram
 
 **Restricciones**
 
-- `CheckConstraint(Q(estado="ASIGNADA", tecnico__isnull=False, asignada_en__isnull=False) | (Q(estado__in=["DISPONIBLE","RESERVADA"]) & Q(tecnico__isnull=True) & Q(asignada_en__isnull=True)), name="serie_tecnico_coherente_estado")`.
+- `CheckConstraint(Q(estado="ASIGNADA", tecnico__isnull=False, asignada_en__isnull=False) | (Q(estado__in=["DISPONIBLE","RESERVADA","INSTALADA","INACTIVA"]) & Q(tecnico__isnull=True) & Q(asignada_en__isnull=True)), name="serie_tecnico_coherente_estado")`; `INSTALADA` la agrega 010 e `INACTIVA` 011.
 - `tecnico.tenant_id == serie.tenant_id` se valida en el servicio.
 - `Index(tecnico, estado)` y `Index(tecnico, material)`.
 
