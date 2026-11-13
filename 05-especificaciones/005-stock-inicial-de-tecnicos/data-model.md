@@ -110,7 +110,8 @@ Reglas:
 - `tenant` se fija desde `carga.tenant`; el servicio nunca lo acepta del cliente.
 - `lote` se copia de `material.lote`; si el catálogo lo tiene vacío, queda vacío.
 - Para materiales seriados, `serie` no es nula y `cantidad=1`. La `Libre utilización` del Excel se
-  ignora.
+  ignora. Al crear la serie `ASIGNADA`, se fijan `serie.tecnico` y `serie.asignada_en` con la fecha de
+  la carga.
 - Para materiales no seriados, `serie` es nula y `cantidad>0`. Varias filas del Excel del mismo
   técnico y material se suman en una sola línea.
 - No se cambia `tecnico`, `material`, `lote` ni `serie` de una línea existente. Para corregirlos se
@@ -128,6 +129,7 @@ Reglas:
 | `material` | Material del catálogo de la línea. |
 | `lote` | Copia de `material.lote`. |
 | `estado` | 005 crea `ASIGNADA`; 004 crea `DISPONIBLE`; 006–011 agregan transiciones. |
+| `tecnico`, `asignada_en` | 005 los fija al crear la serie `ASIGNADA`; 008/009 los actualizan y 011 los limpia. |
 | `creado_por`, `creado_en` | Trazabilidad del alta. |
 | Unicidad | `unique(numero)` en PostgreSQL; la base decide en concurrencia. |
 

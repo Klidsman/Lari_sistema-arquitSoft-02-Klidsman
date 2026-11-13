@@ -283,6 +283,8 @@ class EstadoSerie(models.TextChoices):
     DISPONIBLE = "DISPONIBLE", "Disponible"
     RESERVADA = "RESERVADA", "Reservada"
     ASIGNADA = "ASIGNADA", "Asignada"
+    INSTALADA = "INSTALADA", "Instalada"
+    INACTIVA = "INACTIVA", "Inactiva"
 
 
 class Serie(models.Model):
@@ -308,6 +310,14 @@ class Serie(models.Model):
         choices=EstadoSerie.choices,
         default=EstadoSerie.DISPONIBLE,
     )
+    tecnico = models.ForeignKey(
+        "tecnicos.Tecnico",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="series",
+    )
+    asignada_en = models.DateTimeField(null=True, blank=True)
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -331,13 +341,23 @@ class Serie(models.Model):
                 name="serie_formato",
             ),
             models.CheckConstraint(
-                condition=Q(estado__in=["DISPONIBLE", "RESERVADA", "ASIGNADA"]),
+                condition=Q(estado__in=["DISPONIBLE", "RESERVADA", "ASIGNADA", "INSTALADA", "INACTIVA"]),
                 name="serie_estado_valido",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(estado="ASIGNADA", tecnico__isnull=False, asignada_en__isnull=False)
+                    | (Q(estado__in=["DISPONIBLE", "RESERVADA", "INSTALADA", "INACTIVA"])
+                       & Q(tecnico__isnull=True, asignada_en__isnull=True))
+                ),
+                name="serie_tecnico_coherente_estado",
             ),
         ]
         indexes = [
             models.Index(fields=["tenant", "estado"], name="serie_tenant_estado"),
             models.Index(fields=["tenant", "material"], name="serie_tenant_material"),
+            models.Index(fields=["tecnico", "estado"], name="serie_tecnico_estado"),
+            models.Index(fields=["tecnico", "material"], name="serie_tecnico_material"),
         ]
 
     def __str__(self):
@@ -355,9 +375,11 @@ class Serie(models.Model):
   concurrentes. El patrón de aplicación es configurable (`SERIE_PATRON`); la restricción de base usa
   el valor vigente de 12 caracteres como respaldo y se actualiza con una migración si el negocio
   cambia el formato.
-- `Serie.estado` nace en `DISPONIBLE` cuando lo crea 004; 005 crea `ASIGNADA` pasando el estado
-  explícito a `crear_serie`. 006, 007, 008 y 011 agregan las demás transiciones. 004 no expone
-  cambio de estado.
+- `Serie.estado` nace en `DISPONIBLE` cuando lo crea 004; 005 crea `ASIGNADA` pasando el estado y la
+  custodia explícitos a `crear_serie`. 006, 007, 008, 009, 010 y 011 agregan las demás
+  transiciones. `INSTALADA` (010) e `INACTIVA` (011) son terminales. 004 no expone cambio de estado.
+- `Serie.tecnico` y `Serie.asignada_en` son nulos en `DISPONIBLE`/`RESERVADA`; 005/008/009 los fijan
+  al asignar o traspasar y 011 los limpia al devolver.
 - `Serie.material`, `Serie.tenant` y `Serie.region` son inmutables después del alta.
 - El lote se copia del catálogo al crear la línea y la serie; es informativo y no separa stock.
 
@@ -458,12 +480,15 @@ Viven en `recojos/services.py` y `series/services.py`, no en las vistas.
 - `series_existentes(numeros)`:
   - Consulta `Serie.objects.filter(numero__in=numeros)` una sola vez.
   - Devuelve el conjunto de números existentes.
-- `crear_serie(tenant, region, material, numero, lote, actor, estado=EstadoSerie.DISPONIBLE)`:
+- `crear_serie(tenant, region, material, numero, lote, actor, estado=EstadoSerie.DISPONIBLE,
+  tecnico=None, asignada_en=None)`:
   - Normaliza y valida el número.
   - Crea `Serie` con el `estado` recibido (por defecto `DISPONIBLE`), tenant, región, material,
-    lote y autor.
-  - 004 usa el valor por defecto; 005 pasa `EstadoSerie.ASIGNADA` porque el stock inicial ya está
-    en posesión del técnico.
+    lote, autor y custodia opcional.
+  - 004 usa el valor por defecto; 005 pasa `EstadoSerie.ASIGNADA` con `tecnico`/`asignada_en`
+    porque el stock inicial ya está en posesión del técnico.
+  - Si el estado es `ASIGNADA`, exige técnico y fecha; si es
+    `DISPONIBLE`/`RESERVADA`/`INSTALADA`/`INACTIVA`, exige ambos nulos.
   - No captura `IntegrityError`: la capa que crea el recojo la traduce.
   - No cambia de estado ni de región después del alta.
 

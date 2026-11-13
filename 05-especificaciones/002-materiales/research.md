@@ -23,10 +23,8 @@ planes y sus `ForeignKey`.
   013; se corrige ese documento antes de implementarlo.
 - `catalogo` con alias `materiales`: agrega indirección sin valor y confunde migraciones.
 
-**Seguimiento documental**: actualizar `05-especificaciones/013-registro-materiales/plan.md`
-(`catalogo.Material` → `materiales.Material`) y la frase de `001-tenants-y-acceso/plan.md` que
-menciona `catalogo` como app futura. No se modifican esos documentos en esta tarea porque
-pertenecen a otras specs; queda registrado como deuda de documentación.
+**Seguimiento documental**: la spec 013 ya usa `materiales.Material`. La frase de
+`001-tenants-y-acceso/plan.md` que menciona `catalogo` como app futura sigue como deuda menor.
 
 ---
 

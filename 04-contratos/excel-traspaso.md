@@ -8,10 +8,10 @@ El Excel de traspaso es el documento estandarizado que el sistema genera automá
 
 ## 2. Generación
 
-- El sistema genera el Excel automáticamente al crear una solicitud de traspaso
+- El sistema genera el Excel automáticamente al enviar la solicitud (`BORRADOR→ENVIADA`), no al crear el borrador
 - No se puede editar manualmente el Excel antes de generarlo
 - El Excel se guarda de forma inmutable con firma SHA-256 para garantizar su integridad
-- El Excel se envía por correo al buzón del almacén de la región, con reintentos si falla
+- El envío por correo al buzón del almacén **no forma parte de la spec 009**; queda como deuda documental para una spec posterior
 
 ## 3. Estructura del Archivo
 
@@ -112,9 +112,8 @@ El sistema valida que:
 
 ## 7. Envío al Almacén
 
-- El Excel se envía por correo electrónico al buzón del almacén de la región
-- El sistema reintentar el envío si falla
-- Cada envío se registra con: destinatario, fecha y archivo exacto enviado
+- La spec 009 no envía el Excel por correo; el almacén consulta su bandeja de traspasos
+- El envío por correo y sus reintentos quedan como deuda documental para una spec posterior
 - El almacén puede previsualizar detalles y descargar el Excel original antes de confirmar
 
 ## 8. Estados de la Solicitud

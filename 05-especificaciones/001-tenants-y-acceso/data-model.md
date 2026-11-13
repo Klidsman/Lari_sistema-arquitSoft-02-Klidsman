@@ -79,6 +79,7 @@ erDiagram
     }
     REGISTRO_CAMBIO {
         bigint id PK
+        bigint tenant_id FK "nullable; nulo para acciones globales"
         varchar entidad
         bigint entidad_id
         varchar campo
@@ -290,7 +291,8 @@ Libro de auditoría de solo inserción.
 | Campo | Tipo | Nulo | Regla |
 |---|---|---|---|
 | `id` | `BigAutoField` | No | Clave primaria |
-| `entidad` | `CharField(50)` | No | `Region`, `Almacen`, `Tenant`, `Usuario`, `Invitacion` |
+| `tenant` | FK `Tenant` | Sí | `PROTECT`, `related_name="registros_cambio"`; nulo para acciones globales de plataforma |
+| `entidad` | `CharField(50)` | No | Nombre de la entidad auditada (`Region`, `Tenant`, `SolicitudAsignacion`, `Serie`, `Conciliacion`, etc.) |
 | `entidad_id` | `BigIntegerField` | No | Identificador de la entidad auditada |
 | `campo` | `CharField(50)` | No | Campo modificado o `alta` / `suspension` / `desactivacion` |
 | `valor_anterior` | `TextField` | Sí | Texto legible; vacío en altas |
@@ -303,7 +305,9 @@ Libro de auditoría de solo inserción.
 - Se escribe en la misma transacción que el cambio; si el cambio falla, no se audita.
 - Un registro por campo modificado.
 - Nunca almacena contraseñas, tokens de invitación ni secretos TOTP.
-- Índice recomendado: `(entidad, entidad_id)` y `(usuario, fecha)`.
+- `tenant` se puebla desde la entidad auditada o el actor; si la acción es global (por ejemplo,
+  administración de regiones), queda nulo.
+- Índice recomendado: `(entidad, entidad_id)`, `(usuario, fecha)` y `(tenant, fecha)`.
 
 ---
 

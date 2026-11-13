@@ -11,6 +11,7 @@ otra.
 | `SolicitudAsignacion.estado` | 006/007 | Solo lee | Escribe `ENVIADA→CONFIRMADA` |
 | `SolicitudAsignacion.confirmada_en` | 007 | Solo lee | Escribe en la misma transacción |
 | `Serie.estado` al confirmar | 008 | `RESERVADA→ASIGNADA` | No escribe |
+| `Serie.tecnico` / `Serie.asignada_en` | 008 | Fija el técnico y la fecha de custodia | No escribe |
 | `StockGeneral.cantidad` | 008 | Decrementa | No escribe |
 | `StockTecnico.cantidad` | 008 | Incrementa | No escribe |
 | Auditoría `SolicitudAsignacion/estado` | 007 | No escribe | Escribe |
@@ -28,7 +29,7 @@ otra.
 │   ├── stock.services.actualizar_stock_confirmacion_asignacion(solicitud, actor)
 │   │   ├── valida técnico, series RESERVADA, cantidades y stock suficiente
 │   │   ├── bloquea Tenant → StockGeneral → StockTecnico → Serie
-│   │   ├── Serie: RESERVADA → ASIGNADA
+│   │   ├── Serie: RESERVADA → ASIGNADA (tecnico, asignada_en)
 │   │   ├── StockTecnico += series + no seriados (por material)
 │   │   ├── StockGeneral -= series + no seriados (por material)
 │   │   ├── audita Serie/estado
@@ -67,10 +68,12 @@ otra.
 ## Días en mano
 
 - 007 fija `confirmada_en` en la misma transacción de la confirmación.
-- 008 **no** escribe `confirmada_en`, no crea contador ni tabla de días en mano.
+- 008 **no** escribe `confirmada_en`, no crea contador ni tabla de días en mano; sí fija
+  `Serie.asignada_en` y `Serie.tecnico`.
 - `ResultadoConfirmacionStock.confirmada_en` es de solo lectura y sirve para verificar que 007 fijó
   la fecha.
-- 006 calcula los días en mano a demanda desde `confirmada_en` (CA-05).
+- 006 calcula los días en mano desde `Serie.asignada_en`, con `confirmada_en` como respaldo histórico
+  (CA-05).
 
 ## Rechazo
 

@@ -26,7 +26,7 @@ Permitir que los tenants carguen el reporte diario de Lari para conciliar su sto
 ## 4. Trazabilidad
 
 ### Historias de Usuario
-- **HU-18** (RF-39): Como tenant, quiero cargar el reporte diario de la contrata (Excel, CSV o texto tabulado), para iniciar la conciliación
+- **HU-18** (RF-39): Como tenant, quiero cargar el reporte diario de la contrata en Excel `.xlsx`, para iniciar la conciliación
 - **HU-19** (RF-42): Como tenant, quiero que el sistema compare series asignadas vs. series reportadas por la contrata, para detectar diferencias
 - **HU-20** (RF-45): Como tenant, quiero que las series ya no reportadas se actualicen a estado instalado automáticamente, para reflejar la liquidación
 - **HU-21** (RF-64): Como tenant, quiero que el stock de fungibles se actualice a la cantidad reportada por Lari
@@ -43,7 +43,7 @@ Permitir que los tenants carguen el reporte diario de Lari para conciliar su sto
 - **RF-45**: Al aprobar, las series del reporte que no existen en el sistema se crean en el técnico, y las que el sistema tiene y el reporte no traen se retiran
 - **RF-46**: Al aprobar, cada ajuste registra valor anterior y valor nuevo
 - **RF-47**: Si el stock de un técnico cambió entre la carga y la aprobación, el sistema recalcula y exige revisar de nuevo
-- **RF-48**: Se rechaza el archivo completo si contiene técnicos que no pertenecen al tenant o a la región del reporte
+- **RF-48**: Se rechaza el archivo completo si contiene técnicos desconocidos o que no pertenecen a la región del reporte; las filas de técnicos de otro tenant de la misma región se ignoran
 - **RF-64**: El stock de fungibles se actualiza a la cantidad reportada por Lari
 
 ### Atributos de Calidad
@@ -58,7 +58,8 @@ Permitir que los tenants carguen el reporte diario de Lari para conciliar su sto
 - El tenant carga el reporte de Lari (Excel, ver `04-contratos/excel-conciliacion.md`)
 - El sistema lee la hoja "GENERAL" del Excel
 - El sistema filtra solo las filas donde el técnico pertenece al tenant
-- Las filas con técnicos de otros tenants se ignoran silenciosamente
+- Las filas con técnicos de otros tenants de la misma región se ignoran silenciosamente
+- Las filas con técnicos desconocidos o de otra región rechazan el archivo completo
 - Al cargar, se crea una conciliación en estado "En revisión"
 - El stock no se modifica al cargar (solo se comparan)
 
@@ -70,7 +71,8 @@ Permitir que los tenants carguen el reporte diario de Lari para conciliar su sto
 ### 5.3 Reglas de Ausencia (RF-41)
 - Si un técnico del tenant no aparece en el reporte, se ignora (no se asume 0)
 - Si un técnico aparece en el reporte pero un material que tiene en el sistema no aparece, se asume cantidad 0
-- Si el reporte contiene técnicos que no pertenecen al tenant, se rechaza el archivo completo (RF-48)
+- Si el reporte contiene técnicos desconocidos o de otra región, se rechaza el archivo completo
+  (RF-48); los técnicos de otro tenant de la misma región se ignoran
 
 ### 5.4 Diferencias de Series (RF-42)
 - El sistema compara las series asignadas vs las series reportadas
@@ -109,8 +111,9 @@ Permitir que los tenants carguen el reporte diario de Lari para conciliar su sto
   - Muestra un aviso de que hubo cambios
 
 ### 5.9 Validación de Técnicos (RF-48)
-- Si el reporte contiene técnicos que no pertenecen al tenant, se rechaza el archivo completo
-- Si el reporte contiene técnicos que no pertenecen a la región del reporte, se rechaza el archivo completo
+- Si el reporte contiene técnicos desconocidos o que no pertenecen a la región del reporte, se
+  rechaza el archivo completo
+- Las filas de técnicos de otro tenant de la misma región se ignoran silenciosamente
 
 ## 6. Requisitos No Funcionales
 
@@ -187,15 +190,15 @@ Cuando el tenant intenta aprobar
 Entonces el sistema recalcula y exige revisar de nuevo
 
 ### CA-12: Técnico No Pertenece Rechaza Archivo
-Dado un reporte con un técnico que no pertenece al tenant
+Dado un reporte con un técnico desconocido o que no pertenece a la región
 Cuando el tenant carga el archivo
-Entonces se rechaza el archivo completo
+Entonces se rechaza el archivo completo; un técnico de otro tenant de la misma región se ignora
 
 ## 8. Datos de Entrada
 
 ### Carga de Reporte
 
-- Archivo Excel (.xlsx o .xls)
+- Archivo Excel `.xlsx` (no `.xls`, CSV ni texto tabulado)
 - Formato definido en `04-contratos/excel-conciliacion.md`
 
 ## 9. Datos de Salida
@@ -225,7 +228,7 @@ Entonces se rechaza el archivo completo
 7. Aprobación es todo o nada
 8. Stock de fungibles se actualiza a la cantidad reportada
 9. Si el stock cambió entre carga y aprobación, se recalcula
-10. Técnicos no pertenecientes rechazan el archivo
+10. Técnicos desconocidos o de otra región rechazan el archivo; los de otro tenant de la misma región se ignoran
 
 ## 11. Consideraciones de Implementación
 

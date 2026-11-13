@@ -51,7 +51,8 @@ spec 001. 006 no crea una tabla de auditoría propia.
 | Serie al rechazar | `Serie` | `estado` | `RESERVADA` | `DISPONIBLE` |
 | Movimiento de stock | `StockGeneral` / `StockTecnico` | `cantidad` | anterior | nueva |
 
-- La confirmación fija `SolicitudAsignacion.confirmada_en`, que 006 usa para días en mano.
+- La confirmación fija `SolicitudAsignacion.confirmada_en` y 008 fija `Serie.asignada_en`, que 006 usa
+  para días en mano; `confirmada_en` queda como respaldo histórico.
 - La auditoría de stock la escribe 008 con sus propios servicios.
 - 006 no duplica estos eventos ni los simula en producción.
 

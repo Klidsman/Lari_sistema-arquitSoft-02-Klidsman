@@ -20,7 +20,7 @@ de implementación: los modelos, servicios y contratos viven en `plan.md`, `data
   `stock.services.obtener_stock_general`/`calcular_disponible`. No se requiere la confirmación de
   asignaciones de 007/008 para validar 006.
 - **006 implementada**: app `asignaciones`, rutas, plantillas, migraciones y `openpyxl` instalado.
-- **007 no es prerrequisito**: para CA-08 y CA-09 se usa un fixture que fija `confirmada_en` y deja
+- **007 no es prerrequisito**: para CA-08 y CA-09 se usa un fixture que fija `Serie.asignada_en` y deja
   las series `ASIGNADA`.
 - PostgreSQL 16+; no se admite SQLite, ni en pruebas.
 - Variables de entorno configuradas (base de datos, `MEDIA_ROOT`, correo de 001).
@@ -172,7 +172,7 @@ tenant y la región salen de la sesión.
 ### Escenario 6 — Días en mano al confirmar (CA-08)
 
 1. Usar un fixture o el flujo de 007 para dejar una solicitud `CONFIRMADA` con
-   `confirmada_en` hace 10 días y su serie `ASIGNADA`.
+   `Serie.asignada_en` hace 10 días y su serie `ASIGNADA` al técnico.
 2. Abrir el detalle de la solicitud.
 
 **Resultado esperado**:
@@ -246,7 +246,7 @@ La feature se considera validada cuando:
 - [ ] El Excel contiene Z31, centro y almacén de la región, y el NIF del técnico.
 - [ ] El disponible descuenta lo reservado y el envío revalida con bloqueo.
 - [ ] Una serie `ASIGNADA` o `RESERVADA` no aparece en el selector.
-- [ ] Los días en mano se calculan desde `confirmada_en`; la alerta evalúa cada equipo.
+- [ ] Los días en mano se calculan desde `Serie.asignada_en`; `confirmada_en` solo respalda datos históricos y la alerta evalúa cada equipo.
 - [ ] Admin, Almacén, tenant suspendido y otro tenant reciben `403`/`404` según corresponde.
 - [ ] La auditoría se escribe en la misma transacción y no contiene secretos.
 - [ ] Las correcciones documentales de `plan.md` están aplicadas antes de implementar.
@@ -259,7 +259,7 @@ La feature se considera validada cuando:
 | Una serie no aparece | Está `RESERVADA`/`ASIGNADA` o es de otro tenant | Revisar `Serie.estado` y `tenant` |
 | El envío responde `409` | La solicitud no está `BORRADOR` | Releer el estado; no reenviar |
 | El NIF no cambia | Es de solo lectura y se copia del técnico | Corregir el técnico en 003 |
-| La alerta no aparece | Ningún equipo supera 20 días | Revisar `confirmada_en` y `DIAS_ALERTA_CUSTODIA` |
+| La alerta no aparece | Ningún equipo supera 20 días | Revisar `Serie.asignada_en`, el respaldo `confirmada_en` y `DIAS_ALERTA_CUSTODIA` |
 | El Excel falta | El envío falló y se revirtió | Revisar logs; no hay solicitud `ENVIADA` |
 | Un test intenta SQLite | Configuración de pruebas incorrecta | Ajustar `config/settings/test.py` a PostgreSQL |
 | Una solicitud de otro tenant da `200` | Filtro de tenant ausente | Corregir el servicio y la vista; es un fallo de aislamiento |

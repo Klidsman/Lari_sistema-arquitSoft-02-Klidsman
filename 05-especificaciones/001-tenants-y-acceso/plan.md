@@ -336,7 +336,9 @@ class Invitacion(models.Model):
 
 ```python
 class RegistroCambio(models.Model):
-    entidad = models.CharField(max_length=50)      # Region, Almacen, Tenant, Usuario, Invitacion
+    tenant = models.ForeignKey("tenants.Tenant", null=True, blank=True,
+                               on_delete=models.PROTECT, related_name="registros_cambio")
+    entidad = models.CharField(max_length=50)      # Region, Tenant, SolicitudAsignacion, Serie, ...
     entidad_id = models.BigIntegerField()
     campo = models.CharField(max_length=50)
     valor_anterior = models.TextField(blank=True)
@@ -346,6 +348,7 @@ class RegistroCambio(models.Model):
 ```
 
 - Solo inserción. No se actualizan ni se borran filas.
+- `tenant` se puebla desde la entidad o el actor; queda nulo en acciones globales de plataforma.
 - Nunca se guardan contraseñas, tokens ni secretos de segundo factor.
 - Los valores anteriores y nuevos se guardan como texto.
 

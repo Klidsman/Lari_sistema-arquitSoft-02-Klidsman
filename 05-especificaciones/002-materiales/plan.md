@@ -129,10 +129,9 @@ tests/
 
 **Structure Decision**: se conserva el monolito modular de la spec 001. La app se llama
 `materiales` —no `catalogo`— para coincidir con las referencias concretas ya escritas por las
-specs 004, 005, 006, 008, 009, 010 y 011 (`"materiales.Material"`) y con las rutas
-`/materiales/` de esta spec. Las referencias a `catalogo.Material` en la spec 013 deben
-corregirse antes de implementarla (ver `research.md` §1). Las reglas de negocio viven en
-`materiales/services.py`, nunca en las vistas.
+specs 004, 005, 006, 008, 009, 010, 011 y 013 (`"materiales.Material"`) y con las rutas
+`/materiales/` de esta spec. Las referencias a `catalogo.Material` en la spec 013 ya se
+corrigieron. Las reglas de negocio viven en `materiales/services.py`, nunca en las vistas.
 
 ## Referencias
 - Spec: `05-especificaciones/002-materiales/spec.md`
@@ -334,9 +333,8 @@ directa de un código de 10 dígitos o con letras falla por `CheckConstraint`; c
 falla por `unique`) viven en `tests/contract/` e `tests/integration/`.
 
 ## Decisiones y riesgos
-- **App `materiales` y no `catalogo`:** siete specs consumidoras ya referencian
-  `materiales.Material`; la spec 013 usa `catalogo.Material` y debe corregirse. Detalle en
-  `research.md`.
+- **App `materiales` y no `catalogo`:** las specs consumidoras, incluida 013, ya referencian
+  `materiales.Material`. La corrección documental está aplicada.
 - **Catálogo compartido:** cualquier cuenta activa crea materiales; un error de descripción
   afecta a todos. Mitigación: auditoría, edición restringida y unicidad del código. La
   aprobación previa de materiales está fuera de alcance.

@@ -1,158 +1,349 @@
-# Spec: Registro de materiales usados por técnicos y saldo mensual
+# Spec 013 — Registro de Materiales
 
-## Trazabilidad
-- Historias: HU-30, HU-31, HU-32, HU-33.
-- Requisitos: RF-70 a RF-78.
-- Atributos de calidad: integridad de datos, auditabilidad, aislamiento multitenant, usabilidad.
+## 1. Propósito
 
-## Dependencias
-- Spec 001: tenants, cuentas de acceso y alcance.
-- Spec 002: catálogo de materiales.
-- Spec 003: técnicos con NIF `LAXXXX`.
-- Spec 004: recojo de materiales.
-- Reglas: `03-reglas-de-dominio/registro-materiales.md`, `auditoria.md` y `stock.md` (solo como referencia; este módulo no modifica el stock).
+Permitir que cada tenant controle, mes a mes, el material disponible y el material usado por sus técnicos en las órdenes de instalación.
 
-## Objetivo
-Permitir que cada tenant registre el material usado por sus técnicos en cada orden de liquidación y calcule, por mes, el saldo final de cada material a partir del saldo inicial, los despachos del almacén y el material usado.
+```text
+disponible = saldo inicial + despachos del almacén
+saldo final = disponible − material usado en órdenes
+```
 
-## Alcance
+El saldo final de un mes es el saldo inicial del mes siguiente, salvo que exista una carga manual.
+
+El módulo es independiente de la conciliación del Excel del almacén y no modifica el stock del sistema.
+
+## 1.1 Trazabilidad
+
+- **Historias:** HU-30, HU-31, HU-32 y HU-33.
+- **Requisitos:** RF-70 a RF-78.
+- **Cobertura:** carga masiva de órdenes, registro de materiales, saldos, despachos existentes, dashboard, cierre mensual y exportación.
+
+## 2. Alcance
+
 - Catálogo de materiales habilitado por tenant.
-- Saldo inicial mensual por material, cargado manualmente.
-- Despachos del almacén registrados individualmente y vinculados a un recojo del sistema.
-- Órdenes de liquidación por técnico y mes.
-- Uso de materiales por orden y por técnico.
-- Reporte mensual por material y detalle por técnico.
-- Historial de cambios de órdenes, saldos iniciales y despachos.
+- Carga masiva de órdenes por técnico y mes.
+- Registro de materiales usados por orden.
+- Saldo inicial mensual manual.
+- Lectura de los despachos del almacén ya registrados en `DespachoAlmacen`.
+- Dashboard mensual por material y detalle por técnico.
+- Panel de órdenes pendientes de materiales.
+- Advertencias por cantidades atípicas.
+- Cierre mensual con checklist, congelamiento y reapertura.
+- Exportación del reporte mensual y del detalle de órdenes a Excel o CSV.
 
-## Actores y permisos
-- Usuario del tenant con permiso para registrar materiales.
-- La cuenta del tenant solo puede ver y modificar datos de su propio tenant.
-- El Administrador de plataforma y el Responsable de almacén no operan este módulo, salvo que la spec 001 defina otra cosa.
+## 3. Actores y permisos
 
-## Conceptos
+- **Tenant (ACT-01)**: única cuenta operativa del tenant. Es el único actor del módulo.
+- El Administrador de plataforma y el Responsable de almacén no operan este módulo.
+- Cada tenant solo ve y modifica sus propios datos.
+- No se usan permisos Django por cadena; el rol y el tenant se validan en los servicios.
+
+## 4. Conceptos
+
 | Término | Significado |
 |---|---|
-| Catálogo habilitado | Lista fija de materiales que un tenant puede usar en este módulo |
+| Catálogo habilitado | Materiales del catálogo compartido que el tenant puede usar en el módulo |
 | Saldo inicial | Cantidad de un material al inicio de un mes |
-| Despacho del almacén | Salida de material registrada en el sistema y respaldada por un recojo |
+| Despacho del almacén | Cantidad de material recogida en el mes, registrada en `DespachoAlmacen` |
+| Orden | Orden de instalación identificada por número, técnico y mes |
 | Uso | Cantidad de material consumida por un técnico en una orden |
-| Saldo final | Saldo inicial + despachos del mes - uso del mes |
-| Orden de liquidación | Orden identificada por un número, un técnico y una fecha |
-| Periodo | Mes al que pertenece una orden o un saldo, con formato `YYYY-MM` |
+| Disponible | Saldo inicial + despachos del mes |
+| Saldo final | Disponible − uso del mes |
+| Periodo | Mes `YYYY-MM` |
+| Cierre | Congelamiento del saldo final de un mes y traspaso al mes siguiente |
 
-## Datos
+## 5. Datos
 
-### Catálogo habilitado
+### 5.1 Catálogo habilitado
+
 - Cada tenant tiene una lista fija de materiales habilitados.
 - Solo se pueden registrar usos y saldos de materiales habilitados y activos.
-- Un material deshabilitado conserva su historial, pero no se puede usar en nuevas órdenes.
+- Un material deshabilitado conserva su historial, pero no se ofrece en nuevas órdenes.
+- El tenant puede activar o desactivar materiales desde la pantalla de catálogo.
+- El catálogo referencia `materiales.Material`; no duplica códigos, descripciones ni lotes.
 
-### Saldo inicial
+### 5.2 Despacho del almacén
+
+- `DespachoAlmacen` ya forma parte de 013 y es la única fuente de despachos.
+- Para el cálculo se usan `tenant`, `material`, `fecha` y `cantidad`.
+- Los despachos no se registran de nuevo desde la pantalla de materiales.
+- La fecha del despacho define el mes al que suma.
+- La cantidad es un entero mayor o igual a 0.
+- Un despacho con cantidad 0 se conserva, pero no suma.
+- La guarda de mes cerrado se aplica también al alta/edición existente de `DespachoAlmacen`; no se modifica su estructura.
+- El respaldo previo al cierre es una operación externa; la aplicación exige y registra su referencia.
+
+### 5.3 Saldo inicial
+
 - Se registra por tenant, material y periodo.
 - La cantidad es un entero mayor o igual a 0.
-- Solo existe un saldo inicial por tenant, material y periodo.
-- Si el periodo no tiene saldo inicial cargado, se usa el saldo final del periodo anterior.
-- Si no existe periodo anterior, el saldo inicial es 0.
+- Solo existe un saldo inicial manual por tenant, material y periodo.
+- Si no hay saldo manual, se usa el saldo final del periodo anterior.
+- Si no hay periodo anterior con datos, el saldo inicial es 0.
+- El saldo final de un mes cerrado pasa a ser el saldo inicial del mes siguiente.
 
-### Despacho del almacén
-- Se registra individualmente.
-- Tiene fecha, material, cantidad y referencia al recojo del sistema.
-- La cantidad es un entero mayor o igual a 0.
-- El recojo y la línea de recojo deben pertenecer al tenant.
-- La cantidad acumulada de despachos de una línea no puede superar la cantidad registrada en esa línea del recojo.
+### 5.4 Orden
 
-### Orden de liquidación
-- Se identifica por tenant, técnico, número de orden y periodo.
-- El número de orden es obligatorio.
-- El periodo se obtiene de la fecha de liquidación.
-- Una orden es única por técnico y mes.
-- Si la cuenta del tenant ingresa una orden que ya existe para ese técnico y mes, se abre para editar; no se crea un duplicado.
-- La misma orden puede existir en otro técnico o en otro mes.
+- Se identifica por `(tenant, técnico, periodo, número de orden)`.
+- El número de orden es obligatorio, de 1 a 30 caracteres alfanuméricos, sin espacios internos.
+- El mismo número puede existir para otro técnico o en otro mes.
+- Para un mismo técnico y mes, el número no se repite.
+- La carga masiva pide el mes de las órdenes; por defecto el actual.
+- El mes puede cambiarse al registrar la fecha de instalación de los materiales.
+- Si la orden ya existe para el técnico y mes, se abre para editar; no se duplica.
+- Una orden sin materiales registrados se considera pendiente.
 
-### Uso de material
-- Cada línea relaciona una orden, un técnico `LAXXXX`, un material y una cantidad.
+### 5.5 Uso de material
+
+- Relaciona una orden, un técnico, un material y una cantidad.
+- Solo existe una línea por orden y material.
 - La cantidad es un entero mayor o igual a 0.
 - Vacío o 0 significa que el material no se usó.
-- Solo existe una línea por orden y material.
 - El técnico de la línea debe coincidir con el técnico de la orden.
+- El uso se descuenta del disponible del mes.
 
-## Reglas de negocio
+### 5.6 Advertencia de cantidad atípica
 
-1. **Aislamiento multitenant.** Un tenant nunca ve ni modifica órdenes, saldos, despachos, usos o reportes de otro tenant.
-2. **Catálogo fijo por tenant.** Cada tenant solo opera con sus materiales habilitados.
-3. **Periodo de la orden.** El periodo de uso se obtiene únicamente de la fecha de liquidación de la orden.
-4. **Unicidad de la orden.** No puede existir más de una orden con el mismo número para el mismo técnico y mes.
-5. **Edición de orden existente.** Si al ingresar una orden se encuentra una coincidencia, se abre para editar y se registra el historial de los cambios.
-6. **Cantidades válidas.** Toda cantidad debe ser un entero mayor o igual a 0. No se aceptan negativos, decimales ni texto.
-7. **Saldo inicial mensual.** Cada mes puede tener un saldo inicial manual por material.
-8. **Herencia del saldo.** Si un mes no tiene saldo inicial manual, el saldo inicial es el saldo final del mes anterior.
-9. **Cálculo del saldo final.** `Saldo final = Saldo inicial + Despachos del mes - Uso del mes`.
-10. **Despacho vinculado al recojo.** Todo despacho debe referenciar un recojo registrado en el sistema y no puede superar la cantidad de su línea.
-11. **Uso por técnico.** El uso se registra por orden y por técnico `LAXXXX`; no se registra uso sin orden.
-12. **Historial.** Toda edición de orden, saldo inicial o despacho registra usuario, fecha, valor anterior y valor nuevo.
-13. **Sin borrado.** No se borran órdenes, usos, saldos ni despachos. Las correcciones se registran como cambios auditados.
-14. **Independencia de conciliación.** Este módulo no lee, genera ni modifica la conciliación del Excel del almacén. Tampoco modifica el stock del sistema.
+- Si la cantidad usada supera un umbral configurable frente al promedio mensual de los últimos 3 meses cerrados del material, se registra una advertencia.
+- El promedio se calcula con el total mensual usado por material, no con el promedio por orden.
+- La advertencia no bloquea el guardado.
+- Debe resolverse o justificarse antes del cierre mensual; una advertencia resuelta o con justificación de cierre no bloquea.
 
-## Flujo de registro
-1. La cuenta del tenant entra a “Registrar materiales”.
-2. Selecciona un técnico del tenant.
-3. Escribe el número de orden y la fecha de liquidación.
-4. Presiona Enter.
-5. El sistema busca la orden:
-   - Si no existe, muestra el catálogo habilitado con cantidades en 0.
-   - Si ya existe para ese técnico y mes, la abre para editar.
-6. La cuenta del tenant llena solo la cantidad usada. Vacío o 0 significa no usado.
-7. Guarda la orden.
-8. El sistema conserva el técnico y la fecha, limpia el número de orden y deja el cursor listo para la siguiente orden.
-9. La cuenta del tenant repite con el siguiente número de orden.
-10. Al cambiar de técnico, se reinicia el formulario.
+### 5.7 Cierre mensual
 
-## Criterios de aceptación
+- El cierre congela el saldo por material.
+- Antes de cerrar se revisa una lista de chequeo:
+  - órdenes del mes sin materiales;
+  - materiales con saldo negativo;
+  - advertencias sin resolver.
+- Solo se cierra si los puntos están resueltos o justificados.
+- El cierre registra quién lo hizo, cuándo y la referencia del respaldo de base de datos.
+- Un mes cerrado no admite cambios de órdenes, usos, saldos ni despachos.
+- Para modificarlo se reabre con motivo; la reapertura queda auditada.
 
-- Dada la cuenta del tenant, cuando entra al sistema, entonces ve la opción “Registrar materiales” y solo puede seleccionar técnicos y materiales de su tenant.
-- Dado un técnico `LA1234`, un número de orden y una fecha, cuando presiona Enter, entonces aparece el catálogo habilitado con cantidades en 0.
-- Dado un técnico con una orden ya registrada en el mismo mes, cuando se ingresa el mismo número de orden, entonces se abre la orden existente para editar y no se crea un duplicado.
-- Dado el mismo número de orden para otro técnico o para otro mes, cuando se guarda, entonces se permite porque la clave es distinta.
-- Dada una cantidad vacía o 0, cuando se guarda la orden, entonces el material no suma como usado.
-- Dada una cantidad negativa, decimal o con letras, cuando se guarda, entonces se rechaza con “La cantidad debe ser un número entero mayor o igual a 0”.
-- Dado un mes con saldo inicial 100, despachos 20 y usado 30, cuando se consulta el reporte, entonces el saldo final es 90.
-- Dado un mes sin saldo inicial cargado y con un mes anterior cuyo saldo final fue 90, cuando se consulta el reporte, entonces el saldo inicial del mes es 90.
-- Dado un saldo inicial manual cargado para un mes, cuando se consulta el reporte, entonces ese valor prevalece y el cambio queda auditado.
-- Dado un despacho vinculado a un recojo del tenant, cuando se guarda, entonces se registra y suma al mes correspondiente a su fecha.
-- Dado un despacho vinculado a un recojo de otro tenant, cuando se guarda, entonces se rechaza.
-- Dada una cantidad despachada mayor a la cantidad de la línea del recojo, cuando se guarda, entonces se rechaza.
-- Dado un uso con un técnico distinto al técnico de la orden, cuando se guarda, entonces se rechaza.
-- Dada una edición de una orden, saldo inicial o despacho, cuando se guarda, entonces queda un registro con fecha, usuario, valor anterior y valor nuevo.
-- Dada la cuenta de otro tenant, cuando intenta consultar o modificar una orden, saldo, despacho o reporte, entonces no puede acceder y no se revela la existencia del dato.
-- Dado un mes con uso y despachos, cuando se consulta el reporte, entonces se muestra el total por material y el detalle de uso por técnico.
+## 6. Reglas de negocio
 
-## Casos borde
-- Doble clic en Guardar: la restricción única evita duplicados; si la orden ya existe, se abre para editar.
-- Cantidad con espacios: se normaliza antes de validar.
-- Número de orden con espacios al inicio o al final: se recorta.
-- Cambio de fecha de una orden a otro mes: se recalcula el periodo y se vuelve a validar la unicidad.
-- Saldo inicial duplicado para el mismo mes: se actualiza el existente y se audita el cambio.
-- Material deshabilitado: no se puede usar en nuevas órdenes, pero su historial se conserva.
-- Mes sin saldo inicial ni periodo anterior: el saldo inicial es 0.
-- Saldo final negativo: se muestra con alerta; no se oculta.
-- Despacho con cantidad 0: se registra, pero no suma al total.
-- Recojo sin línea identificada: se rechaza el despacho hasta que se seleccione la línea.
-- Técnico desactivado con órdenes históricas: sus órdenes se conservan y se pueden consultar.
+1. **Aislamiento multitenant.** Un tenant nunca ve ni modifica datos de otro.
+2. **Catálogo fijo por tenant.** Solo se opera con materiales habilitados y activos.
+3. **Periodo de la orden.** Se obtiene del mes de carga y puede cambiar con la fecha de instalación.
+4. **Unicidad de la orden.** No se repite `(tenant, técnico, periodo, número)`; el mismo número puede existir para otro técnico o mes.
+5. **Carga masiva idempotente.** Pegar la misma lista varias veces solo agrega las órdenes nuevas para el técnico y mes.
+6. **Orden de otro técnico.** Si el número existe para otro técnico, se crea para el técnico seleccionado y el resumen lo informa.
+7. **Edición de orden existente.** Se abre para editar y se registra historial.
+8. **Cantidades válidas.** Enteros mayores o iguales a 0; no se aceptan negativos, decimales ni texto.
+9. **Saldo inicial mensual.** Manual si existe; si no, se hereda del final anterior.
+10. **Cálculo del saldo final.** `inicial + despachos − uso`.
+11. **Despachos existentes.** Se leen de `DespachoAlmacen`; no se registran dos veces.
+12. **Bloqueo de negativo.** No se guarda un uso que deje el saldo del mes en negativo.
+13. **Advertencia atípica.** Una cantidad muy alta se advierte, pero no se bloquea.
+14. **Historial.** Toda edición de orden, uso o saldo registra usuario, fecha, valor anterior y valor nuevo.
+15. **Sin borrado ordinario.** No se borran órdenes, usos, saldos ni despachos; la única excepción es deshacer una carga de órdenes nuevas sin materiales.
+16. **Cierre y reapertura.** El cierre congela; la reapertura exige motivo y se audita.
+17. **Exportación.** Reporte mensual y detalle de órdenes en Excel o CSV.
+18. **Independencia.** No se lee, genera ni modifica la conciliación; no se modifica el stock.
 
-## Decisiones confirmadas
-1. El catálogo habilitado referencia el catálogo compartido de la spec 002; no duplica descripciones ni códigos.
-2. El número de orden tiene entre 1 y 30 caracteres alfanuméricos, sin espacios internos.
-3. La frecuencia diaria, semanal o mensual es una forma de consultar o cargar entradas; el reporte siempre es mensual y no se guarda como atributo obligatorio.
-4. Un saldo final negativo se muestra con alerta y no bloquea el registro.
-5. El permiso del módulo se asigna a la cuenta única del tenant definida en la spec 001.
+## 7. Flujos
 
-## Dependencia confirmada
-- La spec 004 define las entidades de recojo y línea de recojo; este módulo solo las referencia.
+### 7.1 Registrar órdenes
 
-## Fuera de alcance
+1. El tenant elige **Registrar órdenes**.
+2. Selecciona el técnico y el mes (por defecto el actual).
+3. Pega la lista.
+4. El sistema normaliza:
+   - quita espacios al inicio y al final;
+   - descarta líneas vacías;
+   - rechaza líneas con más de un valor o espacios internos;
+   - elimina duplicados sin distinguir mayúsculas/minúsculas.
+5. Compara con las órdenes existentes del tenant.
+6. Muestra el resumen:
+   - leídas;
+   - nuevas para el técnico y mes;
+   - ya existentes para el técnico y mes;
+   - cuántas también existen para otro técnico.
+7. El tenant confirma.
+8. El sistema crea solo las órdenes nuevas y registra el lote en `CargaOrdenes`.
+9. El tenant puede deshacer la carga mientras las órdenes nuevas no tengan materiales.
+10. El deshacer elimina solo las órdenes nuevas del lote y queda auditado.
+
+### 7.2 Registrar materiales
+
+1. El tenant elige **Registrar materiales**.
+2. Selecciona el técnico y el mes (por defecto el actual).
+3. Busca la orden por número exacto dentro de ese mes, sin distinguir mayúsculas/minúsculas.
+4. Si no existe en ese mes, se muestra el catálogo habilitado con cantidades en 0; al guardar se crea la orden.
+5. Si existe, se abre para editar.
+6. Si el número existe para el mismo técnico en otro mes, no se muestra: es otra orden. Para abrirla, se selecciona ese otro mes.
+7. Ingresa una sola fecha de instalación; por defecto hoy y editable.
+8. La fecha define el mes de la orden. Si cambia el mes:
+   - se revalida la clave;
+   - se recalculan ambos meses;
+   - si alguno está cerrado, se exige reapertura.
+9. Registra solo cantidades usadas; vacío o 0 no suma.
+10. El sistema calcula el disponible del mes y el uso total.
+11. Si el uso superara el disponible, no guarda y muestra el faltante.
+12. Si la cantidad es atípicamente alta, muestra una advertencia y permite guardar.
+13. Al guardar, el uso se descuenta del disponible y queda asociado al técnico.
+14. Cada cambio guarda historial.
+
+### 7.3 Entradas y saldos
+
+1. El tenant carga el saldo inicial manual por material y mes.
+2. El sistema muestra los despachos del mes desde `DespachoAlmacen` en modo lectura.
+3. No se registran despachos en esta pantalla.
+4. Si se corrige un despacho en su pantalla de origen, el dashboard se recalcula.
+5. Si el mes está cerrado, se exige reapertura para modificar el saldo.
+
+### 7.4 Dashboard
+
+1. El tenant filtra por mes, técnico, material o rango de fechas.
+2. El sistema muestra:
+   - saldo inicial;
+   - despachos;
+   - usado;
+   - saldo final;
+   - órdenes;
+   - técnicos con uso.
+3. Muestra tabla por material y detalle por técnico.
+4. Un saldo final negativo se muestra con alerta.
+
+### 7.5 Pendientes
+
+1. El sistema lista las órdenes del mes sin materiales.
+2. Se filtra por antigüedad (más de 1, 3, 7 o 30 días) y técnico.
+3. Cada fila permite abrir el registro de materiales.
+
+### 7.6 Cierre
+
+1. El tenant entra a **Cierre mensual**.
+2. El sistema muestra la lista de chequeo.
+3. El tenant resuelve o justifica cada punto; las advertencias se resuelven con una justificación.
+4. El respaldo se ejecuta fuera de la aplicación con el comando de operaciones; el sistema exige la referencia emitida.
+5. El tenant confirma.
+6. El sistema congela el saldo por material y lo pasa al mes siguiente.
+7. Se registra quién cerró y cuándo.
+8. Un mes cerrado no admite cambios.
+
+### 7.7 Reapertura
+
+1. El tenant solicita reabrir un mes cerrado.
+2. Ingresa un motivo obligatorio.
+3. El sistema registra usuario, fecha y motivo.
+4. El mes vuelve a abrirse.
+5. Se corrigen los datos y se vuelve a cerrar.
+
+### 7.8 Exportación
+
+1. El tenant elige reporte mensual o detalle de órdenes.
+2. Selecciona Excel o CSV.
+3. El sistema genera el archivo con datos de su tenant.
+4. El archivo se descarga.
+
+## 8. Criterios de aceptación
+
+### CA-01: Menú y aislamiento
+Dada la cuenta del tenant, cuando entra al módulo, entonces ve las opciones del módulo y solo opera con técnicos, materiales, órdenes y saldos de su tenant.
+
+### CA-02: Catálogo habilitado
+Dado un tenant con materiales habilitados, cuando registra una orden nueva, entonces ve solo los materiales activos de su catálogo con cantidades en 0.
+
+### CA-03: Carga masiva normalizada
+Dada una lista con espacios, líneas vacías, mayúsculas/minúsculas y duplicados, cuando se procesa, entonces se normaliza, se descartan vacías y se eliminan duplicados.
+
+### CA-04: Carga masiva idempotente
+Dada una lista con órdenes ya existentes para el técnico y mes, cuando se vuelve a pegar, entonces las existentes se omiten y no se duplican.
+
+### CA-05: Orden de otro técnico
+Dada una orden que existe para otro técnico, cuando se carga para el técnico seleccionado, entonces se crea para este y el resumen indica que también existe para el otro.
+
+### CA-06: Resumen de carga
+Dada una lista procesada, cuando se muestra el resumen, entonces indica leídas, nuevas, omitidas y cuántas también existen para otro técnico.
+
+### CA-07: Deshacer carga
+Dada una carga reciente sin materiales, cuando se deshace, entonces se eliminan solo las órdenes nuevas del lote y se audita.
+
+### CA-08: Orden existente se abre
+Dada una orden existente para el técnico y mes, cuando se busca, entonces se abre para editar y no se duplica.
+
+### CA-09: Cambio de mes
+Dada una orden con fecha de instalación en otro mes, cuando se guarda, entonces se recalcula el periodo y se revalida la clave.
+
+### CA-10: Cantidad 0
+Dada una cantidad vacía o 0, cuando se guarda, entonces el material no suma como usado.
+
+### CA-11: Cantidad inválida
+Dada una cantidad negativa, decimal o con letras, cuando se guarda, entonces se rechaza con el mensaje correspondiente.
+
+### CA-12: Bloqueo de saldo negativo
+Dado un disponible de 45 y un uso total de 40, cuando se intenta usar 10, entonces no se guarda porque faltan 5.
+
+### CA-13: Advertencia atípica
+Dada una cantidad muy superior al promedio del material, cuando se guarda, entonces se advierte pero no se bloquea.
+
+### CA-14: Saldo final
+Dado un mes con inicial 100, despachos 20 y usado 30, cuando se consulta el reporte, entonces el saldo final es 90.
+
+### CA-15: Herencia de saldo
+Dado un mes sin saldo manual y un mes anterior con final 90, cuando se consulta, entonces el inicial es 90.
+
+### CA-16: Saldo manual prevalece
+Dado un saldo inicial manual, cuando se consulta, entonces prevalece sobre la herencia y el cambio se audita.
+
+### CA-17: Despachos existentes
+Dado un despacho registrado en `DespachoAlmacen`, cuando se consulta el mes, entonces su cantidad suma sin volver a registrarse.
+
+### CA-18: Historial de edición
+Dada una edición de orden, uso o saldo, cuando se guarda, entonces queda un registro con usuario, fecha, valor anterior y valor nuevo.
+
+### CA-19: Órdenes pendientes
+Dada una orden sin materiales, cuando se consulta el panel, entonces aparece con filtro por antigüedad.
+
+### CA-20: Cierre con checklist
+Dado un mes con pendientes, negativos o advertencias sin resolver, cuando se intenta cerrar, entonces se bloquea hasta resolver o justificar.
+
+### CA-21: Cierre y traspaso
+Dado un mes cerrado, cuando se consulta el mes siguiente, entonces el saldo final congelado es su saldo inicial.
+
+### CA-22: Reapertura
+Dado un mes cerrado, cuando se reabre, entonces se exige motivo y queda registro de quién y cuándo.
+
+### CA-23: Exportación
+Dado un reporte mensual o detalle de órdenes, cuando se exporta, entonces se genera Excel o CSV solo con datos del tenant.
+
+## 9. Casos borde
+
+- Doble clic en guardar: la clave única evita duplicados.
+- Cantidad con espacios: se normaliza.
+- Número de orden con espacios al inicio/final: se recorta.
+- Línea con más de un valor: se rechaza.
+- Orden existente para otro técnico: se informa y se crea para el técnico actual.
+- Cambio de fecha a otro mes: recalcula y revalida.
+- Mes cerrado: exige reapertura.
+- Material deshabilitado: no se usa en nuevas órdenes; historial conservado.
+- Mes sin saldo inicial ni anterior: 0.
+- Saldo final negativo: alerta; no se oculta.
+- Despacho con cantidad 0: se registra, no suma.
+- Orden sin materiales: pendiente para el cierre.
+- Advertencia sin resolver: bloquea el cierre hasta justificar.
+
+## 10. Decisiones confirmadas
+
+1. `DespachoAlmacen` ya existe en 013 y es la fuente única de despachos.
+2. El despacho solo aporta `tenant`, `material`, `fecha` y `cantidad`; no se vuelve a registrar.
+3. La carga masiva pide el mes de las órdenes y permite cambiarlo al registrar materiales.
+4. El mismo número de orden puede existir para otro técnico o en otro mes.
+5. El bloqueo de saldos negativos es prioritario.
+6. El cierre mensual con checklist es prioritario.
+7. El respaldo de base de datos es externo; la app registra su referencia.
+8. La advertencia de cantidad atípica usa 3 veces el promedio de los últimos 3 meses, configurable.
+9. La modificación de un mes cerrado exige reapertura con motivo.
+10. La exportación es a Excel o CSV.
+
+## 11. Fuera de alcance
+
 - Conciliación del Excel del almacén.
-- Importación de entradas por Excel.
 - Modificación del stock del sistema.
-- Modificación de recojos, asignaciones, traspasos o catálogo.
+- Modificación de asignaciones, traspasos, recojos o catálogo compartido.
+- Registro manual de despachos desde la pantalla de materiales.
+- Importación de entradas por Excel.
 - Reportes de otros módulos.
-- Exportación a Excel o PDF.

@@ -124,11 +124,12 @@ Debe invocarse dentro de la transacción abierta por 007. Si se invoca fuera, ab
 
 **Escrituras**
 
-- Cada serie: `estado = ASIGNADA`.
+- Cada serie: `estado = ASIGNADA`, `tecnico = solicitud.tecnico`, `asignada_en = ahora`.
 - `StockTecnico`: `cantidad += series + cantidad_no_seriada` por material; crea la fila si no
   existe con `tenant = solicitud.tenant`.
 - `StockGeneral`: `cantidad -= series + cantidad_no_seriada` por material; nunca negativa.
-- Auditoría: `Serie/estado` por serie y `StockTecnico/cantidad`/`StockGeneral/cantidad` por material.
+- Auditoría: `Serie/estado`, `Serie/tecnico` y `Serie/asignada_en` por serie, y
+  `StockTecnico/cantidad`/`StockGeneral/cantidad` por material.
 - **No** modifica `SolicitudAsignacion.estado` ni `SolicitudAsignacion.confirmada_en`: son de 007.
 - **No** libera series ni participa en el rechazo: eso es de 007.
 

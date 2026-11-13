@@ -62,7 +62,8 @@ El sistema valida que:
 ## 7. Descarga y Envío
 
 - El acta se puede descargar desde el detalle de la devolución
-- El tenant puede enviar el acta a Lari por correo u otro medio
+- El sistema no envía el acta por correo; el tenant la descarga y la envía a Lari por el medio que
+  corresponda
 - El sistema registra la fecha de generación del acta
 
 ## 8. Ejemplo de Formato

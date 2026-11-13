@@ -17,7 +17,7 @@ en `plan.md`, `data-model.md` y `contracts/`.
 | ¿Quién mueve el stock físico? | 007/008 al confirmar; 006 solo lee `StockGeneral` | 4 |
 | ¿Cuándo se genera el Excel? | En la transición `BORRADOR`→`ENVIADA`, nunca al guardar borrador | 5 |
 | ¿Cómo se evita sobreasignar con envíos concurrentes? | `transaction.atomic` + `select_for_update` sobre tenant, stock y series en orden de id | 6 |
-| ¿Desde cuándo se cuentan los días en mano? | Desde `SolicitudAsignacion.confirmada_en`, fijado por 007 | 7 |
+| ¿Desde cuándo se cuentan los días en mano? | Desde `Serie.asignada_en`; `confirmada_en` es respaldo histórico | 7 |
 | ¿La alerta suma días de todos los equipos? | No; se evalúa por equipo seriado y se alerta si alguno supera 20 días | 8 |
 | ¿Cómo se valida en tiempo real? | Fragmentos HTML/HTMX, sin JSON ni API REST | 9 |
 | ¿Qué permisos se usan? | Roles explícitos; solo `USUARIO_TENANT` activo con tenant activo | 10 |
@@ -161,23 +161,25 @@ sobreasignación aun si dos solicitudes del mismo tenant se envían a la vez. La
 
 ---
 
-## 7. Días en mano desde la confirmación
+## 7. Días en mano desde la custodia actual
 
-**Decisión**: `dias_en_mano_serie(linea, hoy=None)` exige solicitud `CONFIRMADA` y
-`confirmada_en` no nulo, y devuelve `(hoy - confirmada_en.date()).days`. `confirmada_en` lo fija 007
-al confirmar. 006 no crea una fecha de asignación ni usa `fecha` de la solicitud para el conteo.
+**Decisión**: `dias_en_mano_serie(serie, hoy=None)` exige `Serie.estado=ASIGNADA` y
+`Serie.asignada_en` no nulo, y devuelve `(hoy - serie.asignada_en.date()).days`. 008 fija
+`Serie.asignada_en` al confirmar una asignación, 009 la reinicia al traspasar y 011 la limpia al
+devolver. Si una serie histórica no tiene `asignada_en`, se usa
+`SolicitudAsignacion.confirmada_en` solo como respaldo y se registra la deuda.
 
-**Rationale**: la spec y RF-61 dicen que el conteo inicia al aceptar el almacén. Usar `fecha` de la
-solicitud contaría días de espera de revisión que no son custodia del técnico. `confirmada_en` es la
-única marca fiable del inicio.
+**Rationale**: la spec y RF-61 dicen que el conteo inicia al aceptar el almacén, pero debe reiniciarse
+cuando la serie cambia de técnico (RF-62, CA-09 de 009). `confirmada_en` de la asignación original no
+sirve después de un traspaso; `Serie.asignada_en` es la única marca de la custodia actual.
 
 **Alternativas consideradas**:
 - Usar `fecha` de la solicitud: arranca antes de la aceptación. Rechazada.
-- Agregar `fecha_asignacion` en la línea: duplica la marca de la solicitud y puede desincronizarse.
-  Rechazada.
+- Seguir usando `confirmada_en`: no se reinicia con los traspasos. Rechazada.
+- Agregar un contador `dias_en_mano`: se desincroniza. Rechazada.
 
-**Consecuencia**: 006 deja el campo `confirmada_en` en el modelo y lo documenta como escrito por
-007; las pruebas de 006 lo fijan con fixture.
+**Consecuencia**: 006 lee `Serie.asignada_en` y deja `confirmada_en` como respaldo histórico; las
+pruebas de 006 fijan ambos con fixtures. La corrección se coordina con 004/005/008/009/011.
 
 ---
 
@@ -321,7 +323,7 @@ la deuda se registra y no se inventa una RLS paralela.
 | Riesgo / deuda | Impacto | Mitigación |
 |---|---|---|
 | Excel huérfano si el proceso muere entre la escritura y el commit | Archivo sin solicitud | Limpieza por mantenimiento documentada; no se degrada la transacción por un fallo de disco |
-| 009/011 mueven series sin actualizar la fuente de custodia | Días en mano incorrectos | Corrección documental en los planes de 009 y 011 |
+| 009/011 mueven series sin actualizar la fuente de custodia | Días en mano incorrectos | 009 reinicia `Serie.asignada_en`; 011 la limpia; corregido en los planes de 009 y 011 |
 | RLS de 001 no disponible | Aislamiento solo de aplicación | Se registra y se mantiene el filtro obligatorio |
 | 007 no implementada al validar 006 | CA-08/CA-09 sin flujo real | Fixture de confirmación y contrato explícito en `plan.md` |
 | Redacción de `spec.md` §5.5, §11 y CA-01 | Ambigüedad de generación y alerta | Correcciones documentales listadas en `plan.md` |

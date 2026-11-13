@@ -82,7 +82,7 @@ Campos de 006 que 007 escribe:
 | Campo | Uso en 007 |
 |---|---|
 | `estado` | `ENVIADA→CONFIRMADA` o `ENVIADA→RECHAZADA`; nunca vuelve a `BORRADOR` |
-| `confirmada_en` | Se fija en la confirmación; fuente de los días en mano de 006 |
+| `confirmada_en` | Se fija en la confirmación; respaldo histórico de los días en mano de 006, cuya fuente actual es `Serie.asignada_en` |
 | `actualizado_por` | Actor de la confirmación o del rechazo |
 | `actualizado_en` | `auto_now` |
 

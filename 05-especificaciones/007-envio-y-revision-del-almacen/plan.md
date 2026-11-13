@@ -224,7 +224,8 @@ rechazada_en = models.DateTimeField(null=True, blank=True)
 - `motivo_rechazo` se exige no vacío al rechazar y se limpia solo si la solicitud cambiara de
   estado, cosa que no ocurre porque `RECHAZADA` es terminal.
 - `rechazada_en` registra el instante del rechazo; `confirmada_en` (ya existente) lo escribe 007 al
-  confirmar y 006 lo usa para los días en mano.
+  confirmar. Los días en mano usan `Serie.asignada_en`, que 008 fija en la misma transacción;
+  `confirmada_en` queda como respaldo histórico.
 - No se agrega `rechazada_por` ni `confirmada_por`: el actor queda en `auditoria.RegistroCambio`.
 
 ### Entidades externas consumidas
@@ -332,8 +333,9 @@ Las vistas, formularios y plantillas no contienen lógica de negocio.
   - Tras el commit, publica la actualización de bandeja y notifica al tenant.
   - Devuelve la solicitud actualizada. Si 008 falla por stock insuficiente, toda la transacción se
     revierte y la solicitud sigue `ENVIADA`.
-- `confirmada_en` es la única fuente de los días en mano; 007 la escribe, 006 la lee y 009/011
-  deberán actualizar la fuente de custodia cuando muevan o devuelvan series.
+- `confirmada_en` marca la confirmación de la solicitud; los días en mano usan `Serie.asignada_en`,
+  que 008 fija al confirmar, 009 reinicia al traspasar y 011 limpia al devolver. 007 no escribe
+  `Serie.asignada_en`; 006 la lee.
 
 ### Rechazo de solicitud
 

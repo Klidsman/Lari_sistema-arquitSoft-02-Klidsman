@@ -133,7 +133,8 @@ También se modifican:
 - `config/urls.py`: incluir `stock_inicial.urls` bajo `/stock-inicial/`.
 - `tenants/models.py`: campos `stock_inicial_cargado` y `fecha_stock_inicial`.
 - `tenants/migrations/0002_stock_inicial_fields.py`: migración de esos campos.
-- `series/services.py`: parámetro opcional `estado` en `crear_serie` (corrección en 004).
+- `series/services.py`: parámetros opcionales `estado`, `tecnico` y `asignada_en` en `crear_serie`
+  (corrección coordinada con 004/009; `ASIGNADA` exige técnico y fecha).
 - `templates/base.html`: enlace a Stock inicial visible solo para `USUARIO_TENANT` con tenant
   activo.
 
@@ -279,7 +280,7 @@ class LineaStockInicial(models.Model):
 
 | Entidad | Dueña | Uso en 005 |
 |---|---|---|
-| `series.Serie` | 004 | Registro central de identidad y estado. 005 crea series `ASIGNADA` con `crear_serie(..., estado=EstadoSerie.ASIGNADA)` y las consulta con `series_existentes`. |
+| `series.Serie` | 004 | Registro central de identidad, estado y custodia. 005 crea series `ASIGNADA` con `crear_serie(..., estado=EstadoSerie.ASIGNADA, tecnico=tecnico, asignada_en=ahora)` y las consulta con `series_existentes`. |
 | `stock.StockTecnico` | 008 | Stock del técnico por material. 005 solo lo modifica con `incrementar_stock_tecnico` y `decrementar_stock_tecnico`. |
 | `stock.StockGeneral` | 008 | **No se lee ni se modifica.** El stock inicial no pasa por el stock general. |
 | `tecnicos.Tecnico` | 003 | Validación de existencia en el tenant y selector del formulario. |
@@ -455,7 +456,8 @@ servicio. Las vistas, formularios y el comando no contienen lógica de negocio.
     - Agrupa las líneas por `(tecnico_id, material_id)` para el stock.
     - Por cada línea:
       - Si es seriada, crea primero la `Serie` con
-        `series.services.crear_serie(tenant, region, material, numero, material.lote, actor, estado=EstadoSerie.ASIGNADA)`.
+        `series.services.crear_serie(tenant, region, material, numero, material.lote, actor, estado=EstadoSerie.ASIGNADA, tecnico=tecnico, asignada_en=ahora)`;
+        la custodia queda en `Serie.tecnico` y `Serie.asignada_en`.
       - Crea la `LineaStockInicial` con `tenant`, `carga`, `tecnico`, `material`, `lote` del
         catálogo, `serie` y `cantidad`.
       - Audita `LineaStockInicial/alta` y, si aplica, `Serie/alta`.

@@ -13,7 +13,7 @@ inventario general y cantidades de materiales no seriados, validando la disponib
 de `BORRADOR` a `ENVIADA` en una transacción; las series seleccionadas pasan a `RESERVADA`; se
 genera un Excel de asignación con los metadatos de la región, se calcula su SHA-256 y se conserva
 inmutable para que la spec 007 lo envíe al almacén. La cuenta del tenant puede cancelar un borrador;
-el almacén confirma o rechaza en 007. Los días en mano se calculan desde la confirmación y la alerta
+el almacén confirma o rechaza en 007. Los días en mano se calculan desde `Serie.asignada_en` y la alerta
 de custodia se muestra al crear una nueva solicitud sin bloquearla.
 
 El diseño reutiliza la cuenta única, el middleware, los roles y la auditoría de la spec 001; el
@@ -215,7 +215,8 @@ class SolicitudAsignacion(models.Model):
   (confirmación/rechazo). No hay transición desde `RECHAZADA`, `CONFIRMADA` o `CANCELADA`.
 - `excel_ruta` guarda la ruta relativa a `MEDIA_ROOT`; `excel_hash` guarda SHA-256 hexadecimal.
 - `excel_generado_en`, `enviada_en` y `confirmada_en` son marcas de tiempo; `confirmada_en` la
-  escribe 007 dentro de la confirmación y 006 la usa para calcular días en mano.
+  escribe 007 dentro de la confirmación y 006 la usa solo como respaldo histórico de días en mano;
+  la fuente actual es `Serie.asignada_en`.
 - `creado_por` y `actualizado_por` son `PROTECT`; la desactivación de la cuenta no borra la
   solicitud.
 
@@ -442,15 +443,17 @@ contienen lógica de negocio.
 
 ### Días en mano y alerta de cupo
 
-- `dias_en_mano_serie(linea, hoy=None)`:
-  - Exige que la solicitud esté `CONFIRMADA` y tenga `confirmada_en`.
-  - Devuelve `(hoy - confirmada_en.date()).days`; si no está confirmada, devuelve `None`.
+- `dias_en_mano_serie(serie, hoy=None)`:
+  - Exige `Serie.estado=ASIGNADA` y `Serie.asignada_en` no nulo.
+  - Devuelve `(hoy - serie.asignada_en.date()).days`; si falta la fecha, usa
+    `SolicitudAsignacion.confirmada_en` solo como respaldo histórico y devuelve `None` si tampoco
+    existe.
+  - No usa `fecha` de la solicitud.
 - `series_en_custodia_tecnico(tecnico)`:
-  - Recorre las líneas seriadas de solicitudes `CONFIRMADA` del técnico cuya `Serie.estado` sea
-    `ASIGNADA`; conserva la confirmación más reciente por serie.
-  - Devuelve una estructura con serie, material, `confirmada_en`, días en mano.
-  - 009/011 deberán actualizar la fuente de custodia cuando muevan o devuelvan series; hasta
-    entonces esta consulta cubre las asignaciones confirmadas por 007/008.
+  - Filtra `Serie.estado=ASIGNADA`, `Serie.tecnico=tecnico` y mismo tenant.
+  - Devuelve una estructura con serie, material, `Serie.asignada_en` y días en mano.
+  - 009 reinicia `Serie.asignada_en` al traspasar y 011 la limpia al devolver; 006 siempre lee la
+    custodia actual.
 - `calcular_alerta_cupo(tecnico)`:
   - Devuelve `AlertaCupo` si alguna serie en custodia supera
     `settings.DIAS_ALERTA_CUSTODIA` (20 por defecto).
@@ -653,7 +656,8 @@ fallar antes de implementar. Todas corren sobre PostgreSQL, nunca SQLite.
   - reservado solo de solicitudes `ENVIADA`, no de borradores ni rechazadas;
   - cantidad igual al disponible se acepta y cantidad mayor se rechaza;
   - `calcular_alerta_cupo` con 0, 19, 20 y 25 días;
-  - `dias_en_mano_serie` desde `confirmada_en`, no desde `fecha`.
+  - `dias_en_mano_serie` desde `Serie.asignada_en`, no desde `fecha`; `confirmada_en` solo respalda
+  datos históricos.
 - `tests/unit/test_asignacion_excel.py`:
   - metadatos Z31, centro, almacén, NIF, fecha, tenant, región e ID;
   - tabla de seriales y de material menor;
@@ -765,7 +769,7 @@ fallar antes de implementar. Todas corren sobre PostgreSQL, nunca SQLite.
 - **Series centralizadas**: `LineaAsignacion.serie` es FK a `series.Serie`; no hay columna de
   texto ni tabla duplicada. La FK permite reutilizar una serie tras un rechazo o devolución; la
   unicidad dentro de la solicitud y el estado de la serie cubren la integridad.
-- **Días en mano desde `confirmada_en`**: 007 fija la fecha de confirmación; 006 no inventa una
+- **Días en mano desde `Serie.asignada_en`**: 008/009 la fijan y reinician; 006 no inventa una
   fecha de asignación al crear. Hasta que 007 esté implementada, las pruebas usan el fixture de
   confirmación.
 - **Alerta por equipo**: se alerta si algún seriado supera 20 días, no si la suma de días de todos
@@ -779,9 +783,9 @@ fallar antes de implementar. Todas corren sobre PostgreSQL, nunca SQLite.
 - **Riesgo de Excel huérfano**: si el proceso muere después de escribir el archivo y antes del
   commit, queda un archivo sin solicitud. Se documenta una limpieza por mantenimiento; no se
   empeora la transacción por un fallo de disco.
-- **Riesgo de custodia futura**: 009 y 011 deberán actualizar la fuente de días en mano cuando
-  transfieran o devuelvan series; 006 cubre la asignación confirmada por 007/008 y deja la consulta
-  aislada para que esas specs la extiendan.
+- **Custodia futura resuelta**: 009 reinicia `Serie.asignada_en` al traspasar y 011 la limpia al
+  devolver; 006 lee esa fuente. Riesgo residual: datos históricos sin la fecha, cubiertos por el
+  respaldo en `confirmada_en` de la asignación que originó la custodia.
 - **Riesgo de RLS no disponible**: se registra la deuda y se mantiene el filtrado de aplicación.
 
 ## Complexity Tracking

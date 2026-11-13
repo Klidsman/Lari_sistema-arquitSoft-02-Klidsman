@@ -160,6 +160,6 @@ Entonces registra usuario, fecha, series y cambios de estado
 ## 11. Consideraciones de Implementación
 
 - La devolución usa funciones de stock de spec 008 (decrementar stock técnico, incrementar stock general)
-- La recuperación/baja cambia el estado de la serie a un estado inactivo
+- La recuperación/baja cambia el estado de la serie a `INACTIVA`, que es terminal
 - El acta se genera con openpyxl
 - La auditoría registra todos los cambios

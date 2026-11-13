@@ -41,7 +41,7 @@ Permitir que los tiles traspasen materiales entre técnicos del mismo tenant. Lo
 ### 5.1 Traspaso entre Técnicos del Mismo Tenant (RF-33)
 - Un traspaso mueve materiales entre técnicos del mismo tenant
 - No existen traspasos entre tenants
-- El sistema genera un Excel de dos hojas:
+- Al enviar, el sistema genera un Excel de dos hojas:
   - Hoja 1: Desasignación (Z32) para el técnico origen
   - Hoja 2: Asignación (Z31) para el técnico destino
 
@@ -99,7 +99,7 @@ Permitir que los tiles traspasen materiales entre técnicos del mismo tenant. Lo
 
 ### CA-01: Traspaso entre Técnicos del Mismo Tenant
 Dado un tenant con dos técnicos
-Cuando el tenant crea un traspaso entre ellos
+Cuando el tenant crea y envía un traspaso entre ellos
 Entonces el sistema genera el Excel de dos hojas
 
 ### CA-02: Origen y Destino Distintos
@@ -188,6 +188,6 @@ Entonces reinicia el conteo en el técnico destino (RF-62)
 - La validación de disponibilidad consulta el stock del técnico origen
 - El cuadre se valida al crear la solicitud (no solo al confirmar)
 - La generación del Excel de dos hojas usa openpyxl
-- El cambio de técnico de series requiere actualizar la FK de técnico en el modelo de series
+- El cambio de técnico de series actualiza `series.Serie.tecnico` y reinicia `series.Serie.asignada_en`; la migración de esos campos se coordina con las specs 004/005/008/011
 - El stock general no se toca en ningún momento
 - La actualización de stock técnico se hace con las funciones de spec 008

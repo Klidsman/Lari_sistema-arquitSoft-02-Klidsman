@@ -28,11 +28,11 @@ stock nunca queda negativo: toda resta valida existencia suficiente antes de esc
 | Base de datos | PostgreSQL 16+; sin SQLite, tampoco en pruebas |
 | Interfaz | Sin endpoints propios; servicios internos consumidos por 004, 005, 006, 007, 009 y 010 |
 | Stock | `stock.StockGeneral` por tenant/material y `stock.StockTecnico` por tenant/técnico/material |
-| Series | `series.Serie` de 004; 008 cambia `RESERVADA→ASIGNADA` al confirmar |
+| Series | `series.Serie` de 004; 008 cambia `RESERVADA→ASIGNADA`, fija `tecnico` y `asignada_en` al confirmar |
 | Bloqueos | `select_for_update` en orden estable; sin `F()` ciego para decrementos |
 | Transacciones | La confirmación completa ocurre en la transacción abierta por 007 |
 | Auditoría | `auditoria.RegistroCambio` en la misma transacción |
-| Días en mano | Se calculan desde `SolicitudAsignacion.confirmada_en`, que escribe 007; no se duplica el dato |
+| Días en mano | Se calculan desde `Serie.asignada_en`, que 008 fija al confirmar; 006 lo usa y respalda en `confirmada_en` solo para datos históricos |
 | Pruebas | `pytest` + `pytest-django` sobre PostgreSQL |
 | Apps | `stock` (nueva) y consumidores `series`, `tecnicos`, `tenants`, `asignaciones` y `auditoria` |
 | Dependencias nuevas | Ninguna |
@@ -70,9 +70,9 @@ Si falta cualquiera de estos prerrequisitos, la implementación se detiene y se 
 | I. Aislamiento multitenant (NO NEGOCIABLE) | PASA | `StockGeneral` y `StockTecnico` llevan `tenant_id` y filtran por él; en `StockTecnico` se copia y valida desde `tecnico.tenant`. La confirmación usa `solicitud.tenant` y `solicitud.region`, nunca datos del cliente. El stock de otro tenant no se lee ni se escribe. RLS como respaldo. |
 | II. Jerarquía Región → Tenant → Técnico | PASA | El técnico pertenece al tenant de la solicitud; la confirmación no acepta `tenant_id` ni `region_id` externos. El almacén solo confirma solicitudes de su región vía 007. |
 | III. Invariantes de stock | PASA | `StockGeneral` y `StockTecnico` tienen `cantidad >= 0`. Toda resta valida existencia suficiente y usa bloqueo; nunca se crea stock con cantidad negativa. El stock general solo baja con asignaciones confirmadas. |
-| IV. Identidad y unicidad de series | PASA | Se usa `series.Serie`; la confirmación exige que cada serie esté `RESERVADA`, pertenezca al tenant/material y cambia a `ASIGNADA`. No se crea otra tabla ni otro número. |
+| IV. Identidad y unicidad de series | PASA | Se usa `series.Serie`; la confirmación exige que cada serie esté `RESERVADA`, pertenezca al tenant/material, cambia a `ASIGNADA` y fija `tecnico`/`asignada_en`. No se crea otra tabla ni otro número. |
 | V. Integridad transaccional | PASA | La confirmación completa (series + stock técnico + stock general + auditoría) ocurre en la transacción de 007. Cualquier fallo revierte todo; no hay actualizaciones parciales. |
-| VI. Auditoría inmutable y trazabilidad | PASA | Se auditan `Serie/estado`, `StockGeneral/cantidad` y `StockTecnico/cantidad` con valor anterior y nuevo, actor y fecha. Sin secretos ni contenido binario. |
+| VI. Auditoría inmutable y trazabilidad | PASA | Se auditan `Serie/estado`, `Serie/tecnico`, `Serie/asignada_en`, `StockGeneral/cantidad` y `StockTecnico/cantidad` con valor anterior y nuevo, actor y fecha. Sin secretos ni contenido binario. |
 | VII. Autoridad del reporte de Lari y aprobación humana | PASA | La actualización de stock solo ocurre tras la confirmación humana del almacén; 008 no confirma automáticamente ni procesa el reporte de Lari. |
 | VIII. Spec-driven, pruebas y simplicidad | PASA | Cada CA-01…CA-07 tiene al menos una prueba. No se agregan dependencias ni endpoints; la lógica vive en `stock/services.py`, es testeable sin interfaz y respeta la propiedad de 007 sobre el estado de la solicitud. |
 
@@ -207,7 +207,7 @@ class StockTecnico(models.Model):
 
 | Entidad | Dueña | Uso en 008 |
 |---|---|---|
-| `series.Serie` | 004 | `RESERVADA→ASIGNADA` al confirmar; validación de pertenencia y estado. |
+| `series.Serie` | 004 | `RESERVADA→ASIGNADA` al confirmar; fija `tecnico` y `asignada_en`; validación de pertenencia y estado. |
 | `asignaciones.SolicitudAsignacion` / `LineaAsignacion` | 006 | Origen de líneas, tenant, técnico y `estado`. 008 no cambia el estado de la solicitud. |
 | `tecnicos.Tecnico` | 003 | Destinatario del stock; validación de tenant. |
 | `materiales.Material` | 002 | Clave del stock y tipo seriado/no seriado. |
@@ -286,12 +286,12 @@ Mensajes exactos: “La cantidad debe ser mayor a 0”, “El tenant no tiene su
     - Seriados: `cantidad += 1` por serie.
     - No seriados: `cantidad += cantidad` de la línea.
   - Aplica:
-    - Cada serie: `RESERVADA→ASIGNADA`.
+    - Cada serie: `RESERVADA→ASIGNADA`, `tecnico=solicitud.tecnico`, `asignada_en=ahora`.
     - `StockTecnico`: incrementa la cantidad agregada; crea si no existe con
       `tenant = solicitud.tenant`.
     - `StockGeneral`: decrementa la cantidad agregada; si no alcanza, `StockInsuficiente` y revierte.
   - Audita:
-    - `Serie/estado` por cada serie.
+    - `Serie/estado`, `Serie/tecnico` y `Serie/asignada_en` por cada serie.
     - `StockTecnico/cantidad` por cada material agregado, con valor anterior y nuevo.
     - `StockGeneral/cantidad` por cada material agregado, con valor anterior y nuevo.
   - No cambia `SolicitudAsignacion.estado` ni `confirmada_en`: eso lo hace 007.
@@ -304,7 +304,10 @@ Mensajes exactos: “La cantidad debe ser mayor a 0”, “El tenant no tiene su
 
 - 008 **no** crea un contador ni una tabla de días en mano.
 - 007 fija `SolicitudAsignacion.confirmada_en` en la misma transacción.
-- 006 calcula los días a demanda desde `confirmada_en`.
+- 008 fija `Serie.asignada_en = ahora` y `Serie.tecnico = solicitud.tecnico` al confirmar; es la fuente
+  del conteo actual de cada serie.
+- 006 calcula los días a demanda desde `Serie.asignada_en`, con respaldo en `confirmada_en` solo para
+  datos históricos sin custodia.
 - `ResultadoConfirmacionStock` expone `confirmada_en` para verificar que quedó fijado; no lo escribe
   ni lo modifica.
 
@@ -343,10 +346,10 @@ Mensajes exactos: “La cantidad debe ser mayor a 0”, “El tenant no tiene su
 │   ├── 008.actualizar_stock_confirmacion_asignacion(solicitud, actor)
 │   │   ├── valida técnico, series RESERVADA y stock suficiente
 │   │   ├── bloquea Tenant → StockGeneral → StockTecnico → Serie
-│   │   ├── series RESERVADA → ASIGNADA
+│   │   ├── series RESERVADA → ASIGNADA (con tecnico y asignada_en)
 │   │   ├── StockTecnico += cantidad agregada
 │   │   ├── StockGeneral -= cantidad agregada
-│   │   └── audita Serie/estado, StockTecnico/cantidad y StockGeneral/cantidad
+│   │   └── audita Serie/estado, Serie/tecnico, Serie/asignada_en, StockTecnico/cantidad y StockGeneral/cantidad
 │   ├── solicitud.estado = CONFIRMADA
 │   ├── solicitud.confirmada_en = ahora
 │   └── audita SolicitudAsignacion/estado
@@ -389,6 +392,8 @@ Mensajes exactos: “La cantidad debe ser mayor a 0”, “El tenant no tiene su
 
 - Auditoría transaccional con `auditoria.services.registrar_cambio`:
   - `Serie/estado`: `RESERVADA→ASIGNADA` por serie.
+  - `Serie/tecnico`: técnico anterior y nuevo por serie.
+  - `Serie/asignada_en`: fecha anterior y nueva por serie.
   - `StockTecnico/cantidad`: valor anterior y nuevo por material.
   - `StockGeneral/cantidad`: valor anterior y nuevo por material.
 - El actor es el usuario de la sesión que confirma (007); no se inventa un usuario del sistema.
@@ -412,7 +417,7 @@ Un caso por criterio de aceptación, más pruebas de servicios, concurrencia y a
 | CA-02 | `test_stock_tecnico_sube_con_series_y_no_seriados` |
 | CA-03 | `test_stock_general_baja_con_series_y_no_seriados` |
 | CA-04 | `test_confirmacion_fallida_revierte_todo` |
-| CA-05 | `test_dias_en_mano_inician_en_confirmada_en` |
+| CA-05 | `test_dias_en_mano_inician_en_serie_asignada_en` |
 | CA-06 | `test_auditoria_completa_de_series_y_stock` |
 | CA-07 | `test_no_seriados_actualizan_cantidad_agregada` |
 
@@ -443,8 +448,9 @@ Además:
 - **Agregación por material**: reduce consultas y produce una auditoría legible; el detalle por
   serie queda en `Serie/estado`. Alternativa descartada: una fila de stock por serie, que
   duplicaría el inventario.
-- **Días en mano sin campo propio**: `confirmada_en` de 007 es la fuente; 006 calcula a demanda.
-  Alternativa descartada: un contador en 008 que se desincroniza.
+- **Días en mano desde la custodia**: `Serie.asignada_en` se fija al confirmar y 006 calcula a demanda;
+  `confirmada_en` solo respalda datos históricos. Alternativa descartada: un contador en 008 que se
+  desincroniza o seguir usando `confirmada_en`, que no se reinicia con los traspasos de 009.
 - **Sin endpoints**: 008 es un módulo de servicios consumido por 004–011. Alternativa descartada:
   una API de stock que nadie pidió y que ampliaría la superficie de permisos.
 - **Fundacional antes de 004/005**: el orden evita que cada spec cree su propio stock. Ya está
@@ -468,6 +474,8 @@ Además:
    estable y se prueba concurrencia.
 5. Se agregó `tenant` a `StockTecnico`, copiado y validado desde `tecnico.tenant`, para cumplir la
    restricción constitucional de que toda tabla operativa lleva `tenant_id` y permitir RLS directa.
+6. Se alineó con 009: al confirmar, 008 fija `Serie.tecnico` y `Serie.asignada_en`, los audita y los
+   expone en el resultado; 006 calcula los días en mano desde `Serie.asignada_en`.
 
 ## Complexity Tracking
 
