@@ -9,7 +9,7 @@ El reporte de Lari es el documento que la contrata principal envía diariamente 
 ## 2. Formato del Archivo
 
 ### 2.1 Nombre del Archivo
-- Formato: `STOCK CONTRASTAS [REGIÓN] [FECHA].xlsx`
+- Formato: `STOCK CONTRASTAS [REGIÓN] [FECHA].xlsx`; solo se acepta `.xlsx`
 - Ejemplo: `STOCK CONTRASTAS AYACUCHO 20-10-2026.xlsx`
 
 ### 2.2 Estructura del Excel
@@ -72,12 +72,12 @@ El sistema solo lee las siguientes columnas para la conciliación:
 - **El reporte de Lari contiene técnicos de todos los tenants de la región**
 - **El sistema solo procesa las filas donde el técnico (Nº ident.fis.1) está registrado en el tenant que carga el reporte**
 - **Las filas con técnicos de otros tenants se ignoran silenciosamente** (no causan error)
-- Si el técnico no existe en el tenant y no pertenece a otros tenants de la región, se registra como advertencia
+- Si el técnico es desconocido o pertenece a otra región, se rechaza el archivo completo
 
 ## 6. Validaciones del Reporte
 
 El sistema valida que:
-- El archivo sea un Excel válido (.xlsx o .xls)
+- El archivo sea un Excel válido `.xlsx` (no `.xls`)
 - Exista la hoja llamada "GENERAL"
 - La hoja GENERAL tenga las columnas requeridas (Material, Lote, Libre utilización, Número de serie, Nº ident.fis.1, Texto breve material)
 - Los códigos de material existan en el catálogo
@@ -88,11 +88,13 @@ El sistema valida que:
 **Nota sobre técnicos:**
 - El reporte de Lari contiene técnicos de todos los tenants de la región
 - El sistema filtra y solo procesa las filas donde el técnico está registrado en el tenant que carga el reporte
-- Las filas con técnicos de otros tenants se ignoran silenciosamente (no causan error ni rechazo del archivo)
+- Las filas con técnicos de otros tenants de la misma región se ignoran silenciosamente (no causan
+  error ni rechazo del archivo)
+- Las filas con técnicos desconocidos o de otra región rechazan el archivo completo
 
 ## 7. Proceso de Carga
 
-1. El tenant carga el archivo Excel (.xlsx o .xls)
+1. El tenant carga el archivo Excel `.xlsx`
 2. El sistema lee únicamente la hoja llamada "GENERAL"
 3. El sistema extrae las columnas: Material, Lote, Libre utilización, Número de serie, Nº ident.fis.1, Texto breve material
 4. El sistema crea una conciliación en estado "En revisión"
