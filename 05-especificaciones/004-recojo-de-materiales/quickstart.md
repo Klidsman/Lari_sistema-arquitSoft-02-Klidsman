@@ -96,17 +96,20 @@ unicidad global, concurrencia real y transacciones anidadas con el servicio de s
 
 1. Iniciar sesión con la cuenta del tenant `AYA-01`.
 2. Ir a `/recojos/nuevo/`.
-3. Elegir el material seriado `10402520279`; verificar que tipo `Seriado` y lote `FIBERHOME` se
-   muestran como solo lectura.
-4. Pegar tres series válidas, una por línea: `ABC123456789`, `DEF123456789`, `GHI123456789`.
-5. **Esperado**: la vista previa muestra las tres como `Válida`; Guardar redirige al detalle.
-6. **Esperado**: el detalle muestra fecha, tenant, región `Ayacucho`, total de series 3, total de
-   cantidad 0 y las tres series.
-7. Consultar el stock general del tenant para el material: aumentó en 3.
-8. Consultar `series.Serie`: las tres están en estado `DISPONIBLE`, con el tenant y la región
-   correctos.
-9. Consultar la auditoría: hay un registro `Recojo/alta` y un registro `StockGeneral/cantidad` con
-   valor anterior y nuevo.
+3. Escribir un nombre para el recojo, por ejemplo `Recojo de rosetas`.
+4. Elegir `10402520279 - ROSETA` en la lista desplegable de materiales; verificar que tipo
+   `Seriado` y lote `FIBERHOME` se muestran como solo lectura.
+5. Antes de guardar, cambiar el material de una línea o pulsar **Quitar línea** para corregir un
+   error; el recojo guardado no se edita.
+6. Pegar tres series válidas, una por línea: `ABC123456789`, `DEF123456789`, `GHI123456789`.
+7. **Esperado**: la vista previa muestra las tres como `Válida`; Guardar redirige al detalle.
+8. **Esperado**: el detalle muestra nombre, fecha, tenant, región `Ayacucho`, total de series 3,
+   total de cantidad 0 y las tres series.
+9. Consultar el stock general del tenant para el material: aumentó en 3.
+10. Consultar `series.Serie`: las tres están en estado `DISPONIBLE`, con el tenant y la región
+    correctos.
+11. Consultar la auditoría: hay un registro `Recojo/alta` y un registro `StockGeneral/cantidad` con
+    valor anterior y nuevo.
 
 ### 2. Normalización de series (CA-03)
 
@@ -114,6 +117,8 @@ unicidad global, concurrencia real y transacciones anidadas con el servicio de s
 2. **Esperado**: la vista previa muestra `ABC123456789` como `Válida`.
 3. Ingresar `" abc 123456789 "`.
 4. **Esperado**: también se normaliza a `ABC123456789`; la vista previa lo muestra así.
+5. Pegar en una sola fila `ABC123456789 - DEF123456789 - GHI123456789`.
+6. **Esperado**: se muestran tres series válidas; los guiones se descartan como separadores.
 5. Guardar y verificar que la serie persistida es la normalizada.
 
 ### 3. Validación de formato (CA-04)
@@ -180,6 +185,14 @@ unicidad global, concurrencia real y transacciones anidadas con el servicio de s
    `/recojos/` y `/recojos/nuevo/`.
 8. **Esperado**: `403` "No tienes permiso para registrar recojos".
 
+### 9.1 Búsqueda por nombre del recojo
+
+1. Abrir `/recojos/`.
+2. Escribir en el buscador parte del nombre, por ejemplo `rosetas`.
+3. **Esperado**: solo aparecen los recojos del tenant cuyo nombre coincide.
+4. Dejar el buscador vacío.
+5. **Esperado**: vuelve el listado completo, paginado a 50.
+
 ### 10. Varias líneas y varios materiales
 
 1. Registrar un recojo con una línea del material seriado (2 series) y una línea del material no
@@ -225,7 +238,18 @@ unicidad global, concurrencia real y transacciones anidadas con el servicio de s
 3. Repetir con un material sin recojos ni stock.
 4. **Esperado**: el cambio de tipo se permite (regla de 002).
 
-### 15. Rendimiento y ausencia de N+1
+### 15.1 Anulación lógica dentro de 24 horas
+
+1. Abrir un recojo registrado hace menos de 24 horas.
+2. **Esperado**: el detalle muestra “Puedes anular este recojo dentro de las próximas 24 horas.” y el formulario de anulación.
+3. Escribir un motivo y confirmar.
+4. **Esperado**: el recojo queda **Anulado**, el stock se revierte, las series quedan **INACTIVA** y la auditoría registra recojo, stock y series.
+5. Intentar anular de nuevo.
+6. **Esperado**: no cambia nada ni se duplica auditoría.
+7. Abrir un recojo con más de 24 horas.
+8. **Esperado**: “El plazo de 24 horas para anular este recojo venció.” y no se permite anular.
+
+### 15.2 Rendimiento y ausencia de N+1
 
 1. Preparar un recojo con 200 series y abrir su detalle.
 2. **Esperado**: el detalle responde en menos de un segundo y no ejecuta una consulta por serie.
@@ -242,6 +266,8 @@ La funcionalidad se considera validada cuando:
 - [ ] Cada criterio de aceptación CA-01…CA-09 tiene al menos una prueba automatizada.
 - [ ] Los escenarios manuales 1–15 se completan con los resultados esperados.
 - [ ] Un recojo se guarda completo o no se guarda; no hay estados parciales.
+- [ ] Un recojo puede anularse con motivo dentro de 24 horas; la anulación revierte stock, deja series inactivas y se audita.
+- [ ] Fuera del plazo, con series usadas o stock insuficiente, la anulación se rechaza sin cambios.
 - [ ] Las series se normalizan y validan antes de escribir; la unicidad global se impone en la
       base.
 - [ ] El stock general sube con cada recojo y no se modifica por otra vía en esta spec.

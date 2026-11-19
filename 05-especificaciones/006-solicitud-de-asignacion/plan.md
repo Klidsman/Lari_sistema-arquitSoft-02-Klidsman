@@ -7,7 +7,7 @@
 
 ## Summary
 
-Implementar la creación de solicitudes de asignación de un técnico, con series elegidas del
+Implementar la creación de solicitudes de asignación de uno o más técnicos del tenant, con series elegidas del
 inventario general y cantidades de materiales no seriados, validando la disponibilidad real
 (`Stock General - Reservado`) y reservando los materiales al enviar la solicitud. La solicitud pasa
 de `BORRADOR` a `ENVIADA` en una transacción; las series seleccionadas pasan a `RESERVADA`; se
@@ -156,11 +156,6 @@ class SolicitudAsignacion(models.Model):
         on_delete=models.PROTECT,
         related_name="solicitudes_asignacion",
     )
-    tecnico = models.ForeignKey(
-        "tecnicos.Tecnico",
-        on_delete=models.PROTECT,
-        related_name="solicitudes_asignacion",
-    )
     fecha = models.DateField()
     estado = models.CharField(
         max_length=20,
@@ -205,7 +200,6 @@ class SolicitudAsignacion(models.Model):
         ]
         indexes = [
             models.Index(fields=["tenant", "estado"], name="solicitud_asign_tenant_estado"),
-            models.Index(fields=["tecnico", "fecha"], name="solicitud_asign_tecnico_fecha"),
             models.Index(fields=["region", "fecha"], name="solicitud_asign_region_fecha"),
         ]
 ```
@@ -233,6 +227,11 @@ class LineaAsignacion(models.Model):
         SolicitudAsignacion,
         on_delete=models.PROTECT,
         related_name="lineas",
+    )
+    tecnico = models.ForeignKey(
+        "tecnicos.Tecnico",
+        on_delete=models.PROTECT,
+        related_name="lineas_asignacion",
     )
     material = models.ForeignKey(
         "materiales.Material",
@@ -269,25 +268,27 @@ class LineaAsignacion(models.Model):
                 name="linea_asignacion_serie_unica_en_solicitud",
             ),
             models.UniqueConstraint(
-                fields=["solicitud", "material"],
+                fields=["solicitud", "tecnico", "material"],
                 condition=Q(serie__isnull=True),
                 name="linea_asignacion_no_seriada_unica",
             ),
         ]
         indexes = [
             models.Index(fields=["solicitud", "material"], name="linea_asign_solicitud_material"),
+            models.Index(fields=["solicitud", "tecnico"], name="linea_asign_solicitud_tecnico"),
             models.Index(fields=["tenant", "material"], name="linea_asign_tenant_material"),
             models.Index(fields=["serie"], name="linea_asign_serie"),
         ]
 ```
 
 - `tenant` se fija desde `solicitud.tenant`; el servicio nunca lo acepta del cliente.
+- `tecnico` se valida contra el tenant; cada línea puede tener un técnico distinto.
 - `serie` es FK, no `OneToOneField`: una serie puede aparecer en una solicitud rechazada y luego
   volver a asignarse. La unicidad dentro de una solicitud la impone
   `linea_asignacion_serie_unica_en_solicitud`; la disponibilidad global la impone el estado de
   `series.Serie`.
 - Para seriados, `serie` no es nula y `cantidad=1`. Para no seriados, `serie` es nula y
-  `cantidad>0`; una sola línea por material en la solicitud.
+  `cantidad>0`; una sola línea por técnico y material en la solicitud.
 - `lote` se copia de `material.lote`; no se acepta del cliente.
 - No se crea una tabla de reservas: el reservado de no seriados se calcula con las líneas de
   solicitudes `ENVIADA`.
@@ -307,6 +308,8 @@ class LineaAsignacion(models.Model):
 
 - `asignaciones/migrations/0001_initial.py`: `SolicitudAsignacion` y `LineaAsignacion` con
   restricciones e índices.
+- `asignaciones/migrations/0004_linea_tecnico.py` y `0005_quitar_tecnico_solicitud.py`: mueven el
+  técnico de la solicitud a cada línea (enmienda 2026-11-19) y ajustan la unicidad de no seriados.
 - `asignaciones/migrations/0002_rls.py`: políticas RLS por `tenant_id` para
   `asignaciones_solicitudasignacion` y `asignaciones_lineaasignacion`, si la infraestructura RLS
   de 001 está disponible. Si no, se registra la deuda en `research.md` y no se inventa una
@@ -400,9 +403,9 @@ contienen lógica de negocio.
 
 ### Creación y envío
 
-- `crear_borrador_solicitud(tenant, tecnico_id, fecha, lineas, actor)`:
+- `crear_borrador_solicitud(tenant, fecha, lineas, actor)`:
   - `validar_cuenta_tenant(actor)`.
-  - `validar_tecnico_para_asignacion`.
+  - Valida el `tecnico_id` de cada línea con `validar_tecnico_para_asignacion`.
   - Normaliza y valida las líneas.
   - En `transaction.atomic`, crea `SolicitudAsignacion` en `BORRADOR`, con región de la sesión y
     `creado_por=actor`, y sus `LineaAsignacion`; audita `SolicitudAsignacion/alta` y
@@ -425,7 +428,7 @@ contienen lógica de negocio.
   - Si algo falla, revierte la transacción y elimina el archivo generado.
   - No modifica `StockGeneral` ni `StockTecnico`; la reserva es lógica y se deriva del estado
     `ENVIADA`.
-- `crear_y_enviar_solicitud(tenant, tecnico_id, fecha, lineas, actor)`:
+- `crear_y_enviar_solicitud(tenant, fecha, lineas, actor)`:
   - Ejecuta creación y envío en una sola `transaction.atomic`; si el envío falla, no queda ni
     borrador ni archivo.
   - Es la operación que usa el botón "Enviar" del formulario y la que cubre CA-01.
@@ -500,14 +503,24 @@ contienen lógica de negocio.
 - No existe `GET /asignaciones/<id>/editar/` ni ruta de borrado. `DELETE`, `PUT` y `PATCH`
   responden `405` en todas las rutas.
 - La descarga y el envío por correo del Excel pertenecen a 007. 006 no expone una ruta de correo.
-- `series-disponibles` y `validar-disponibilidad` devuelven **fragmentos HTML/HTMX**, nunca JSON.
-- El formulario tiene una sola solicitud y un solo técnico; las líneas se agregan/eliminan en el
-  cliente. Un botón "Guardar borrador" crea un `BORRADOR`; un botón "Enviar" ejecuta
+- `series-disponibles` y `validar-disponibilidad` devuelven **fragmentos HTML**, nunca JSON. El
+  proyecto no carga HTMX: el formulario usa JavaScript propio.
+- El formulario arma **bloques por técnico** en una sola solicitud: se elige un técnico, se
+  agregan sus materiales y luego se agrega otro técnico. Los bloques se pueden editar o quitar
+  hasta enviar. Un botón "Guardar borrador" crea un `BORRADOR`; "Enviar" ejecuta
   `crear_y_enviar_solicitud` y redirige al detalle.
+- Al elegir un material seriado se abre una ventana (`<dialog>`) con las series disponibles y
+  búsqueda por número; se marcan varias y se confirman. Las selecciones quedan como campos
+  ocultos de la fila.
+- La pantalla incluye un panel fijo a la izquierda con los materiales disponibles, su disponible
+  y sobrante actualizados. Se pueden marcar varios y pulsar "Agregar seleccionados" para crear
+  las líneas en el bloque del técnico activo. Los seriados agregados en lote quedan pendientes de
+  series; solo la ventana del primero se abre automáticamente.
 - El selector de técnico usa `tecnicos.services.tecnicos_para_operacion` (solo activos). El
-  selector de material usa `/materiales/buscar/` de 002.
-- La pantalla de detalle muestra técnico, NIF, fecha, estado, líneas agrupadas, totales, hash del
-  Excel y, si la solicitud está confirmada, los días en mano por serie y la alerta de cupo.
+  selector de material muestra solo existencias del tenant y su cantidad disponible.
+- Un material repetido para el mismo técnico se rechaza en el cliente y en el servicio.
+- La pantalla de detalle muestra técnicos, NIF, fecha, estado, líneas agrupadas, totales, hash
+  del Excel y, si la solicitud está confirmada, los días en mano por serie y la alerta de cupo.
 - La alerta de cupo se muestra como aviso no intrusivo; no deshabilita "Enviar".
 
 ## Integraciones

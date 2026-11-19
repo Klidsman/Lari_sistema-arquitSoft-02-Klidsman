@@ -60,6 +60,7 @@ asignaciones, traspasos y conciliaciones.
 | `descripcion` | `CharField(100)` | No | 1–100 caracteres después de normalizar; no vacía; sin espacios al inicio/final ni repetidos |
 | `lote` | `CharField(50)` | No | Opcional (cadena vacía permitida); hasta 50 caracteres; se normaliza en mayúsculas y sin espacios repetidos |
 | `es_seriado` | `BooleanField` | No | `True` = Seriado, `False` = No seriado; obligatorio; inmutable si el material tiene stock o movimientos |
+| `activo` | `BooleanField` | No | `True` por defecto; `False` tras la baja lógica. No borra la fila |
 | `creado_por` | FK `Usuario` | No | `PROTECT`, `related_name="+"`; cuenta que registró el material |
 | `creado_en` | `DateTimeField` | No | `auto_now_add` |
 | `actualizado_por` | FK `Usuario` | Sí | `PROTECT`, `related_name="+"`; última cuenta que editó |
@@ -96,9 +97,14 @@ asignaciones, traspasos y conciliaciones.
 
 - Cada material tiene un solo lote; el lote es informativo y no separa stock.
 - El código no se edita después del alta.
-- Solo el creador o el Administrador de plataforma editan descripción y lote.
+- Solo el Responsable de almacén crea materiales.
+- Cualquier Responsable de almacén da de baja cualquier material; la baja es lógica.
+- Cualquier Responsable de almacén o el Administrador de plataforma editan descripción y lote
+  de cualquier material activo; la cuenta de tenant no edita.
 - El tipo solo cambia si el material no tiene stock ni movimientos en ningún tenant.
-- No se elimina ningún material; se conserva aunque su creador se desactive.
+- No se borra ningún material: se marca `activo=False` y se conserva aunque su creador se
+  desactive.
+- Listados y búsquedas solo devuelven materiales con `activo=True`.
 - El catálogo es global y la búsqueda no se filtra por tenant.
 
 ## Reglas de normalización
@@ -136,6 +142,9 @@ transacción que el cambio.
 | Edición de descripción | `Material` | `descripcion` | descripción anterior | descripción nueva |
 | Edición de lote | `Material` | `lote` | lote anterior | lote nuevo |
 | Cambio de tipo | `Material` | `tipo` | `SERIADO` / `NO_SERIADO` | `NO_SERIADO` / `SERIADO` |
+| Baja lógica | `Material` | `activo` | `True` | `False` |
+| Reactivación | `Material` | `activo` | `False` | `True` |
+| Cambios al reactivar | `Material` | `descripcion` / `lote` / `tipo` | valor anterior | valor nuevo |
 
 - Un registro por campo modificado.
 - Los valores se guardan como texto legible; fechas en ISO 8601 cuando correspondan.
@@ -147,14 +156,19 @@ transacción que el cambio.
 ## Ciclo de vida
 
 ```text
-(no existe) ── crear_material ──▶ activo (sin estado explícito)
+(no existe) ── crear_material (Responsable de almacén) ──▶ activo
 activo ── actualizar_material (descripción/lote/tipo) ──▶ activo
-activo ── (no existe borrado) ──▶ activo
+activo ── dar_de_baja_material (Responsable de almacén) ──▶ dado de baja (activo=False)
+dado de baja ── crear_material con el mismo código ──▶ activo (reactivado)
 ```
 
-- No hay estado `activo/inactivo`: la spec no define desactivación de materiales.
-- No hay transición a eliminado.
-- El material permanece visible y utilizable aunque su creador se desactive.
+- La baja es lógica: la fila se conserva con su creador y su auditoría.
+- Registrar de nuevo un código dado de baja reactiva la misma fila y actualiza sus datos;
+  nunca crea un duplicado.
+- Un material dado de baja no aparece en listados ni búsquedas.
+- No hay transición a borrado físico.
+- El material permanece visible y utilizable mientras esté activo, aunque su creador se
+  desactive.
 
 ## Trazabilidad con la spec
 

@@ -46,6 +46,27 @@ Celery y **no** usa permisos Django por cadena.
 
 ---
 
+## Estado de implementación (2026-11-18)
+
+- **Implementado el núcleo**: app `reportes`, modelo `CorteMensual` con restricciones de unicidad
+  por tenant/mes/año y global, migración `0001_initial`.
+- **Servicios**: `rango_mes`, `calcular_totales` (solicitados, asignados,
+  liquidados/instalados, devueltos, no justificado y merma redondeada a 2 decimales),
+  `generar_corte`, `regenerar_corte` con versión y auditoría, consultas por alcance y
+  exportaciones de auditoría y conciliación en `.xlsx` en memoria.
+- **Interfaz**: listado con filtro por año, generación por mes/año y tenant/global, detalle,
+  regeneración y descargas. El Admin ve todos los cortes y puede generar el global; el tenant solo
+  el suyo.
+- **Pruebas en verde** (9 pruebas de 012): CA-01/CA-02 (totales y merma 15%), asignados 0,
+  generación/duplicado/regeneración, permisos de alcance, exportaciones con y sin columna Tenant,
+  aislamiento de cortes ajenos y contrato HTTP.
+- **Pendientes de cierre**:
+  - Pruebas de rendimiento y validación manual de `quickstart.md`.
+  - RLS de `reportes_cortemensual` implementada en
+    `reportes/migrations/0002_rls.py`.
+
+---
+
 ## Fase 1: Setup (infraestructura compartida)
 
 **Propósito**: verificar prerrequisitos y correcciones, añadir los campos de apoyo, crear la app,

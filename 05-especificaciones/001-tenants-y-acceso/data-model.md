@@ -211,7 +211,7 @@ Identidad de acceso con un rol y un alcance.
 | `region` | FK `Region` | Sí | `PROTECT`, `related_name="usuarios"`; solo para `RESPONSABLE_ALMACEN` |
 | `is_active` | `BooleanField` | No | `False` hasta aceptar la invitación |
 | `version_sesion` | `PositiveIntegerField` | No | Por defecto `0`; se incrementa al revocar sesiones |
-| `secreto_totp` | `CharField(64)` | Sí | Secreto TOTP cifrado; nunca en auditoría |
+| `secreto_totp` | `CharField(255)` | Sí | Secreto TOTP cifrado con Fernet; nunca en auditoría |
 | `segundo_factor_habilitado` | `BooleanField` | No | Por defecto `False` |
 | `date_joined` | `DateTimeField` | No | Heredado de `AbstractUser` |
 | `last_login` | `DateTimeField` | Sí | Heredado de `AbstractUser` |

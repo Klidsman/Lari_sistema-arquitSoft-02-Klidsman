@@ -52,6 +52,34 @@ Celery y **no** usa permisos Django por cadena.
 
 ---
 
+## Estado de implementación (2026-11-18)
+
+- **Implementado el núcleo**: app `traspasos`, modelos `SolicitudTraspaso`/`LineaTraspaso` con
+  restricciones, migración `0001_initial`, servicios de creación, edición, envío, confirmación,
+  rechazo, cancelación, disponibilidad y reserva derivada, Excel de dos hojas
+  (`Desasignación`/`Asignación`, Z32/Z31) con hash SHA-256, vistas y plantillas del tenant y del
+  almacén.
+- **Cuadre**: `construir_movimientos`, `validar_cuadre_traspaso` y `resumen_cuadre` se ejecutan al
+  crear, editar, enviar y confirmar; la salida y la entrada se proyectan desde la misma lista
+  canónica.
+- **Pruebas en verde** (21 pruebas de 009): creación, disponibilidad, borrador sin reserva, envío
+  con Excel y hash, cuadre, confirmación con cambio de técnico y reinicio de `asignada_en`, rechazo
+  con liberación de reserva, cancelación, stock general invariable, aislamiento entre tenants,
+  hash alterado y contrato HTTP de las rutas principales.
+- **Pendientes de cierre**:
+  - Nombres de servicio del contrato disponibles como alias en
+    `traspasos/services.py` (`crear_solicitud_traspaso`, `actualizar_lineas_borrador`,
+    `enviar_solicitud_traspaso`, `verificar_hash_excel`); las firmas siguen usando ids.
+  - RLS de `traspasos` (T015) implementada en `traspasos/migrations/0002_rls.py`;
+    queda pendiente la revalidación con bloqueo explícito al enviar (T027/T033).
+  - Concurrencia de la confirmación cubierta en
+    `tests/integration/test_traspaso_concurrencia.py`; rendimiento de 100 series cubierto en
+    `tests/integration/test_traspaso_rendimiento.py`; quedan la contención de envíos y la
+    auditoría de líneas/Excel (T064, T067).
+  - Escenarios de `quickstart.md` pendientes de validación manual (T080).
+
+---
+
 ## Fase 1: Setup (infraestructura compartida)
 
 **Propósito**: verificar prerrequisitos y correcciones documentales, crear la app, registrar rutas,

@@ -100,7 +100,12 @@ Documento que registra los materiales retirados del almacén central de la regi�
 | `id` | `BigAutoField` | No | Clave primaria |
 | `tenant` | FK `tenants.Tenant` | No | `PROTECT`, `related_name="recojos"`; se toma de la sesión y es inmutable |
 | `region` | FK `tenants.Region` | No | `PROTECT`, `related_name="recojos"`; se fija desde `tenant.region` y es inmutable |
+| `nombre` | `CharField(100)` | No | Nombre identificatorio del recojo, 1–100 caracteres; sirve para la búsqueda del listado |
 | `fecha` | `DateField` | No | Fecha del recojo; por defecto hoy en el formulario; no se imponen límites de pasado/futuro |
+| `estado` | `CharField(10)` | No | `REGISTRADO` o `ANULADO`; por defecto `REGISTRADO` |
+| `anulado_en` | `DateTimeField` | Sí | Momento de la anulación |
+| `anulado_por` | FK `Usuario` | Sí | Usuario que anuló; `PROTECT` |
+| `motivo_anulacion` | `TextField` | No | Motivo obligatorio al anular, 1–500 caracteres |
 | `creado_por` | FK `Usuario` | No | `PROTECT`, `related_name="recojos_creados"`; cuenta que registró el recojo |
 | `creado_en` | `DateTimeField` | No | `auto_now_add`; fecha y hora de registro, distinta de `fecha` |
 
@@ -114,6 +119,8 @@ Documento que registra los materiales retirados del almacén central de la regi�
 
 - `Index(tenant, fecha)` para el listado por tenant y fecha.
 - `Index(region, fecha)` para consultas de región y reportes posteriores.
+- `Index(tenant, nombre)` para la búsqueda por nombre dentro del tenant.
+- `Index(tenant, estado, fecha)` para el listado filtrado por estado.
 - Índices de clave foránea de `tenant`, `region` y `creado_por` (los crea Django).
 
 **Relaciones**
@@ -130,6 +137,7 @@ Documento que registra los materiales retirados del almacén central de la regi�
 - El recojo es inmutable: no se edita ni se borra; una corrección se hará con un movimiento nuevo
   de una spec posterior.
 - La fecha del recojo puede ser pasada; `creado_en` conserva el momento de carga.
+- El nombre es obligatorio para los recojos nuevos y se usa en la búsqueda del listado.
 
 ### LineaRecojo (`recojos.LineaRecojo`)
 
@@ -326,6 +334,10 @@ cambio.
 |---|---|---|---|---|
 | Alta de recojo | `Recojo` | `alta` | vacío | `fecha=2026-11-12; region=Ayacucho; lineas=4; series=3; cantidad=25` |
 | Incremento de stock | `StockGeneral` | `cantidad` | cantidad anterior | cantidad nueva (lo escribe 008) |
+| Anulación de recojo | `Recojo` | `estado` | `REGISTRADO` | `ANULADO` |
+| Motivo de anulación | `Recojo` | `motivo_anulacion` | vacío | motivo |
+| Reversión de stock | `StockGeneral` | `cantidad` | cantidad anterior | cantidad nueva (la escribe 008) |
+| Serie inactivada | `Serie` | `estado` | `DISPONIBLE` | `INACTIVA` |
 
 - Un registro por alta de recojo y uno por cada material incrementado; no uno por serie.
 - Los valores se guardan como texto legible; fechas en ISO 8601.
@@ -339,7 +351,8 @@ cambio.
 ## Ciclo de vida
 
 ```text
-(no existe) ── crear_recojo ──▶ registrado (inmutable)
+(no existe) ── crear_recojo ──▶ REGISTRADO
+REGISTRADO ── anular_recojo (≤ 24 h, motivo) ──▶ ANULADO (stock revertido, series INACTIVA)
 registrado ── consulta ──▶ registrado
 registrado ── (no existe edición) ──▶ registrado
 registrado ── (no existe borrado) ──▶ registrado

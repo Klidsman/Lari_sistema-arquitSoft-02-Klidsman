@@ -286,7 +286,7 @@ Mensajes exactos: “La cantidad debe ser mayor a 0”, “El tenant no tiene su
     - Seriados: `cantidad += 1` por serie.
     - No seriados: `cantidad += cantidad` de la línea.
   - Aplica:
-    - Cada serie: `RESERVADA→ASIGNADA`, `tecnico=solicitud.tecnico`, `asignada_en=ahora`.
+    - Cada serie: `RESERVADA→ASIGNADA`, `tecnico=técnico de la línea`, `asignada_en=ahora`.
     - `StockTecnico`: incrementa la cantidad agregada; crea si no existe con
       `tenant = solicitud.tenant`.
     - `StockGeneral`: decrementa la cantidad agregada; si no alcanza, `StockInsuficiente` y revierte.
@@ -304,7 +304,7 @@ Mensajes exactos: “La cantidad debe ser mayor a 0”, “El tenant no tiene su
 
 - 008 **no** crea un contador ni una tabla de días en mano.
 - 007 fija `SolicitudAsignacion.confirmada_en` en la misma transacción.
-- 008 fija `Serie.asignada_en = ahora` y `Serie.tecnico = solicitud.tecnico` al confirmar; es la fuente
+- 008 fija `Serie.asignada_en = ahora` y `Serie.tecnico = técnico de la línea` al confirmar; es la fuente
   del conteo actual de cada serie.
 - 006 calcula los días a demanda desde `Serie.asignada_en`, con respaldo en `confirmada_en` solo para
   datos históricos sin custodia.

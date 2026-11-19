@@ -225,18 +225,48 @@ regular, unicidad global, transiciones de estado y concurrencia real.
 2. **Esperado**: una alta tiene éxito y la otra falla con `"El NIF ya está registrado"`; existe una
    sola fila en la base.
 
+## Registro de validación manual
+
+**Fecha**: 2026-11-16
+**Entorno**: Windows, PostgreSQL 16 (contenedor `lari-postgres` en el puerto 5434), Redis 7,
+Django 5.2 y Python 3.12.
+**Guía seguida**: `05-especificaciones/003-tecnicos/guia-validacion-manual.md`.
+
+| # | Escenario | Resultado |
+|---|---|---|
+| 1 | Alta de técnico | OK |
+| 2 | Formato y normalización del NIF | OK |
+| 3 | NIF único y doble envío | OK |
+| 4 | NIF de un técnico desactivado | OK |
+| 5 | Validación del nombre | OK |
+| 6 | Edición e inmutabilidad | OK |
+| 7 | Desactivación y conservación | OK |
+| 8 | Reactivación | OK |
+| 9 | Búsqueda y listado por tenant | OK |
+| 10 | Aislamiento y accesos forzados | OK |
+| 11 | Permisos de Administrador y Responsable | OK |
+| 12 | Tenant suspendido y cuenta inactiva | OK |
+| 13 | Formulario viejo con técnico desactivado | OK |
+| 14 | Sin eliminación e idempotencia | OK |
+| 15 | Auditoría | OK |
+| 16 | Concurrencia | OK |
+
+Los 16 escenarios se completaron con los resultados esperados. Durante la validación se
+detectaron dos mejoras de interfaz del panel administrador, ya implementadas: enlace directo a
+«Administración de cuentas» y confirmación antes de activar, desactivar, suspender o dar de baja.
+
 ## Criterios de salida
 
 La funcionalidad se considera validada cuando:
 
-- [ ] `pytest` pasa completo sobre PostgreSQL.
-- [ ] Cada criterio de aceptación de `spec.md` tiene al menos una prueba automatizada.
-- [ ] Los escenarios manuales 1–16 se completan con los resultados esperados.
-- [ ] El NIF es único global y no se reutiliza tras una desactivación.
-- [ ] El NIF y el tenant no se pueden modificar por ninguna vía.
-- [ ] Solo la cuenta del tenant gestiona técnicos; Administrador y Responsable reciben `403`.
-- [ ] Los selectores de operaciones nuevas solo muestran técnicos activos del tenant.
-- [ ] Un técnico desactivado conserva su historial y su stock; no se elimina.
-- [ ] La reactivación vuelve a habilitarlo y queda auditada.
-- [ ] La auditoría registra altas, nombres y estados, sin secretos y en la misma transacción.
-- [ ] No existe ninguna ruta de borrado de técnicos.
+- [X] `pytest` pasa completo sobre PostgreSQL.
+- [X] Cada criterio de aceptación de `spec.md` tiene al menos una prueba automatizada.
+- [X] Los escenarios manuales 1–16 se completan con los resultados esperados.
+- [X] El NIF es único global y no se reutiliza tras una desactivación.
+- [X] El NIF y el tenant no se pueden modificar por ninguna vía.
+- [X] Solo la cuenta del tenant gestiona técnicos; Administrador y Responsable reciben `403`.
+- [X] Los selectores de operaciones nuevas solo muestran técnicos activos del tenant.
+- [X] Un técnico desactivado conserva su historial y su stock; no se elimina.
+- [X] La reactivación vuelve a habilitarlo y queda auditada.
+- [X] La auditoría registra altas, nombres y estados, sin secretos y en la misma transacción.
+- [X] No existe ninguna ruta de borrado de técnicos.

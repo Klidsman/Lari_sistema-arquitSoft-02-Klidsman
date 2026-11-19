@@ -8,7 +8,7 @@
 
 Implementar el catálogo compartido de materiales que Lari introduce en el almacén central:
 alta con código de 11 dígitos único e inmutable, descripción, lote y tipo (seriado o no
-seriado); edición restringida al creador o al Administrador de plataforma; búsqueda global por
+seriado); edición restringida al Responsable de almacén o al Administrador de plataforma; búsqueda global por
 código o descripción reutilizable por los módulos de recojo, stock inicial, asignación y
 traspaso; y auditoría de altas y cambios. Es la **única excepción documentada** al aislamiento
 multitenant: el catálogo no lleva `tenant_id` y todos los tenants ven los mismos materiales.
@@ -41,7 +41,7 @@ desarrollo local en Windows o Linux.
 de autocompletado p95 < 200 ms con límite de 20 resultados; listado paginado a 50 filas.
 
 **Constraints**: código de exactamente 11 dígitos, único global e inmutable; sin eliminación
-de materiales; solo creador o Administrador de plataforma editan descripción y lote; el tipo no
+de materiales; solo el Responsable de almacén o el Administrador de plataforma editan descripción y lote; el tipo no
 cambia si el material tiene stock o movimientos; toda alta y cambio se audita en la misma
 transacción; el catálogo nunca se filtra por tenant.
 
@@ -158,6 +158,7 @@ class Material(models.Model):
     descripcion = models.CharField(max_length=100)
     lote = models.CharField(max_length=50, blank=True, default="")
     es_seriado = models.BooleanField()
+    activo = models.BooleanField(default=True)
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_por = models.ForeignKey(
@@ -218,12 +219,17 @@ Se reutiliza `auditoria.RegistroCambio` (spec 001). Eventos propios de esta spec
 Viven en `materiales/services.py`, no en las vistas.
 
 - `crear_material(datos, usuario)`:
-  - Verifica que `usuario` esté activo y tenga rol autenticado (cualquiera de los tres roles).
+  - Verifica que `usuario` esté activo y tenga rol `RESPONSABLE_ALMACEN`.
+  - Si el rol es distinto: "Solo el Responsable de almacén puede registrar materiales".
   - Normaliza `codigo` (strip), `descripcion` (strip + colapsa espacios internos) y `lote`
     (strip + colapsa espacios + mayúsculas).
   - Valida 11 dígitos exactos, descripción de 1–100, lote de hasta 50 y tipo obligatorio.
-  - En `transaction.atomic`: crea el material y el registro de auditoría `alta`.
-  - Captura `IntegrityError` de `codigo` y devuelve "El material ya existe".
+  - Si el código pertenece a un material **activo**, devuelve "El material ya existe".
+  - Si el código pertenece a un material **dado de baja**, reactiva la misma fila
+    (`activo=True`), actualiza descripción, lote y tipo, y audita los cambios y la reactivación.
+  - En `transaction.atomic`: crea el material nuevo y el registro de auditoría `alta`.
+  - Captura `IntegrityError` de `codigo` y devuelve "El material ya existe" solo si el
+    material existente está activo.
 - `actualizar_material(material, cambios, usuario)`:
   - Valida permiso con `puede_editar_material(material, usuario)`; si no, lanza
     `PermisoDenegado` con "No tienes permiso para editar este material".
@@ -252,16 +258,26 @@ Viven en `materiales/services.py`, no en las vistas.
 - `obtener_datos_material(material)`:
   - Devuelve `codigo`, `descripcion`, `lote`, `tipo` para el autocompletado de las specs
     004, 005, 006, 009 y 013.
+- `dar_de_baja_material(material, usuario)`:
+  - Solo `RESPONSABLE_ALMACEN` activo; cualquier almacén puede dar de baja cualquier material.
+  - En `transaction.atomic` con `select_for_update`, marca `activo=False`, completa
+    `actualizado_por`/`actualizado_en` y audita `activo` de `True` a `False`.
+  - Es idempotente: si ya está dado de baja, no cambia nada ni audita de nuevo.
+  - No borra la fila ni la auditoría.
+- `listar_materiales` y `buscar_materiales` filtran `activo=True`.
 
 ## Permisos
-- **Crear**: cualquier cuenta autenticada y activa (tenant, almacén o administrador). La spec
-  permite que cualquier tenant registre materiales; la restricción real está en el código único.
-- **Editar descripción y lote**: únicamente `creado_por == usuario` o rol
-  `ADMIN_PLATAFORMA`. La vista aplica la misma comprobación y el servicio la revalida.
+- **Crear**: únicamente el Responsable de almacén activo. La restricción de rol se revalida en
+  el servicio; la unicidad del código sigue siendo la fuente de verdad ante duplicados.
+- **Editar descripción y lote**: cualquier `RESPONSABLE_ALMACEN` activo o rol
+  `ADMIN_PLATAFORMA`, aunque el material lo haya creado otra cuenta. La cuenta de tenant no
+  edita. La vista aplica la comprobación y el servicio la revalida.
 - **Cambiar el código**: nadie; el campo no existe en el formulario de edición y el servicio
   rechaza la clave.
-- **Cambiar el tipo**: creador o Administrador, y solo si `puede_cambiar_tipo` lo permite.
-- **No eliminar**: no hay ruta ni vista de borrado; `DELETE` responde `405`.
+- **Cambiar el tipo**: Responsable de almacén o Administrador, y solo si `puede_cambiar_tipo` lo permite.
+- **Dar de baja**: únicamente el Responsable de almacén activo; cualquier almacén puede dar de
+  baja cualquier material. Es baja lógica (`activo=False`), no borrado.
+- **No eliminar físicamente**: no hay ruta de borrado; `DELETE` responde `405`.
 - Los permisos se validan siempre en el backend; ocultar un botón no es autorización.
 
 ## Interfaz y endpoints
@@ -272,6 +288,7 @@ Viven en `materiales/services.py`, no en las vistas.
 | `/materiales/buscar/?q=` | GET | Fragmento HTMX con resultados para otros módulos |
 | `/materiales/nuevo/` | GET / POST | Alta de material |
 | `/materiales/<id>/editar/` | GET / POST | Edición de descripción y lote |
+| `/materiales/<id>/baja/` | POST | Baja lógica del material |
 
 ### Pantallas
 - **Listado**: código, descripción, lote, tipo, creador y fecha; buscador; paginación de 50.

@@ -208,7 +208,12 @@ class Recojo(models.Model):
         on_delete=models.PROTECT,
         related_name="recojos",
     )
+    nombre = models.CharField(max_length=100, default="")
     fecha = models.DateField()
+    estado = models.CharField(max_length=10, default="REGISTRADO")
+    anulado_en = models.DateTimeField(null=True, blank=True)
+    anulado_por = models.ForeignKey(..., null=True, blank=True, on_delete=models.PROTECT)
+    motivo_anulacion = models.TextField(blank=True, default="")
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -537,10 +542,23 @@ Viven en `recojos/services.py` y `series/services.py`, no en las vistas.
     se ignoran y el alcance sigue saliendo de la sesión.
   - Devuelve el `Recojo` creado.
 
+### Anulación
+
+- `puede_anular_recojo(recojo, ahora=None)`:
+  - `False` si ya está `ANULADO`.
+  - `False` si `ahora > creado_en + 24 horas`; mensaje "El plazo de 24 horas para anular este recojo venció.".
+  - `False` si alguna serie no está `DISPONIBLE` o tiene técnico.
+  - `False` si el stock general no alcanza para revertir.
+  - `True` con el mensaje "Puedes anular este recojo dentro de las próximas 24 horas.".
+- `anular_recojo(recojo, motivo, actor)`:
+  - Solo `USUARIO_TENANT` dueño; motivo obligatorio de 1–500 caracteres.
+  - En `transaction.atomic` con `select_for_update`: verifica plazo, series y stock; revierte stock vía 008, marca series `INACTIVA`, cambia el recojo a `ANULADO` y audita todo.
+  - Idempotente: un recojo ya anulado no cambia ni audita de nuevo.
+
 ### Consultas
 
-- `listar_recojos(tenant)`:
-  - Filtra siempre por `tenant`.
+- `listar_recojos(tenant, q="")`:
+  - Filtra siempre por `tenant`; con `q` filtra por `nombre__icontains`.
   - Ordena por `fecha` descendente e `id` descendente.
   - Anota `total_lineas`, `total_series` (líneas con serie) y `total_cantidad` (suma de líneas no
     seriadas) para evitar N+1.
@@ -574,6 +592,7 @@ Viven en `recojos/services.py` y `series/services.py`, no en las vistas.
 | `/recojos/nuevo/` | GET / POST | Formulario de recojo con varias líneas |
 | `/recojos/<id>/` | GET | Detalle y confirmación del recojo |
 | `/recojos/validar-series/` | POST | Vista previa HTMX de series pegadas o escaneadas |
+| `/recojos/<id>/anular/` | POST | Anulación lógica dentro de 24 horas con motivo |
 
 ### Pantallas
 

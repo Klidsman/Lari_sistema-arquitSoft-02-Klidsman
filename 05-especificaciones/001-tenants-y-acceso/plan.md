@@ -135,7 +135,7 @@ tests/
 ```
 
 **Structure Decision**: proyecto Django único en la raíz del repositorio. Cada spec futura
-agrega su propia app (`catalogo`, `tecnicos`, etc.) sin cambiar el despliegue. `config/`
+agrega su propia app (`materiales`, `tecnicos`, etc.) sin cambiar el despliegue. `config/`
 concentra settings, URLs y Celery; las reglas de negocio viven en `services.py` de cada app,
 nunca en las vistas. `tests/` se separa por tipo para que las pruebas de contrato HTTP y las
 de integración con PostgreSQL sean explícitas.
@@ -280,7 +280,8 @@ class Usuario(AbstractUser):
         "tenants.Region", null=True, blank=True, on_delete=models.PROTECT, related_name="usuarios"
     )
     version_sesion = models.PositiveIntegerField(default=0)
-    secreto_totp = models.CharField(max_length=64, blank=True)
+    # El token Fernet de un secreto TOTP supera 64 caracteres.
+    secreto_totp = models.CharField(max_length=255, blank=True)
     segundo_factor_habilitado = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"

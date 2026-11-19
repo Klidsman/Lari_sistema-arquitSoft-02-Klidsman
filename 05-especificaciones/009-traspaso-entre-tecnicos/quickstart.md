@@ -45,18 +45,16 @@ de 004/005/008.
 ## Pruebas automatizadas
 
 ```powershell
-# Servicios, cuadre y Excel
-pytest tests/unit/test_traspaso_servicios.py tests/unit/test_traspaso_cuadre.py tests/unit/test_traspaso_excel.py
+# Cuadre
+pytest tests/unit/test_traspaso_cuadre.py
 
-# Integración
-pytest tests/integration/test_traspaso_creacion.py tests/integration/test_traspaso_envio.py
-pytest tests/integration/test_traspaso_confirmacion.py tests/integration/test_traspaso_rechazo.py
-pytest tests/integration/test_traspaso_concurrencia.py tests/integration/test_traspaso_auditoria.py
+# Servicios, envío, confirmación y rechazo
+pytest tests/integration/test_traspasos_servicios.py
 
 # Contrato HTTP
-pytest tests/contract/test_traspaso_http.py
+pytest tests/contract/test_traspasos_http.py
 
-# Todo 009
+# Todo lo que toca traspasos
 pytest -k "traspaso"
 
 # Cobertura
@@ -252,3 +250,27 @@ La funcionalidad se considera validada cuando:
 - [ ] La auditoría está completa y no duplica la de 008.
 - [ ] Ningún tenant ve datos de otro.
 - [ ] No se agregaron correo, Celery, permisos Django por cadena ni cambios a `StockGeneral`.
+
+## Registro de validación (2026-11-18)
+
+Validación automatizada ejecutada sobre PostgreSQL con `.\.venv\Scripts\python.exe -m pytest -q`:
+**suite completa en verde**.
+
+| CA | Prueba real | Estado |
+|---|---|---|
+| CA-01 | `test_envio_genera_excel_dos_hojas_con_hash` (hojas `Desasignación`/`Asignación`, Z32/Z31, NIF y hash SHA-256) | Cubierto |
+| CA-02 | `test_origen_y_destino_iguales_se_rechaza` | Cubierto |
+| CA-03 | `test_cantidad_supera_stock_del_tecnico` y `test_borrador_no_reserva_ni_mueve_stock` | Cubierto |
+| CA-04 | `test_serie_que_sale_y_no_entra`, `test_serie_duplicada_en_entrada`, `test_serie_con_lote_distinto` | Cubierto |
+| CA-05 | `test_cantidad_no_seriada_distinta`, `test_movimiento_extra_y_faltante` | Cubierto |
+| CA-06 | `test_traspaso_seriado_confirma` | Cubierto |
+| CA-07 | `test_rechazo_no_mueve_stock` y `test_rechazo_libera_reserva` | Cubierto |
+| CA-08 | `test_confirmar_reinicia_asignada_en_y_no_toca_stock_general` | Cubierto |
+| CA-09 | `test_confirmar_reinicia_asignada_en_y_no_toca_stock_general` | Cubierto |
+
+Complementarios cubiertos: `test_hash_alterado_bloquea_la_descarga`,
+`test_cancelar_borrador_no_genera_reserva`, `test_tenant_ajeno_no_accede_al_traspaso`,
+`test_contrato_acciones_y_aislamiento` (409/404/405/400/403 y bandeja del almacén).
+
+Concurrencia de confirmación cubierta por `test_dos_confirmaciones_simultaneas_mueven_una_sola_vez`. Rendimiento de 100 series cubierto por `test_traspaso_de_cien_series_en_menos_de_diez_segundos`. Pendiente de validación manual: contención de envíos, RLS de `traspasos` (implementada en `0002_rls.py`) y los alias de nombres del contrato (`crear_solicitud_traspaso`, `enviar_solicitud_traspaso`, `verificar_hash_excel`) ya disponibles en `traspasos/services.py`.
+

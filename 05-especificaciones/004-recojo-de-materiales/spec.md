@@ -69,7 +69,17 @@ Permitir que los tenants registren los materiales que retiran del almacén centr
 - La serie debe tener exactamente 12 caracteres alfanuméricos (A-Z, 0-9)
 - Las series que no cumplen el formato se marcan como inválidas
 
-### 5.6 Validación y Regla Todo o Nada (RF-19)
+### 5.6 Anulación lógica (nueva regla)
+
+- Solo la cuenta del tenant dueña del recojo puede anularlo.
+- La anulación se permite dentro de las **24 horas** siguientes a `creado_en`.
+- El motivo es obligatorio (1–500 caracteres).
+- Se revierte el stock general, las series quedan `INACTIVA` y el recojo pasa a `ANULADO`.
+- No se borra la fila, las líneas ni las series; el número de serie no se reutiliza.
+- Se bloquea si alguna serie ya fue utilizada o si el stock ya no alcanza.
+- La anulación y su reversión quedan auditadas en la misma transacción.
+
+### 5.7 Validación y Regla Todo o Nada (RF-19)
 - El sistema valida cada serie antes de guardar:
   - Formato correcto (12 caracteres alfanuméricos)
   - No duplicada dentro del mismo recojo
@@ -142,12 +152,23 @@ Dado un formulario de recojo
 Cuando el tenant ingresa un material no seriado con cantidad
 Entonces el sistema guarda el recojo y la cantidad se suma al stock general del tenant
 
+### CA-10: Anulación lógica dentro de 24 horas
+Dado un recojo registrado hace menos de 24 horas
+Cuando la cuenta del tenant lo anula con un motivo
+Entonces el recojo queda ANULADO, el stock se revierte, las series quedan INACTIVA y todo se audita
+
+### CA-11: Anulación fuera de plazo o con series usadas
+Dado un recojo con más de 24 horas o con series ya utilizadas
+Cuando se intenta anular
+Entonces se rechaza sin modificar stock, series ni auditoría
+
 ## 8. Datos de Entrada
 
 ### Formulario de Recojo
 
 | Campo | Tipo | Requerido | Descripción |
 |---|---|---|---|
+| Nombre | Text | Sí | Nombre identificatorio del recojo, 1–100 caracteres |
 | Fecha | Date | Sí | Fecha del recojo (por defecto: hoy) |
 | Material | Select | Sí | Material del catálogo |
 | Tipo de material | Read-only | Sí | Seriado o no seriado (del catálogo) |
@@ -162,6 +183,7 @@ Entonces el sistema guarda el recojo y la cantidad se suma al stock general del 
 | Campo | Descripción |
 |---|---|
 | ID de recojo | Identificador único del recojo |
+| Nombre | Nombre con el que se registró el recojo |
 | Fecha | Fecha del recojo |
 | Tenant | Tenant que registró el recojo |
 | Región | Región del tenant |
@@ -171,8 +193,9 @@ Entonces el sistema guarda el recojo y la cantidad se suma al stock general del 
 ## 10. Reglas de Negocio
 
 1. Un tenant solo puede registrar recojos de su región
-2. Una serie pertenece a un solo tenant y no cambia de región
-3. El stock general solo sube con recojos registrados
+2. Cada recojo tiene un nombre obligatorio, de 1 a 100 caracteres; el listado permite buscar por ese nombre
+3. Una serie pertenece a un solo tenant y no cambia de región
+3. El stock general sube con recojos registrados y solo baja por una anulación confirmada dentro de las 24 horas
 4. El recojo se registra por formulario, no por Excel
 5. Las series se normalizan (mayúsculas, sin espacios)
 6. Si alguna serie es inválida, duplicada o ya existe, no se guarda ningún recojo (todo o nada)

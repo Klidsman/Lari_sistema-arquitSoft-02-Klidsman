@@ -50,6 +50,43 @@ confirmación del almacén.
 
 ---
 
+## Estado de implementación (2026-11-18)
+
+- Implementado el núcleo: modelos `SolicitudAsignacion`/`LineaAsignacion`, migraciones, RLS, borrador, envío, cancelación, disponibilidad, selector de series, generación de Excel con hash y pantallas de listado/formulario/detalle.
+- Pruebas agregadas para servicios y contrato del flujo principal; suite completa en verde.
+- Pendientes de cierre: correcciones documentales T002–T004, pruebas unitarias/restricciones T010–T013, días/alerta completos, pruebas de concurrencia y validación manual.
+- La generación de Excel y la reserva de series requieren el almacén configurado en la región.
+
+### Actualización 2026-11-19 (varios técnicos por solicitud)
+
+- Enmienda aprobada de la constitución a 1.4.0: una solicitud puede incluir varios técnicos;
+  `LineaAsignacion` guarda su técnico y `SolicitudAsignacion` deja de tener un técnico único
+  (migraciones `0004_linea_tecnico` y `0005_quitar_tecnico_solicitud`).
+- El formulario captura el técnico por línea, en orden de captura; el Excel es una sola tabla
+  con columnas Movimiento, Centro, Almacén, Material, Descripción, Cantidad, NIF Técnico, Lote y
+  Serie, y respeta ese orden.
+- Se añadió el panel de cantidad sobrante por material, actualizado con JavaScript propio
+  (el proyecto no carga HTMX en `base.html`).
+- El selector de series por material ya funciona en el navegador; antes dependía de HTMX y no
+  se ejecutaba.
+- El tenant puede descargar el Excel de asignación desde el detalle, verificando su hash.
+- La confirmación del almacén mueve el stock de cada técnico y asigna cada serie a su técnico.
+- El selector de materiales muestra solo existencias del tenant (stock general disponible o
+  series `DISPONIBLE`, creadas por recojos o stock inicial) con su cantidad disponible; no todo
+  el catálogo.
+- UX implementada 2026-11-19: bloques por técnico (elegir técnico, agregar sus materiales y luego
+  agregar otro técnico), ventana de series con búsqueda y selección múltiple, bloques editables
+  hasta enviar y rechazo del material repetido para el mismo técnico.
+- Pruebas de la UX: `test_material_repetido_para_el_mismo_tecnico_se_rechaza`,
+  `test_formulario_tiene_bloques_y_ventana_de_series`,
+  `test_material_repetido_para_mismo_tecnico_devuelve_400` y las pruebas del fragmento de series.
+- Panel lateral implementado 2026-11-19: fijo a la izquierda, materiales con disponible y sobrante
+  actualizados, selección múltiple con "Agregar seleccionados" al bloque activo, deshabilitado al
+  llegar a 0, y series pendientes para los seriados agregados en lote.
+- Pruebas del panel: `test_formulario_tiene_bloques_y_ventana_de_series`,
+  `test_formulario_solo_muestra_materiales_con_existencias`,
+  `test_formulario_muestra_series_y_sobrante` y `test_sobrante_ignora_filas_incompletas`.
+
 ## Fase 1: Setup (infraestructura compartida)
 
 **Propósito**: corregir los documentos contradictorios, crear la app `asignaciones`, conectarla al

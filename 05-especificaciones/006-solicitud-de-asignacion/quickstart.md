@@ -98,10 +98,39 @@ configuración, no una prueba válida.
 Los escenarios usan la cuenta del tenant `TEN-01` salvo que se indique lo contrario. En todos, el
 tenant y la región salen de la sesión.
 
+> El selector de materiales solo muestra los que el tenant tiene con existencias: stock general
+> disponible (no seriados) o series `DISPONIBLE`. Esas existencias se crean al registrar un
+> **recojo de materiales** o un stock inicial. Si la lista está vacía, registra primero un recojo.
+
+### Escenario 0 — Varios técnicos por bloques, ventana de series y sobrante (actualización 2026-11-19)
+
+1. Abrir `/asignaciones/nueva/`.
+2. Verificar que a la **izquierda**, siempre visible, está el panel de materiales con su disponible
+   y sobrante.
+3. Elegir el técnico `LA0001` y pulsar "Agregar técnico".
+4. En el panel, marcar un material no seriado y un material seriado, y pulsar "Agregar seleccionados".
+   Se crean las líneas en el bloque; la ventana de series del primer seriado se abre automáticamente.
+5. En esa ventana, buscar por número y marcar **varias** series. El otro seriado queda pendiente con
+   su botón "Elegir series"; completarlo.
+6. Verificar que el sobrante del panel baja al agregar y que un material agotado se deshabilita.
+7. Pulsar "Agregar técnico", elegir `LA0002` y repetir con sus materiales.
+8. Verificar que el bloque de `LA0001` sigue visible y que se puede editar o quitar.
+9. Intentar agregar otra vez el mismo material para `LA0001`: debe rechazarse con un mensaje.
+10. Pulsar "Enviar" y abrir el detalle.
+
+**Resultado esperado**:
+
+- Una sola solicitud incluye a los dos técnicos y el detalle muestra ambos NIF.
+- El Excel es una tabla con columnas Movimiento (Z31), Centro, Almacén, Material, Descripción,
+  Cantidad, NIF Técnico, Lote y Serie; las filas siguen el orden de captura.
+- Un material repetido para el mismo técnico se rechaza, no se une ni se duplica.
+- El detalle ofrece "Descargar Excel de asignación" al tenant.
+- Cada serie queda reservada; el stock no cambia hasta la confirmación.
+
 ### Escenario 1 — Crear y enviar una solicitud válida (CA-01, CA-05, CA-06)
 
 1. Entrar como `USUARIO_TENANT` y abrir `/asignaciones/nueva/`.
-2. Elegir el técnico `LA0001`; verificar que el NIF se muestra de solo lectura.
+2. Elegir el técnico `LA0001` en la línea; el NIF se toma del técnico y no se escribe.
 3. Agregar una línea del material seriado y seleccionar la serie `ABC123456789`.
 4. Agregar una línea del material no seriado con cantidad 10.
 5. Pulsar "Enviar".
@@ -112,7 +141,8 @@ tenant y la región salen de la sesión.
 - La solicitud queda `ENVIADA`.
 - La serie `ABC123456789` queda `RESERVADA`.
 - El detalle muestra el hash SHA-256 de 64 caracteres y la ruta del Excel.
-- El Excel contiene `Movimiento=Z31`, `Centro=PR05`, `Almacén=BE03` y el NIF del técnico.
+- El Excel es una tabla con `Z31`, Centro `PR05`, Almacén `BE03`, el material, la cantidad y el
+  NIF del técnico en cada fila.
 - `StockGeneral` y `StockTecnico` no cambiaron.
 
 ### Escenario 2 — Guardar borrador y cancelar (borrador sin reserva)

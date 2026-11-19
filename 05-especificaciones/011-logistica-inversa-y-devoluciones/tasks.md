@@ -50,6 +50,28 @@ permisos Django por cadena.
 
 ---
 
+## Estado de implementación (2026-11-18)
+
+- **Implementado el núcleo**: app `logistica_inversa`, modelos `Devolucion`, `LineaDevolucion` y
+  `BajaEquipo` con restricciones e índices, migración `0001_initial`, registro de devoluciones con
+  liberación de custodia y movimientos de stock de 008, registro de bajas por avería/migración/otro,
+  acta `.xlsx` de una hoja generada dentro de la transacción, verificación SHA-256 y vistas/rutas
+  del tenant.
+- **Stock**: la devolución descuenta `StockTecnico` y suma `StockGeneral`; la baja descuenta el nivel
+  donde estaba la serie (técnico o general) y la deja `INACTIVA` sin custodia. No se toca
+  `StockGeneral` fuera de los servicios de 008.
+- **Pruebas en verde** (14 pruebas de 011): CA-01…CA-06, validaciones de fecha/serie/técnico,
+  serie reservada en traspaso, acta con una hoja y hash alterado, y contrato HTTP.
+- **Pendientes de cierre**:
+  - RLS de `logistica_inversa` implementada en
+    `logistica_inversa/migrations/0002_rls.py`.
+  - Concurrencia de devoluciones cubierta en
+    `tests/integration/test_logistica_inversa_concurrencia.py`; quedan rendimiento y validación
+    manual de `quickstart.md`.
+  - Verificar la regla de series `RESERVADA` con solicitudes 006 además de traspasos 009.
+
+---
+
 ## Fase 1: Setup (infraestructura compartida)
 
 **Propósito**: verificar prerrequisitos y correcciones, crear la app, registrar rutas, preparar

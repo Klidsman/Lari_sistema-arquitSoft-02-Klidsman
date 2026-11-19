@@ -14,8 +14,8 @@ contenedor de la línea con el fragmento devuelto.
 | Autenticación | Cookie de sesión; rol `TENANT` activo y tenant activo |
 | CSRF | Obligatorio |
 | Parámetros | `material_id` (entero), `series` (texto con una serie por línea) |
-| `material_id` | Debe existir en el catálogo y ser seriado |
-| `series` | Se divide por saltos de línea; las líneas vacías se ignoran |
+| `material_id` | Debe existir en el catálogo y ser seriado. Se acepta `material_codigo` como alternativa para el buscador HTMX |
+| `series` | Se divide por saltos de línea, guiones (`-`) o espacios; las líneas vacías se ignoran. Una fila como `ABC123456789 - DEF123456789` produce dos series |
 | Normalización | Cada serie se normaliza antes de clasificar: se eliminan todos los espacios en blanco y se convierte a mayúsculas |
 | Filtro de tenant | Solo para autorización y para el material; la consulta de existencia de series es global porque la unicidad lo es |
 | Escritura | Ninguna |
@@ -62,6 +62,10 @@ Forma esperada (ilustrativa, no normativa en clases CSS):
 
 - Los atributos `data-*` son el contrato; el texto visible puede variar en formato.
 - La serie mostrada es la normalizada, no el texto original.
+- Las series pueden pegarse en una sola fila separadas por ` - `, `-`, espacios o saltos de
+  línea; el separador se descarta y cada serie de 12 caracteres se procesa por separado.
+- Un texto que no sea una sucesión de series válidas y separadores (por ejemplo
+  `ABC-12345678`) se conserva completo y se marca como `invalida`.
 - El estado `duplicada` se aplica a la segunda y posteriores ocurrencias de la misma serie
   normalizada dentro de la misma petición.
 - El estado `ya_existe` se aplica si la serie ya está en `series.Serie`, en cualquier tenant.
