@@ -1,0 +1,1 @@
+"""Stock del tenant."""
