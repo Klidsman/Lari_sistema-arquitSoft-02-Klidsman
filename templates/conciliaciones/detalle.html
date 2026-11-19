@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Conciliación {{ conciliacion.pk }} · Lari{% endblock %}
+{% block contenido %}
+  <h1>Conciliación {{ conciliacion.pk }}</h1>
+  {% if conciliacion.requiere_revision %}
+    <p class="mensaje mensaje-aviso">Hubo cambios en el stock. Revise de nuevo antes de aprobar.</p>
+  {% endif %}
+  <dl class="detalle">
+    <dt>Estado</dt><dd>{{ conciliacion.get_estado_display }}</dd>
+    <dt>Fecha de carga</dt><dd>{{ conciliacion.fecha_carga|date:"Y-m-d H:i" }}</dd>
+    <dt>Archivo</dt><dd>{{ conciliacion.archivo_nombre }}</dd>
+    <dt>Hash SHA-256</dt><dd>{{ conciliacion.hash_sha256 }}</dd>
+    <dt>Materiales fuera de catálogo</dt><dd>{{ detalle.no_catalogados|length }}</dd>
+  </dl>
+
+  {% if detalle.no_catalogados %}
+    <h2>Materiales no catalogados</h2>
+    <table class="tabla">
+      <thead><tr><th>Código</th><th>Descripción</th><th>NIF</th><th>Filas</th></tr></thead>
+      <tbody>
+        {% for material in detalle.no_catalogados %}
+          <tr><td>{{ material.codigo }}</td><td>{{ material.descripcion }}</td><td>{{ material.tecnico_nif }}</td><td>{{ material.filas }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <h2>Series en reporte, no en sistema</h2>
+  <ul>
+    {% for diferencia in detalle.series.en_reporte_no_sistema %}
+      <li>{{ diferencia.numero }} · {{ diferencia.tecnico.nif }} · {{ diferencia.material.codigo }}</li>
+    {% empty %}<li>Sin diferencias.</li>{% endfor %}
+  </ul>
+
+  <h2>Series en sistema, no en reporte</h2>
+  <ul>
+    {% for diferencia in detalle.series.en_sistema_no_reporte %}
+      <li>{{ diferencia.numero }} · {{ diferencia.tecnico.nif }} · {{ diferencia.material.codigo }}</li>
+    {% empty %}<li>Sin diferencias.</li>{% endfor %}
+  </ul>
+
+  <h2>Técnicos con inconsistencias (serie en otro técnico)</h2>
+  <ul>
+    {% for diferencia in detalle.series.en_otro_tecnico %}
+      <li>{{ diferencia.numero }} · reporte: {{ diferencia.tecnico.nif }} · sistema: {{ diferencia.tecnico_sistema.nif }}</li>
+    {% empty %}<li>Sin diferencias.</li>{% endfor %}
+  </ul>
+
+  <h2>Diferencias de cantidades</h2>
+  <table class="tabla">
+    <thead><tr><th>Técnico</th><th>Material</th><th>Sistema</th><th>Reporte</th><th>Diferencia</th></tr></thead>
+    <tbody>
+      {% for diferencia in detalle.cantidades %}
+        <tr>
+          <td>{{ diferencia.tecnico.nif }}</td>
+          <td>{{ diferencia.material.codigo }}</td>
+          <td>{{ diferencia.cantidad_sistema }}</td>
+          <td>{{ diferencia.cantidad_reporte }}</td>
+          <td>{{ diferencia.diferencia }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">Sin diferencias.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if detalle.alertas.tecnicos_inconsistentes %}
+    <h2>Alertas</h2>
+    <ul>
+      {% for alerta in detalle.alertas.tecnicos_inconsistentes %}
+        <li>{{ alerta.tecnico.nif }}: {{ alerta.diferencias }} diferencias</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if en_revision %}
+    <form method="post" action="{% url 'recalcular_conciliacion' conciliacion.pk %}">
+      {% csrf_token %}<button type="submit">Recalcular</button>
+    </form>
+    <form method="post" action="{% url 'aprobar_conciliacion' conciliacion.pk %}">
+      {% csrf_token %}<button type="submit">Aprobar y ajustar stock</button>
+    </form>
+    <form method="post" action="{% url 'rechazar_conciliacion' conciliacion.pk %}">
+      {% csrf_token %}
+      <label>Motivo (opcional) <textarea name="motivo" maxlength="1000"></textarea></label>
+      <button type="submit">Rechazar</button>
+    </form>
+  {% endif %}
+{% endblock %}

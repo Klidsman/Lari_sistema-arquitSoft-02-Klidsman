@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Recojos · Lari{% endblock %}
+
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <h1>Recojos</h1>
+    <a class="boton" href="{% url 'crear_recojo' %}">Nuevo recojo</a>
+  </div>
+
+  <form method="get" action="{% url 'lista_recojos' %}" class="buscador">
+    <label>Buscar por nombre
+      <input type="search" name="q" value="{{ q }}" placeholder="Nombre del recojo">
+    </label>
+    <label>Estado
+      <select name="estado">
+        <option value="todos" {% if estado == "todos" %}selected{% endif %}>Todos</option>
+        <option value="registrados" {% if estado == "registrados" %}selected{% endif %}>Registrados</option>
+        <option value="anulados" {% if estado == "anulados" %}selected{% endif %}>Anulados</option>
+      </select>
+    </label>
+    <button type="submit">Buscar</button>
+  </form>
+
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Estado</th>
+        <th>Fecha</th>
+        <th>Líneas</th>
+        <th>Series</th>
+        <th>Cantidad</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for recojo in recojos %}
+        <tr>
+          <td>{{ recojo.pk }}</td>
+          <td>{{ recojo.nombre }}</td>
+          <td>
+            {% if recojo.estado == "ANULADO" %}
+              <span class="etiqueta etiqueta-anulado">Anulado</span>
+            {% else %}
+              <span class="etiqueta">Registrado</span>
+            {% endif %}
+          </td>
+          <td>{{ recojo.fecha|date:"Y-m-d" }}</td>
+          <td>{{ recojo.total_lineas }}</td>
+          <td>{{ recojo.total_series }}</td>
+          <td>{{ recojo.total_cantidad|default:0 }}</td>
+          <td>
+            <a href="{% url 'detalle_recojo' recojo.pk %}">Ver detalle</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="8">No hay recojos registrados.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if pagina.paginator.num_pages > 1 %}
+    <nav class="paginacion">
+      {% if pagina.has_previous %}
+        <a href="?page={{ pagina.previous_page_number }}&q={{ q }}&estado={{ estado }}">Anterior</a>
+      {% endif %}
+      <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+      {% if pagina.has_next %}
+        <a href="?page={{ pagina.next_page_number }}&q={{ q }}&estado={{ estado }}">Siguiente</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% endblock %}

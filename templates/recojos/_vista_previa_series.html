@@ -1,0 +1,23 @@
+{% if estados %}
+  <table class="vista-previa-series">
+    <thead>
+      <tr><th>Serie</th><th>Estado</th></tr>
+    </thead>
+    <tbody>
+      {% for estado in estados %}
+        <tr data-serie="{{ estado.numero }}" data-estado="{{ estado.estado }}">
+          <td>{{ estado.numero }}</td>
+          <td>
+            {% if estado.estado == "valida" %}Válida
+            {% elif estado.estado == "invalida" %}Inválida: debe tener 12 caracteres alfanuméricos
+            {% elif estado.estado == "duplicada" %}Duplicada en el recojo
+            {% else %}Ya está registrada en el sistema
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="sin-resultados">No se ingresaron series</p>
+{% endif %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Registrar materiales · Lari{% endblock %}
+{% block contenido %}
+  <h1>Registrar materiales</h1>
+  <form method="get" action="{% url 'registrar_materiales' %}">
+    <label>Técnico
+      <select name="tecnico">
+        {% for item in tecnicos %}<option value="{{ item.pk }}" {% if tecnico and tecnico.pk == item.pk %}selected{% endif %}>{{ item.nif }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Periodo <input type="month" name="periodo" value="{{ periodo }}"></label>
+    <label>Número de orden <input type="text" name="numero_orden" value="{{ numero }}"></label>
+    <button type="submit">Buscar</button>
+  </form>
+  {% if orden %}
+    <p>Orden {{ orden.numero_normalizado }} · {{ orden.tecnico.nif }} · {{ orden.periodo }}</p>
+    <p><a href="{% url 'historial_orden' orden.pk %}">Ver historial</a></p>
+  {% endif %}
+  <form method="post" action="{% url 'guardar_materiales' %}">
+    {% csrf_token %}
+    <input type="hidden" name="tecnico" value="{{ tecnico.pk }}">
+    <input type="hidden" name="periodo" value="{{ periodo }}">
+    <input type="hidden" name="numero_orden" value="{{ numero }}">
+    <label>Fecha de instalación <input type="date" name="fecha_instalacion" required></label>
+    <table class="tabla">
+      <thead><tr><th>Material</th><th>Disponible</th><th>Cantidad usada</th></tr></thead>
+      <tbody>
+        {% for fila in filas %}
+          <tr>
+            <td>{{ fila.material.codigo }} - {{ fila.material.descripcion }}</td>
+            <td>{{ fila.disponible }}</td>
+            <td><input type="number" min="0" name="cantidades[{{ fila.material.pk }}]" value="{{ fila.cantidad }}"></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3">No hay materiales habilitados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button type="submit">Guardar materiales</button>
+  </form>
+{% endblock %}

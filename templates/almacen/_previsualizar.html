@@ -1,0 +1,9 @@
+{% if error %}
+  <p class="mensaje mensaje-error">{{ error }}</p>
+{% else %}
+  <div data-solicitud-id="{{ solicitud.pk }}">
+    <p>{{ solicitud.tenant.codigo }} / {{ solicitud.nifs_tecnicos }} — {{ solicitud.get_estado_display }}</p>
+    <p>Total series: {{ totales.total_series }} · Total cantidad: {{ totales.total_cantidad }}</p>
+    <p>Hash: {{ solicitud.excel_hash }}</p>
+  </div>
+{% endif %}

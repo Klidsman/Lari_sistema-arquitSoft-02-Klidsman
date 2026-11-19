@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Nuevo traspaso · Lari{% endblock %}
+{% block contenido %}
+  <h1>Nuevo traspaso</h1>
+  {% if error %}<p class="mensaje mensaje-error">{{ error }}</p>{% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="lineas-TOTAL_FORMS" value="3">
+    <input type="hidden" name="lineas-INITIAL_FORMS" value="0">
+    <input type="hidden" name="lineas-MIN_NUM_FORMS" value="0">
+    <input type="hidden" name="lineas-MAX_NUM_FORMS" value="1000">
+    <label>Técnico origen
+      <select name="tecnico_origen">
+        {% for tecnico in tecnicos %}<option value="{{ tecnico.pk }}">{{ tecnico.nif }} - {{ tecnico.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Técnico destino
+      <select name="tecnico_destino">
+        {% for tecnico in tecnicos %}<option value="{{ tecnico.pk }}">{{ tecnico.nif }} - {{ tecnico.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Fecha <input type="date" name="fecha" value="{{ hoy|date:'Y-m-d' }}"></label>
+    {% for indice in lineas %}
+      <fieldset class="linea-recojo">
+        <legend>Línea {{ forloop.counter }}</legend>
+        <label>Material
+          <select name="lineas-{{ indice }}-material_id">
+            <option value="">Selecciona un material</option>
+            {% for material in materiales %}<option value="{{ material.pk }}">{{ material.codigo }} - {{ material.descripcion }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Series <textarea name="lineas-{{ indice }}-series" rows="2"></textarea></label>
+        <label>Cantidad no seriada <input type="number" min="1" name="lineas-{{ indice }}-cantidad"></label>
+      </fieldset>
+    {% endfor %}
+    <button type="submit" name="accion" value="borrador">Guardar borrador</button>
+    <button type="submit" name="accion" value="enviar">Enviar traspaso</button>
+  </form>
+{% endblock %}

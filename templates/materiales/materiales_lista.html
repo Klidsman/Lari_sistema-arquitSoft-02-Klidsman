@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Materiales · Lari{% endblock %}
+
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <h1>Materiales</h1>
+    {% if request.rol == "RESPONSABLE_ALMACEN" %}
+      <a class="boton" href="{% url 'crear_material' %}">Nuevo material</a>
+    {% endif %}
+  </div>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <form method="get" action="{% url 'listar_materiales' %}" class="buscador">
+    <label>Buscar
+      <input type="search" name="q" value="{{ q }}" placeholder="Código o descripción">
+    </label>
+    <button type="submit">Buscar</button>
+  </form>
+
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Descripción</th>
+        <th>Lote</th>
+        <th>Tipo</th>
+        <th>Creador</th>
+        <th>Fecha</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for material in materiales %}
+        <tr>
+          <td>{{ material.codigo }}</td>
+          <td>{{ material.descripcion }}</td>
+          <td>{{ material.lote }}</td>
+          <td>{{ material.tipo }}</td>
+          <td>{{ material.creado_por.email }}</td>
+          <td>{{ material.creado_en|date:"Y-m-d H:i:s" }}</td>
+          <td class="acciones">
+            <a href="{% url 'editar_material' material.pk %}">Editar</a>
+            {% if request.rol == "RESPONSABLE_ALMACEN" %}
+              <form method="post"
+                    action="{% url 'dar_de_baja_material' material.pk %}"
+                    class="en-linea"
+                    data-confirmar="¿Estás seguro de dar de baja este material? Dejará de aparecer en el catálogo.">
+                {% csrf_token %}
+                <button type="submit">Dar de baja</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="7">No se encontraron materiales</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if pagina.paginator.num_pages > 1 %}
+    <nav class="paginacion">
+      {% if pagina.has_previous %}
+        <a href="?page={{ pagina.previous_page_number }}&q={{ q }}">Anterior</a>
+      {% endif %}
+      <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+      {% if pagina.has_next %}
+        <a href="?page={{ pagina.next_page_number }}&q={{ q }}">Siguiente</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% endblock %}

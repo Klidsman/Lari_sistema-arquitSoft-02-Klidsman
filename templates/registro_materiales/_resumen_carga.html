@@ -1,0 +1,9 @@
+<div class="resumen-carga" id="resumen-carga">
+  <p>Leídas: {{ resumen.leidas }}</p>
+  <p>Nuevas: {{ resumen.nuevas }}</p>
+  <p>Omitidas: {{ resumen.omitidas }}</p>
+  <p>También existen para otro técnico: {{ resumen.tambien_otro_tecnico }}</p>
+  {% if resumen.rechazadas %}
+    <p class="mensaje-error">Líneas rechazadas: {{ resumen.rechazadas|join:", " }}</p>
+  {% endif %}
+</div>

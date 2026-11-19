@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Cargar reporte · Lari{% endblock %}
+{% block contenido %}
+  <h1>Cargar reporte de Lari</h1>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ formulario.as_p }}
+    <button type="submit">Cargar y comparar</button>
+  </form>
+{% endblock %}

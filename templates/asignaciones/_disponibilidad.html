@@ -1,0 +1,6 @@
+{% if error %}
+  <p class="mensaje mensaje-error">{{ error }}</p>
+{% else %}
+  <p>Disponible: {{ disponible }}</p>
+  {% if alerta %}<p class="mensaje">{{ alerta.mensaje }}</p>{% endif %}
+{% endif %}

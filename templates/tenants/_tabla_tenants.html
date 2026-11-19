@@ -1,0 +1,42 @@
+{% if error %}
+  <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+{% endif %}
+
+<table class="tabla">
+  <thead>
+    <tr>
+      <th>Código</th>
+      <th>Nombre</th>
+      <th>Región</th>
+      <th>Estado</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for tenant in tenants %}
+      <tr>
+        <td>{{ tenant.codigo }}</td>
+        <td>{{ tenant.nombre }}</td>
+        <td>{{ tenant.region.codigo }} - {{ tenant.region.nombre }}</td>
+        <td>{{ tenant.get_estado_display }}</td>
+        <td><a href="{% url 'detalle_tenant' tenant.pk %}">Ver detalle</a></td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="5">No hay tenants registrados.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if pagina.paginator.num_pages > 1 %}
+  <nav class="paginacion">
+    {% if pagina.has_previous %}
+      <a href="?page={{ pagina.previous_page_number }}">Anterior</a>
+    {% endif %}
+    <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+    {% if pagina.has_next %}
+      <a href="?page={{ pagina.next_page_number }}">Siguiente</a>
+    {% endif %}
+  </nav>
+{% endif %}

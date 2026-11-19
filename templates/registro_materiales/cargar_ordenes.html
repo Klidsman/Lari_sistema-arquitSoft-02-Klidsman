@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Cargar órdenes · Lari{% endblock %}
+{% block contenido %}
+  <h1>Cargar órdenes</h1>
+  <form method="post" action="{% url 'cargar_ordenes' %}">
+    {% csrf_token %}
+    <label>Técnico
+      <select name="tecnico" required>
+        {% for tecnico in tecnicos %}<option value="{{ tecnico.pk }}">{{ tecnico.nif }} - {{ tecnico.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Periodo <input type="month" name="periodo" value="{{ periodo }}" required></label>
+    <label>Órdenes (una por línea)
+      <textarea name="texto" rows="10" required></textarea>
+    </label>
+    <button type="submit" formaction="{% url 'preview_carga_ordenes' %}" formmethod="post">Previsualizar</button>
+    <button type="submit">Confirmar carga</button>
+  </form>
+{% endblock %}

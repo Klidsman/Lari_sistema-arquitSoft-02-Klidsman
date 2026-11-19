@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva asignación · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Nueva solicitud de asignación</h1>
+
+  {% if error %}<p class="mensaje mensaje-error" role="alert">{{ error }}</p>{% endif %}
+
+  <div class="pantalla-asignacion">
+    <aside id="panel-materiales" class="panel-materiales" aria-label="Materiales disponibles">
+      <h2>Materiales disponibles</h2>
+      <p id="panel-tecnico-activo" class="ayuda">Selecciona o agrega un técnico.</p>
+      <div id="lista-materiales-panel">
+        {% include "asignaciones/_sobrante.html" with resumen=panel_materiales %}
+      </div>
+      <button type="button" id="agregar-seleccionados">Agregar seleccionados</button>
+    </aside>
+
+    <div class="contenido-asignacion">
+      {% if not materiales %}
+        <p class="mensaje mensaje-error">No hay materiales disponibles. Registra primero un
+          <a href="{% url 'lista_recojos' %}">recojo de materiales</a>.</p>
+      {% endif %}
+
+      <form method="post" action="{% url 'nueva_asignacion' %}" id="form-asignacion">
+        {% csrf_token %}
+        <input type="hidden" name="lineas-TOTAL_FORMS" id="total-filas" value="0">
+        <input type="hidden" name="lineas-INITIAL_FORMS" value="0">
+        <input type="hidden" name="lineas-MIN_NUM_FORMS" value="0">
+        <input type="hidden" name="lineas-MAX_NUM_FORMS" value="1000">
+
+        <label>Fecha <input type="date" name="fecha" value="{{ hoy|date:'Y-m-d' }}"></label>
+
+        <fieldset class="constructor-bloque">
+          <legend>Asignar materiales a un técnico</legend>
+          <label>Técnico
+            <select id="selector-tecnico">
+              <option value="">Selecciona un técnico</option>
+              {% for tecnico in tecnicos %}
+                <option value="{{ tecnico.pk }}">{{ tecnico.nif }} - {{ tecnico.nombre }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <button type="button" id="agregar-bloque">Agregar técnico</button>
+        </fieldset>
+
+        <div id="bloques"></div>
+
+        <button type="submit" name="accion" value="borrador">Guardar borrador</button>
+        <button type="submit" name="accion" value="enviar">Enviar solicitud</button>
+        <a href="{% url 'lista_asignaciones' %}">Cancelar</a>
+      </form>
+    </div>
+  </div>
+
+  <dialog id="dialogo-series" aria-label="Series disponibles">
+    <h2>Series disponibles</h2>
+    <p id="dialogo-material" class="ayuda"></p>
+    <label>Buscar serie
+      <input type="search" id="buscar-series" placeholder="Número de serie">
+    </label>
+    <div id="lista-series"></div>
+    <p>
+      <button type="button" id="aceptar-series">Aceptar</button>
+      <button type="button" id="cerrar-series">Cancelar</button>
+    </p>
+  </dialog>
+
+  <template id="plantilla-bloque">
+    <fieldset class="bloque-tecnico" data-tecnico="__TECNICO__">
+      <legend><span class="titulo-bloque"></span></legend>
+      <div class="filas-bloque"></div>
+      <button type="button" class="agregar-fila">Agregar material</button>
+      <button type="button" class="quitar-bloque">Quitar técnico</button>
+    </fieldset>
+  </template>
+
+  <template id="plantilla-fila">
+    <div class="fila-asignacion" data-indice="__INDICE__">
+      <input type="hidden" name="lineas-__INDICE__-tecnico_id" value="__TECNICO__">
+      <label>Material
+        <select name="lineas-__INDICE__-material_id" class="material-fila">
+          <option value="">Selecciona un material</option>
+          {% for item in materiales %}
+            <option value="{{ item.material.pk }}" data-seriado="{% if item.seriado %}1{% else %}0{% endif %}">{{ item.material.codigo }} - {{ item.material.descripcion }} (disponible: {{ item.disponible }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="bloque-seriados" hidden>
+        <button type="button" class="elegir-series">Elegir series</button>
+        <span class="resumen-series">Sin series</span>
+        <div class="series-seleccionadas"></div>
+      </div>
+      <div class="bloque-no-seriados" hidden>
+        <label>Cantidad <input type="number" min="1" name="lineas-__INDICE__-cantidad"></label>
+      </div>
+      <button type="button" class="quitar-fila">Quitar material</button>
+    </div>
+  </template>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var form = document.getElementById("form-asignacion");
+  var contenedorBloques = document.getElementById("bloques");
+  var selectorTecnico = document.getElementById("selector-tecnico");
+  var botonAgregarBloque = document.getElementById("agregar-bloque");
+  var totalFormularios = document.getElementById("total-filas");
+  var panelLista = document.getElementById("lista-materiales-panel");
+  var panelTecnico = document.getElementById("panel-tecnico-activo");
+  var botonAgregarSeleccionados = document.getElementById("agregar-seleccionados");
+  var plantillaBloque = document.getElementById("plantilla-bloque");
+  var plantillaFila = document.getElementById("plantilla-fila");
+  var dialogo = document.getElementById("dialogo-series");
+  var listaSeries = document.getElementById("lista-series");
+  var buscarSeries = document.getElementById("buscar-series");
+  var dialogoMaterial = document.getElementById("dialogo-material");
+  var urlSeries = "{% url 'series_disponibles' %}";
+  var urlSobrante = "{% url 'sobrante_asignacion' %}";
+  var siguienteIndice = 0;
+  var filaSeriesActual = null;
+  var pendienteSobrante = null;
+  var solicitudSeries = 0;
+  var bloqueActivo = null;
+
+  function actualizarTotal() {
+    totalFormularios.value = String(siguienteIndice);
+  }
+
+  function filasDe(contenedor) {
+    return Array.prototype.slice.call(
+      contenedor.querySelectorAll(".fila-asignacion")
+    );
+  }
+
+  function materialDe(fila) {
+    var select = fila.querySelector(".material-fila");
+    var opcion = select.options[select.selectedIndex];
+    return opcion && opcion.value ? opcion : null;
+  }
+
+  function esSeriado(opcion) {
+    return opcion && opcion.dataset.seriado === "1";
+  }
+
+  function mostrarMensaje(texto) {
+    window.alert(texto);
+  }
+
+  function bloqueDeTecnico(tecnicoId) {
+    return contenedorBloques.querySelector(
+      '.bloque-tecnico[data-tecnico="' + tecnicoId + '"]'
+    );
+  }
+
+  function materialesEnBloque(bloque) {
+    var vistos = new Set();
+    if (!bloque) return vistos;
+    filasDe(bloque).forEach(function (fila) {
+      var opcion = materialDe(fila);
+      if (opcion) vistos.add(opcion.value);
+    });
+    return vistos;
+  }
+
+  function actualizarPanelBloqueActivo() {
+    var enBloque = materialesEnBloque(bloqueActivo);
+    Array.prototype.slice
+      .call(panelLista.querySelectorAll(".material-panel-check"))
+      .forEach(function (check) {
+        var sinSobrante = check.dataset.sinSobrante === "1";
+        var yaAgregado = enBloque.has(check.value);
+        check.disabled = sinSobrante || yaAgregado;
+        var opcion = check.closest(".material-opcion");
+        if (!opcion) return;
+        opcion.classList.toggle("material-ya-agregado", yaAgregado);
+        var nota = opcion.querySelector(".material-nota");
+        if (!nota) {
+          nota = document.createElement("span");
+          nota.className = "material-nota";
+          opcion.appendChild(nota);
+        }
+        nota.textContent = yaAgregado ? "Ya agregado a este técnico" : "";
+      });
+  }
+
+  function activarBloque(bloque) {
+    Array.prototype.slice
+      .call(contenedorBloques.querySelectorAll(".bloque-tecnico"))
+      .forEach(function (otro) {
+        otro.classList.toggle("bloque-activo", otro === bloque);
+      });
+    bloqueActivo = bloque;
+    panelTecnico.textContent = bloque
+      ? "Se agregarán al técnico: " + bloque.querySelector(".titulo-bloque").textContent
+      : "Selecciona o agrega un técnico.";
+    actualizarPanelBloqueActivo();
+  }
+
+  function agregarFila(bloque) {
+    var tecnicoId = bloque.dataset.tecnico;
+    var indice = siguienteIndice;
+    siguienteIndice += 1;
+    var html = plantillaFila.innerHTML
+      .split("__INDICE__").join(String(indice))
+      .split("__TECNICO__").join(tecnicoId);
+    var contenedor = document.createElement("div");
+    contenedor.innerHTML = html;
+    var fila = contenedor.firstElementChild;
+    bloque.querySelector(".filas-bloque").appendChild(fila);
+    actualizarTotal();
+    return fila;
+  }
+
+  function agregarBloque() {
+    var opcion = selectorTecnico.options[selectorTecnico.selectedIndex];
+    if (!opcion || !opcion.value) {
+      mostrarMensaje("Selecciona un técnico antes de agregar el bloque.");
+      return;
+    }
+    if (bloqueDeTecnico(opcion.value)) {
+      mostrarMensaje("Ese técnico ya tiene un bloque en esta solicitud.");
+      return;
+    }
+    var html = plantillaBloque.innerHTML
+      .split("__TECNICO__").join(opcion.value);
+    var contenedor = document.createElement("div");
+    contenedor.innerHTML = html;
+    var bloque = contenedor.firstElementChild;
+    bloque.querySelector(".titulo-bloque").textContent = opcion.text;
+    contenedorBloques.appendChild(bloque);
+    agregarFila(bloque);
+    selectorTecnico.value = "";
+    activarBloque(bloque);
+    actualizarSobrante();
+  }
+
+  function limpiarSeries(fila) {
+    fila.querySelector(".series-seleccionadas").innerHTML = "";
+    fila.querySelector(".resumen-series").textContent = "Sin series";
+  }
+
+  function actualizarFila(fila) {
+    var opcion = materialDe(fila);
+    var seriado = esSeriado(opcion);
+    fila.querySelector(".bloque-seriados").hidden = !seriado;
+    fila.querySelector(".bloque-no-seriados").hidden = seriado || !opcion;
+  }
+
+  function verificarDuplicado(fila) {
+    var opcion = materialDe(fila);
+    if (!opcion) return false;
+    var bloque = fila.closest(".bloque-tecnico");
+    var repetida = filasDe(bloque).some(function (otra) {
+      if (otra === fila) return false;
+      var otraOpcion = materialDe(otra);
+      return otraOpcion && otraOpcion.value === opcion.value;
+    });
+    if (repetida) {
+      fila.querySelector(".material-fila").value = "";
+      limpiarSeries(fila);
+      actualizarFila(fila);
+      mostrarMensaje("Ese material ya fue agregado para este técnico.");
+      return true;
+    }
+    return false;
+  }
+
+  function seriesDeFila(fila) {
+    return Array.prototype.slice
+      .call(fila.querySelectorAll(".series-seleccionadas input"))
+      .map(function (input) { return input.value; });
+  }
+
+  function seriesMarcadasEnDialogo() {
+    return Array.prototype.slice
+      .call(listaSeries.querySelectorAll(".serie-modal-check:checked"))
+      .map(function (check) { return check.value; });
+  }
+
+  function seriesEnOtrasFilas(filaActual) {
+    var ids = [];
+    filasDe(contenedorBloques).forEach(function (fila) {
+      if (fila !== filaActual) {
+        ids = ids.concat(seriesDeFila(fila));
+      }
+    });
+    return ids;
+  }
+
+  function cargarSeries(q, seleccionados, excluir) {
+    if (!filaSeriesActual) return;
+    var opcion = materialDe(filaSeriesActual);
+    if (!opcion) return;
+    var params = new URLSearchParams({
+      material_id: opcion.value,
+      q: q || "",
+      seleccionados: (seleccionados || []).join(","),
+      excluir: (excluir || []).join(",")
+    });
+    solicitudSeries += 1;
+    var token = solicitudSeries;
+    fetch(urlSeries + "?" + params.toString(), { credentials: "same-origin" })
+      .then(function (respuesta) { return respuesta.text(); })
+      .then(function (html) {
+        if (token !== solicitudSeries) return;
+        listaSeries.innerHTML = html;
+      });
+  }
+
+  function abrirSeries(fila) {
+    var opcion = materialDe(fila);
+    if (!opcion) {
+      mostrarMensaje("Selecciona primero un material.");
+      return;
+    }
+    filaSeriesActual = fila;
+    buscarSeries.value = "";
+    dialogoMaterial.textContent = opcion.text;
+    cargarSeries("", seriesDeFila(fila), seriesEnOtrasFilas(fila));
+    if (typeof dialogo.showModal === "function") {
+      dialogo.showModal();
+    } else {
+      dialogo.setAttribute("open", "open");
+    }
+  }
+
+  function aceptarSeries() {
+    if (!filaSeriesActual) return;
+    var marcadas = seriesMarcadasEnDialogo();
+    var contenedor = filaSeriesActual.querySelector(".series-seleccionadas");
+    contenedor.innerHTML = "";
+    marcadas.forEach(function (valor) {
+      var input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "lineas-" + filaSeriesActual.dataset.indice + "-serie_ids";
+      input.value = valor;
+      contenedor.appendChild(input);
+    });
+    filaSeriesActual.querySelector(".resumen-series").textContent = marcadas.length
+      ? marcadas.length + " serie(s) seleccionada(s)"
+      : "Sin series";
+    dialogo.close();
+    filaSeriesActual = null;
+    actualizarSobrante();
+  }
+
+  function actualizarSobrante() {
+    clearTimeout(pendienteSobrante);
+    pendienteSobrante = setTimeout(function () {
+      var marcados = Array.prototype.slice
+        .call(panelLista.querySelectorAll(".material-panel-check:checked"))
+        .map(function (check) { return check.value; });
+      fetch(urlSobrante, {
+        method: "POST",
+        body: new FormData(form),
+        credentials: "same-origin"
+      })
+        .then(function (respuesta) { return respuesta.text(); })
+        .then(function (html) {
+          panelLista.innerHTML = html;
+          Array.prototype.slice
+            .call(panelLista.querySelectorAll(".material-panel-check"))
+            .forEach(function (check) {
+              if (marcados.indexOf(check.value) !== -1 && !check.disabled) {
+                check.checked = true;
+              }
+            });
+          actualizarPanelBloqueActivo();
+        });
+    }, 250);
+  }
+
+  function agregarSeleccionados() {
+    if (!bloqueActivo) {
+      mostrarMensaje("Primero agrega o selecciona un técnico.");
+      return;
+    }
+    var marcados = Array.prototype.slice
+      .call(panelLista.querySelectorAll(".material-panel-check:checked"))
+      .filter(function (check) { return !check.disabled; });
+    if (!marcados.length) {
+      mostrarMensaje("Marca al menos un material disponible.");
+      return;
+    }
+    var enBloque = materialesEnBloque(bloqueActivo);
+    var primerSeriado = null;
+    marcados.forEach(function (check) {
+      if (enBloque.has(check.value)) return;
+      var fila = agregarFila(bloqueActivo);
+      fila.querySelector(".material-fila").value = check.value;
+      actualizarFila(fila);
+      enBloque.add(check.value);
+      check.checked = false;
+      if (esSeriado(materialDe(fila))) {
+        if (!primerSeriado) primerSeriado = fila;
+      } else {
+        var cantidad = fila.querySelector('input[type="number"]');
+        if (cantidad) cantidad.focus();
+      }
+    });
+    actualizarPanelBloqueActivo();
+    actualizarSobrante();
+    if (primerSeriado) abrirSeries(primerSeriado);
+  }
+
+  botonAgregarBloque.addEventListener("click", agregarBloque);
+  botonAgregarSeleccionados.addEventListener("click", agregarSeleccionados);
+
+  contenedorBloques.addEventListener("click", function (evento) {
+    var bloque = evento.target.closest(".bloque-tecnico");
+    if (!bloque) return;
+    var eraActivo = bloque === bloqueActivo;
+    activarBloque(bloque);
+    if (evento.target.classList.contains("agregar-fila")) {
+      agregarFila(bloque);
+      return;
+    }
+    if (evento.target.classList.contains("quitar-bloque")) {
+      bloque.remove();
+      if (eraActivo) {
+        var restantes = contenedorBloques.querySelectorAll(".bloque-tecnico");
+        activarBloque(restantes.length ? restantes[restantes.length - 1] : null);
+      }
+      actualizarSobrante();
+      return;
+    }
+    if (evento.target.classList.contains("quitar-fila")) {
+      evento.target.closest(".fila-asignacion").remove();
+      actualizarPanelBloqueActivo();
+      actualizarSobrante();
+      return;
+    }
+    if (evento.target.classList.contains("elegir-series")) {
+      abrirSeries(evento.target.closest(".fila-asignacion"));
+    }
+  });
+
+  contenedorBloques.addEventListener("change", function (evento) {
+    if (!evento.target.classList.contains("material-fila")) return;
+    var fila = evento.target.closest(".fila-asignacion");
+    limpiarSeries(fila);
+    actualizarFila(fila);
+    if (verificarDuplicado(fila)) {
+      actualizarPanelBloqueActivo();
+      return;
+    }
+    actualizarPanelBloqueActivo();
+    actualizarSobrante();
+    var opcion = materialDe(fila);
+    if (esSeriado(opcion) && seriesDeFila(fila).length === 0) {
+      abrirSeries(fila);
+    }
+  });
+
+  contenedorBloques.addEventListener("input", function (evento) {
+    if (evento.target.matches("input[type=number]")) {
+      actualizarSobrante();
+    }
+  });
+
+  buscarSeries.addEventListener("input", function () {
+    if (!filaSeriesActual) return;
+    cargarSeries(
+      buscarSeries.value,
+      seriesMarcadasEnDialogo(),
+      seriesEnOtrasFilas(filaSeriesActual)
+    );
+  });
+  document.getElementById("aceptar-series").addEventListener("click", aceptarSeries);
+  document.getElementById("cerrar-series").addEventListener("click", function () {
+    dialogo.close();
+    filaSeriesActual = null;
+  });
+  dialogo.addEventListener("close", function () {
+    filaSeriesActual = null;
+  });
+
+  form.addEventListener("submit", function (evento) {
+    var problema = "";
+    filasDe(contenedorBloques).forEach(function (fila) {
+      var opcion = materialDe(fila);
+      if (!opcion) {
+        fila.remove();
+        return;
+      }
+      if (esSeriado(opcion) && seriesDeFila(fila).length === 0) {
+        problema = "Cada material seriado debe tener al menos una serie.";
+      }
+      if (!esSeriado(opcion)) {
+        var cantidad = fila.querySelector('input[type="number"]');
+        if (!cantidad || !cantidad.value || Number(cantidad.value) < 1) {
+          problema = "Cada material no seriado debe tener una cantidad mayor a 0.";
+        }
+      }
+    });
+    if (problema) {
+      evento.preventDefault();
+      mostrarMensaje(problema);
+      return;
+    }
+    actualizarTotal();
+  });
+
+  actualizarTotal();
+  actualizarPanelBloqueActivo();
+})();
+</script>
+{% endblock %}

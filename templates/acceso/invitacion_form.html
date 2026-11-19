@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Definir contraseña · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Definir contraseña</h1>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  {% if form %}
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Guardar contraseña</button>
+    </form>
+  {% endif %}
+{% endblock %}

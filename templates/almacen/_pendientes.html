@@ -1,0 +1,6 @@
+<span data-pendientes="{{ pendientes }}">{{ pendientes }}</span>
+{% if ultima %}
+  <a href="{% url 'detalle_almacen' ultima.pk %}" data-ultima-solicitud-id="{{ ultima.pk }}">
+    Nueva solicitud {{ ultima.pk }}
+  </a>
+{% endif %}

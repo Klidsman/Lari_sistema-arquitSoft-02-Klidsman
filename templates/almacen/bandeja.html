@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Bandeja de despachos · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Bandeja de despachos</h1>
+  <p>Pendientes: <span data-pendientes="{{ pendientes }}">{{ pendientes }}</span></p>
+
+  <form method="get" class="buscador">
+    <label>Estado
+      <select name="estado">
+        <option value="">Todos</option>
+        <option value="ENVIADA" {% if estado == "ENVIADA" %}selected{% endif %}>Enviada</option>
+        <option value="CONFIRMADA" {% if estado == "CONFIRMADA" %}selected{% endif %}>Confirmada</option>
+        <option value="RECHAZADA" {% if estado == "RECHAZADA" %}selected{% endif %}>Rechazada</option>
+      </select>
+    </label>
+    <button type="submit">Filtrar</button>
+  </form>
+
+  <table class="tabla">
+    <thead><tr><th>ID</th><th>Fecha envío</th><th>Tenant</th><th>Técnico</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+      {% for solicitud in solicitudes %}
+        <tr data-solicitud-id="{{ solicitud.pk }}">
+          <td>{{ solicitud.pk }}</td>
+          <td>{{ solicitud.enviada_en|date:"Y-m-d H:i" }}</td>
+          <td>{{ solicitud.tenant.codigo }}</td>
+          <td>{{ solicitud.nifs_tecnicos }}</td>
+          <td>{{ solicitud.get_estado_display }}</td>
+          <td><a href="{% url 'detalle_almacen' solicitud.pk %}">Revisar</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">No hay solicitudes para revisar.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if pagina.paginator.num_pages > 1 %}
+    <nav class="paginacion">
+      {% if pagina.has_previous %}<a href="?page={{ pagina.previous_page_number }}&estado={{ estado }}">Anterior</a>{% endif %}
+      <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+      {% if pagina.has_next %}<a href="?page={{ pagina.next_page_number }}&estado={{ estado }}">Siguiente</a>{% endif %}
+    </nav>
+  {% endif %}
+{% endblock %}

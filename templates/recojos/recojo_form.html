@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo recojo · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Nuevo recojo</h1>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <form method="post" action="{% url 'crear_recojo' %}">
+    {% csrf_token %}
+    <div class="recojo-layout"
+         style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:1.25rem;align-items:start;">
+      <div class="recojo-principal">
+        {{ form.as_p }}
+
+        <h2>Líneas</h2>
+        {{ formset.management_form }}
+
+        <div id="lineas-recojo">
+          {% for linea in formset %}
+            {% include "recojos/_linea_form.html" %}
+          {% endfor %}
+        </div>
+
+        <button type="button" id="agregar-linea">Agregar línea</button>
+        <button type="submit" hx-disabled-elt="this">Guardar recojo</button>
+        <a href="{% url 'lista_recojos' %}">Cancelar</a>
+      </div>
+
+      <aside id="series-lateral"
+             class="recojo-lateral"
+             style="position:sticky;top:1rem;max-height:80vh;overflow:auto;">
+        <h2>Series del recojo</h2>
+        {% if resultado and resultado.series_estados %}
+          {% include "recojos/_vista_previa_series.html" with estados=resultado.series_estados %}
+        {% else %}
+          <p class="ayuda">
+            Selecciona un material y pega o escanea las series para ver su estado aquí.
+          </p>
+        {% endif %}
+      </aside>
+    </div>
+  </form>
+
+  <script>
+    const contenedorLineas = document.getElementById("lineas-recojo");
+
+    function actualizarInfoMaterial(select) {
+      const fieldset = select.closest(".linea-recojo");
+      const seleccionado = fieldset.querySelector(".material-seleccionado");
+      const opcion = select.options[select.selectedIndex];
+      if (!select.value) {
+        seleccionado.textContent = "";
+        return;
+      }
+      seleccionado.textContent =
+        (opcion.dataset.codigo || "") + " - " +
+        (opcion.dataset.descripcion || "") +
+        " | Lote: " + (opcion.dataset.lote || "—") +
+        " | Tipo: " + (opcion.dataset.tipo || "");
+    }
+
+    function limpiarLinea(fieldset) {
+      fieldset.querySelectorAll("input, textarea").forEach(function (campo) {
+        campo.value = "";
+      });
+      fieldset.querySelectorAll("select").forEach(function (select) {
+        select.selectedIndex = 0;
+      });
+      const seleccionado = fieldset.querySelector(".material-seleccionado");
+      if (seleccionado) { seleccionado.textContent = ""; }
+    }
+
+    contenedorLineas.addEventListener("click", function (evento) {
+      const quitar = evento.target.closest(".quitar-linea");
+      if (quitar) {
+        limpiarLinea(quitar.closest(".linea-recojo"));
+      }
+    });
+
+    contenedorLineas.addEventListener("change", function (evento) {
+      if (evento.target.matches('select[name$="-material_id"]')) {
+        actualizarInfoMaterial(evento.target);
+      }
+    });
+
+    contenedorLineas.querySelectorAll('select[name$="-material_id"]')
+      .forEach(actualizarInfoMaterial);
+
+    document.getElementById("agregar-linea").addEventListener("click", function () {
+      const total = document.getElementById("id_lineas-TOTAL_FORMS");
+      const indice = Number(total.value);
+      const plantilla = contenedorLineas.querySelector(".linea-recojo");
+      const nueva = plantilla.cloneNode(true);
+      nueva.querySelectorAll("input, textarea").forEach(function (campo) {
+        campo.name = campo.name.replace(/lineas-\d+-/, "lineas-" + indice + "-");
+        campo.value = "";
+      });
+      nueva.querySelectorAll("select").forEach(function (select) {
+        select.name = select.name.replace(/lineas-\d+-/, "lineas-" + indice + "-");
+        select.selectedIndex = 0;
+      });
+      nueva.querySelectorAll("[hx-vals]").forEach(function (elemento) {
+        elemento.setAttribute(
+          "hx-vals",
+          elemento.getAttribute("hx-vals").replace(
+            /lineas-\d+-/g,
+            "lineas-" + indice + "-"
+          )
+        );
+      });
+      nueva.querySelector("legend").textContent = "Línea " + (indice + 1);
+      nueva.querySelector(".material-seleccionado").textContent = "";
+      contenedorLineas.appendChild(nueva);
+      total.value = indice + 1;
+    });
+  </script>
+{% endblock %}

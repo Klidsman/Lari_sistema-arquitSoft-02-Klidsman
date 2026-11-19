@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Técnicos · Lari{% endblock %}
+
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <h1>Técnicos</h1>
+    <a class="boton" href="{% url 'crear_tecnico' %}">Nuevo técnico</a>
+  </div>
+
+  <form method="get" action="{% url 'listar_tecnicos' %}" class="buscador">
+    <label>Buscar
+      <input type="search" name="q" value="{{ q }}" placeholder="NIF o nombre">
+    </label>
+    <label>Estado
+      <select name="estado">
+        <option value="todos" {% if estado == "todos" %}selected{% endif %}>Todos</option>
+        <option value="activos" {% if estado == "activos" %}selected{% endif %}>Activos</option>
+        <option value="desactivados" {% if estado == "desactivados" %}selected{% endif %}>Desactivados</option>
+      </select>
+    </label>
+    <button type="submit">Buscar</button>
+  </form>
+
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>NIF</th>
+        <th>Nombre</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tecnico in tecnicos %}
+        <tr>
+          <td>{{ tecnico.nif }}</td>
+          <td>{{ tecnico.nombre }}</td>
+          <td>{{ tecnico.activo|yesno:"Activo,Desactivado" }}</td>
+          <td class="acciones">
+            <a href="{% url 'detalle_tecnico' tecnico.pk %}">Ver</a>
+            <a href="{% url 'editar_tecnico' tecnico.pk %}">Editar</a>
+            {% if tecnico.activo %}
+              <form method="post"
+                    action="{% url 'desactivar_tecnico' tecnico.pk %}"
+                    class="en-linea"
+                    data-confirmar="¿Estás seguro de desactivar este técnico? No aparecerá en nuevas operaciones.">
+                {% csrf_token %}
+                <button type="submit">Desactivar</button>
+              </form>
+            {% else %}
+              <form method="post"
+                    action="{% url 'reactivar_tecnico' tecnico.pk %}"
+                    class="en-linea"
+                    data-confirmar="¿Estás seguro de reactivar este técnico?">
+                {% csrf_token %}
+                <button type="submit">Reactivar</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4">No se encontraron técnicos</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if pagina.paginator.num_pages > 1 %}
+    <nav class="paginacion">
+      {% if pagina.has_previous %}
+        <a href="?page={{ pagina.previous_page_number }}&q={{ q }}&estado={{ estado }}">Anterior</a>
+      {% endif %}
+      <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+      {% if pagina.has_next %}
+        <a href="?page={{ pagina.next_page_number }}&q={{ q }}&estado={{ estado }}">Siguiente</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Excels históricos · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Excels históricos</h1>
+  <table class="tabla">
+    <thead><tr><th>ID</th><th>Fecha</th><th>Tenant</th><th>Técnico</th><th>Estado</th><th>Hash</th><th></th></tr></thead>
+    <tbody>
+      {% for solicitud in solicitudes %}
+        <tr>
+          <td>{{ solicitud.pk }}</td>
+          <td>{{ solicitud.fecha|date:"Y-m-d" }}</td>
+          <td>{{ solicitud.tenant.codigo }}</td>
+          <td>{{ solicitud.nifs_tecnicos }}</td>
+          <td>{{ solicitud.get_estado_display }}</td>
+          <td>{{ solicitud.excel_hash }}</td>
+          <td><a href="{% url 'descargar_historico_almacen' solicitud.pk %}">Descargar</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7">No hay Excels registrados.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Órdenes pendientes · Lari{% endblock %}
+{% block contenido %}
+  <h1>Órdenes pendientes</h1>
+  <form method="get">
+    <label>Periodo <input type="month" name="periodo" value="{{ periodo }}"></label>
+    <label>Antigüedad (días) <input type="number" name="dias" min="1" value="{{ dias }}"></label>
+    <button type="submit">Filtrar</button>
+  </form>
+  <table class="tabla">
+    <thead><tr><th>Orden</th><th>Técnico</th><th>Periodo</th><th>Creada</th><th></th></tr></thead>
+    <tbody>
+      {% for orden in ordenes %}
+        <tr>
+          <td>{{ orden.numero_normalizado }}</td>
+          <td>{{ orden.tecnico.nif }}</td>
+          <td>{{ orden.periodo }}</td>
+          <td>{{ orden.creado_en|date:"Y-m-d" }}</td>
+          <td><a href="{% url 'registrar_materiales' %}?tecnico={{ orden.tecnico.pk }}&periodo={{ orden.periodo }}&numero_orden={{ orden.numero_normalizado }}">Registrar</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">Sin órdenes pendientes.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

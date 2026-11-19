@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva cuenta · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Nueva cuenta</h1>
+  {% if tenant %}
+    <p>Tenant: {{ tenant.codigo }} - {{ tenant.nombre }}</p>
+  {% endif %}
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Crear cuenta y enviar invitación</button>
+    {% if tenant %}
+      <a href="{% url 'detalle_tenant' tenant.pk %}">Cancelar</a>
+    {% else %}
+      <a href="{% url 'listar_cuentas' %}">Cancelar</a>
+    {% endif %}
+  </form>
+{% endblock %}

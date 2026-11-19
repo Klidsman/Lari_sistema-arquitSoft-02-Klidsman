@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Técnico {{ tecnico.nif }} · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Técnico {{ tecnico.nif }}</h1>
+
+  <dl class="detalle">
+    <dt>NIF</dt>
+    <dd>{{ tecnico.nif }}</dd>
+    <dt>Nombre</dt>
+    <dd>{{ tecnico.nombre }}</dd>
+    <dt>Estado</dt>
+    <dd>{{ tecnico.activo|yesno:"Activo,Desactivado" }}</dd>
+    <dt>Creado por</dt>
+    <dd>{{ tecnico.creado_por.email }}</dd>
+    <dt>Creado en</dt>
+    <dd>{{ tecnico.creado_en|date:"Y-m-d H:i:s" }}</dd>
+    <dt>Última actualización</dt>
+    <dd>{{ tecnico.actualizado_en|date:"Y-m-d H:i:s" }}</dd>
+  </dl>
+
+  <h2>Acciones</h2>
+  <p>
+    <a class="boton" href="{% url 'editar_tecnico' tecnico.pk %}">Editar</a>
+  </p>
+
+  {% if tecnico.activo %}
+    <form method="post"
+          action="{% url 'desactivar_tecnico' tecnico.pk %}"
+          data-confirmar="¿Estás seguro de desactivar este técnico? No aparecerá en nuevas operaciones.">
+      {% csrf_token %}
+      <button type="submit">Desactivar técnico</button>
+    </form>
+  {% else %}
+    <form method="post"
+          action="{% url 'reactivar_tecnico' tecnico.pk %}"
+          data-confirmar="¿Estás seguro de reactivar este técnico?">
+      {% csrf_token %}
+      <button type="submit">Reactivar técnico</button>
+    </form>
+  {% endif %}
+
+  <p><a href="{% url 'listar_tecnicos' %}">Volver al listado</a></p>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo tenant · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Nuevo tenant</h1>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <form method="post" action="{% url 'crear_tenant' %}">
+    {% csrf_token %}
+    {{ formulario.as_p }}
+    <button type="submit">Guardar</button>
+    <a href="{% url 'listar_tenants' %}">Cancelar</a>
+  </form>
+{% endblock %}

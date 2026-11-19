@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Entradas y saldos · Lari{% endblock %}
+{% block contenido %}
+  <h1>Entradas y saldos · {{ periodo }}</h1>
+  <form method="post" action="{% url 'guardar_saldo_inicial' %}">
+    {% csrf_token %}
+    <input type="hidden" name="periodo" value="{{ periodo }}">
+    <label>Material
+      <select name="material" required>
+        {% for fila in filas %}<option value="{{ fila.material.pk }}">{{ fila.material.codigo }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Cantidad <input type="number" name="cantidad" min="0" required></label>
+    <button type="submit">Guardar saldo inicial</button>
+  </form>
+  <table class="tabla">
+    <thead><tr><th>Material</th><th>Saldo inicial</th><th>Despachos</th></tr></thead>
+    <tbody>
+      {% for fila in filas %}
+        <tr><td>{{ fila.material.codigo }} - {{ fila.material.descripcion }}</td><td>{{ fila.saldo }}</td><td>{{ fila.despachos }}</td></tr>
+      {% empty %}
+        <tr><td colspan="3">Sin materiales habilitados.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p><a href="{% url 'exportar_reporte_mensual' %}?periodo={{ periodo }}&formato=xlsx">Exportar reporte mensual</a></p>
+  <p><a href="{% url 'exportar_detalle_ordenes' %}?periodo={{ periodo }}&formato=csv">Exportar detalle de órdenes</a></p>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Historial de orden {{ orden_id }} · Lari{% endblock %}
+{% block contenido %}
+  <h1>Historial de la orden {{ orden_id }}</h1>
+  <table class="tabla">
+    <thead><tr><th>Fecha</th><th>Entidad</th><th>Campo</th><th>Anterior</th><th>Nuevo</th><th>Usuario</th></tr></thead>
+    <tbody>
+      {% for registro in registros %}
+        <tr>
+          <td>{{ registro.fecha|date:"Y-m-d H:i" }}</td>
+          <td>{{ registro.entidad }}</td>
+          <td>{{ registro.campo }}</td>
+          <td>{{ registro.valor_anterior }}</td>
+          <td>{{ registro.valor_nuevo }}</td>
+          <td>{{ registro.usuario.email }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">Sin historial.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

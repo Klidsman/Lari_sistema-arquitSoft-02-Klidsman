@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitud {{ solicitud.pk }} · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Solicitud {{ solicitud.pk }}</h1>
+
+  {% for alerta in alertas %}
+    <p class="mensaje">{{ alerta.tecnico.nif }}: {{ alerta.mensaje }}</p>
+  {% endfor %}
+
+  <dl class="detalle">
+    <dt>Técnicos</dt><dd>{{ solicitud.nifs_tecnicos }}</dd>
+    <dt>Fecha</dt><dd>{{ solicitud.fecha|date:"Y-m-d" }}</dd>
+    <dt>Estado</dt><dd>{{ solicitud.get_estado_display }}</dd>
+    <dt>Total líneas</dt><dd>{{ totales.total_lineas }}</dd>
+    <dt>Total técnicos</dt><dd>{{ totales.total_tecnicos }}</dd>
+    <dt>Total series</dt><dd>{{ totales.total_series }}</dd>
+    <dt>Total cantidad</dt><dd>{{ totales.total_cantidad }}</dd>
+    {% if solicitud.excel_hash %}
+      <dt>Hash Excel</dt><dd>{{ solicitud.excel_hash }}</dd>
+    {% endif %}
+  </dl>
+
+  <table class="tabla">
+    <thead><tr><th>Técnico</th><th>Material</th><th>Descripción</th><th>Lote</th><th>Serie</th><th>Cantidad</th></tr></thead>
+    <tbody>
+      {% for linea in solicitud.lineas.all %}
+        <tr>
+          <td>{{ linea.tecnico.nif }}</td>
+          <td>{{ linea.material.codigo }}</td>
+          <td>{{ linea.material.descripcion }}</td>
+          <td>{{ linea.lote }}</td>
+          <td>{{ linea.serie.numero|default:"—" }}</td>
+          <td>{{ linea.cantidad }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if solicitud.excel_ruta %}
+    <p><a class="boton" href="{% url 'excel_asignacion' solicitud.pk %}">Descargar Excel de asignación</a></p>
+  {% endif %}
+
+  {% if puede_enviar %}
+    <form method="post" action="{% url 'enviar_asignacion' solicitud.pk %}"
+          data-confirmar="¿Enviar esta solicitud al almacén?">
+      {% csrf_token %}
+      <button type="submit">Enviar solicitud</button>
+    </form>
+    <form method="post" action="{% url 'cancelar_asignacion' solicitud.pk %}"
+          data-confirmar="¿Cancelar esta solicitud?">
+      {% csrf_token %}
+      <button type="submit">Cancelar solicitud</button>
+    </form>
+  {% endif %}
+
+  <p><a href="{% url 'lista_asignaciones' %}">Volver</a></p>
+{% endblock %}

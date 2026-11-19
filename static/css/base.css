@@ -1,0 +1,216 @@
+:root {
+  color-scheme: light;
+  --fondo: #f6f7f9;
+  --texto: #1f2933;
+  --borde: #d9dee5;
+  --acento: #1f5f8b;
+  --error: #a4262c;
+  --exito: #256b3b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.9rem 1.5rem;
+  background: #fff;
+  border-bottom: 1px solid var(--borde);
+}
+
+.marca {
+  color: var(--acento);
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+
+.contenido {
+  width: min(1100px, calc(100% - 2rem));
+  margin: 1.5rem auto;
+}
+
+.mensajes {
+  margin-bottom: 1rem;
+}
+
+.mensaje {
+  margin: 0 0 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.4rem;
+  background: #fff;
+}
+
+.mensaje-error {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.mensaje-success {
+  border-color: var(--exito);
+  color: var(--exito);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+th,
+td {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid var(--borde);
+  text-align: left;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.recojo-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.recojo-principal {
+  min-width: 0;
+}
+
+.recojo-lateral {
+  position: sticky;
+  top: 1rem;
+  max-height: 80vh;
+  overflow: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: #fff;
+}
+
+@media (max-width: 700px) {
+  .recojo-layout {
+    display: block !important;
+  }
+  .recojo-lateral {
+    position: static !important;
+    max-height: none !important;
+    margin-top: 1rem;
+  }
+}
+
+/* Asignación: panel de materiales y bloques por técnico */
+.pantalla-asignacion {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.panel-materiales {
+  position: sticky;
+  top: 1rem;
+  flex: 0 0 310px;
+  max-height: 80vh;
+  overflow: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.panel-materiales h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.lista-materiales-panel .material-opcion {
+  display: block;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.lista-materiales-panel .material-opcion[aria-disabled="true"] {
+  opacity: 0.55;
+}
+
+.lista-materiales-panel .material-ya-agregado {
+  opacity: 0.6;
+}
+
+.material-nombre {
+  font-weight: 600;
+}
+
+.material-cantidades,
+.material-nota {
+  display: block;
+  font-size: 0.85rem;
+  color: #52606d;
+}
+
+.material-nota {
+  color: #8a5a00;
+}
+
+.contenido-asignacion {
+  flex: 1;
+  min-width: 0;
+}
+
+.bloque-tecnico {
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: #fff;
+}
+
+.bloque-tecnico.bloque-activo {
+  border-color: var(--acento);
+  box-shadow: 0 0 0 2px rgba(31, 95, 139, 0.15);
+}
+
+.bloque-tecnico legend {
+  font-weight: 600;
+}
+
+.fila-asignacion {
+  border-top: 1px solid #eef1f4;
+  padding: 0.5rem 0;
+}
+
+@media (max-width: 900px) {
+  .pantalla-asignacion {
+    display: block;
+  }
+  .panel-materiales {
+    position: static;
+    max-height: none;
+    margin-bottom: 1rem;
+  }
+}

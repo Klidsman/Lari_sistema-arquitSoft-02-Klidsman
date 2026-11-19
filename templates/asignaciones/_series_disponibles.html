@@ -1,0 +1,12 @@
+{% for serie in series %}
+  <label class="serie-opcion">
+    <input type="checkbox"
+           class="serie-modal-check"
+           value="{{ serie.pk }}"
+           data-numero="{{ serie.numero }}"
+           {% if serie.pk in seleccionados %}checked{% endif %}>
+    {{ serie.numero }} — {{ serie.material.codigo }}
+  </label>
+{% empty %}
+  <p class="ayuda">No hay series disponibles para este material.</p>
+{% endfor %}
