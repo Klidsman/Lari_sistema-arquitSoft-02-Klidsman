@@ -39,18 +39,14 @@ python manage.py shell -c "from registro_materiales.models import CargaOrdenes, 
 ## Pruebas automatizadas
 
 ```powershell
-# Unitarias
-pytest tests/unit/test_registro_carga.py tests/unit/test_registro_materiales.py
-pytest tests/unit/test_registro_saldos.py tests/unit/test_registro_exportacion.py
+# Unitarias: normalización y periodos
+pytest tests/unit/test_registro_materiales.py
 
-# Integración
-pytest tests/integration/test_carga_ordenes.py tests/integration/test_materiales_uso.py
-pytest tests/integration/test_bloqueo_negativo.py tests/integration/test_dashboard.py
-pytest tests/integration/test_cierre_mensual.py tests/integration/test_auditoria.py
-pytest tests/integration/test_concurrencia.py tests/integration/test_aislamiento.py
+# Integración: órdenes, usos, saldos, cierre y exportación
+pytest tests/integration/test_registro_materiales.py
 
 # Contrato HTTP
-pytest tests/contract/test_registro_http.py
+pytest tests/contract/test_registro_materiales_http.py
 
 # Todo 013
 pytest -k "registro"
@@ -285,3 +281,38 @@ cierre se bloquea.
 - [ ] La reapertura exige motivo y queda auditada.
 - [ ] Excel/CSV solo contienen datos del tenant.
 - [ ] No se modifica stock, series, asignaciones, traspasos ni conciliaciones.
+
+## Registro de validación (2026-11-18)
+
+Validación automatizada sobre PostgreSQL con `.\.venv\Scripts\python.exe -m pytest -q`: **suite
+completa en verde**.
+
+| CA | Prueba real | Estado |
+|---|---|---|
+| CA-01 | Contrato HTTP (menú y aislamiento) | Cubierto |
+| CA-02 | `test_catalogo_habilitado_http` y `materiales_habilitados` | Cubierto |
+| CA-03 | `test_procesar_lista_normaliza_y_deduplica` | Cubierto |
+| CA-04 | `test_carga_masiva_idempotente_y_resumen` | Cubierto |
+| CA-05 | `test_carga_masiva_idempotente_y_resumen` (otro técnico) | Cubierto |
+| CA-06 | `test_flujo_http_carga_materiales_y_exportacion` (preview) | Cubierto |
+| CA-07 | `test_deshacer_bloqueado_si_hay_materiales` y deshacer sin materiales | Cubierto |
+| CA-08 | `test_carga_masiva_idempotente_y_resumen` (`buscar_orden`) | Cubierto |
+| CA-09 | `test_historial_y_pendientes` y cambio de periodo en `guardar_uso` | Cubierto |
+| CA-10 | `test_guardar_uso_cantidad_cero_e_invalida` | Cubierto |
+| CA-11 | `test_guardar_uso_cantidad_cero_e_invalida` | Cubierto |
+| CA-12 | `test_bloqueo_de_saldo_negativo` | Cubierto |
+| CA-13 | `test_advertencia_atipica_no_bloquea` | Cubierto |
+| CA-14 | `test_saldo_final_herencia_y_manual_y_despachos` | Cubierto |
+| CA-15 | `test_saldo_final_herencia_y_manual_y_despachos` | Cubierto |
+| CA-16 | `test_saldo_final_herencia_y_manual_y_despachos` | Cubierto |
+| CA-17 | `test_saldo_final_herencia_y_manual_y_despachos` (despacho) | Cubierto |
+| CA-18 | `test_historial_y_pendientes` | Cubierto |
+| CA-19 | `test_historial_y_pendientes` | Cubierto |
+| CA-20 | `test_cierre_bloqueado_por_pendientes` | Cubierto |
+| CA-21 | `test_cierre_traspaso_y_reapertura` | Cubierto |
+| CA-22 | `test_cierre_traspaso_y_reapertura` | Cubierto |
+| CA-23 | `test_exportacion_excel_y_csv` | Cubierto |
+
+Concurrencia de usos cubierta por `test_dos_usos_simultaneos_no_superan_el_disponible`. Rendimiento de exportación cubierto por `test_exportacion_de_mil_ordenes_en_menos_de_diez_segundos`. Pendiente de validación manual: RLS de las tablas de 013 (implementada en `0002_rls.py`) e
+integración futura de `validar_periodo_abierto` en una pantalla de despachos.
+

@@ -76,10 +76,15 @@ class CuadreTraspaso:
 
 ### `validar_tecnicos(origen, destino, tenant) -> None`
 
+- Resuelve ambos con `tecnicos.services.obtener_tecnico(tenant, id)`; el destino se valida con
+  `tecnicos.services.validar_tecnico_para_operacion(tenant, id)`.
 - Ambos existen y pertenecen al tenant; si no, `TecnicosDistintoTenant`.
 - `origen.id != destino.id`; si no, `OrigenDestinoIguales`.
 - El destino está activo; si no, `TecnicoNoExiste`.
 - El origen puede estar inactivo si aún tiene stock.
+- Los selectores usan `tecnicos.services.tecnicos_para_operacion(tenant)`; para documentos
+  históricos, `tecnicos_para_reporte(tenant, incluir_inactivos=True)`.
+- La resolución por NIF del Excel usa `tecnicos.services.obtener_tecnico_por_nif(tenant, nif)`.
 
 ## Disponibilidad
 

@@ -18,6 +18,7 @@ inicial), 006 (asignación), 009 (traspaso) y 013 (registro de materiales).
 | `q` con texto | Filtra por `codigo__icontains` **o** `descripcion__icontains` |
 | Orden | `codigo` ascendente, estable |
 | Filtro de tenant | **Ninguno**: el catálogo es global |
+| Estado | Solo devuelve materiales con `activo=True`; los dados de baja no aparecen |
 | CSRF | No aplica (`GET`) |
 
 ## Respuesta
@@ -71,7 +72,7 @@ Forma esperada (ilustrativa, no normativa en clases CSS):
 
 1. El fragmento no incluye datos de stock, de tenants ni de regiones.
 2. El catálogo devuelto es el mismo para todos los tenants; un consumidor no debe volver a
-   filtrarlo por tenant ni por región.
+   filtrarlo por tenant ni por región. Solo incluye materiales activos.
 3. El código es estable e inmutable: sirve como clave de selección.
 4. La descripción y el lote devueltos son los normalizados y persistidos; el consumidor no debe
    permitir editarlos en su propio formulario (regla de la spec 002).

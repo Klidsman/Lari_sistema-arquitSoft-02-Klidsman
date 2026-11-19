@@ -216,13 +216,37 @@ concurrencia real.
 3. Intentar crear dos cuentas para el mismo tenant en paralelo.
 4. **Esperado**: solo una se crea; la otra falla con `"El tenant ya tiene una cuenta"`.
 
+## Registro de validación manual
+
+**Fecha**: 2026-11-14
+**Entorno**: Windows, PostgreSQL 16 (contenedor `lari-postgres` en el puerto 5434), Redis 7,
+Django 5.2 y Python 3.12.
+**Guía seguida**: `05-especificaciones/001-tenants-y-acceso/guia-validacion-manual.md`.
+
+| # | Escenario | Resultado |
+|---|---|---|
+| 1 | Alta de región y almacén | OK |
+| 2 | Alta de tenant | OK |
+| 3 | Cuenta única e invitación | OK |
+| 4 | Invitación vencida y reenvío | OK |
+| 5 | Inicio de sesión y segundo factor | OK |
+| 6 | Aislamiento entre tenants y regiones | OK |
+| 7 | Desactivación, reactivación y suspensión | OK |
+| 8 | Cambio de rol | OK |
+| 9 | Sin eliminación | OK |
+| 10 | Auditoría | OK |
+| 11 | Concurrencia | OK |
+
+Los 11 escenarios se completaron con los resultados esperados. No se detectaron secretos en la
+auditoría ni accesos cruzados entre tenants o regiones.
+
 ## Criterios de salida
 
 La funcionalidad se considera validada cuando:
 
-- [ ] `pytest` pasa completo sobre PostgreSQL.
-- [ ] Cada criterio de aceptación de `spec.md` tiene al menos una prueba automatizada.
-- [ ] Los escenarios manuales 1–11 se completan con los resultados esperados.
-- [ ] La auditoría no contiene secretos y es de solo inserción.
-- [ ] Un tenant nunca ve datos de otro y un Responsable de almacén nunca ve otra región.
-- [ ] La desactivación y la suspensión invalidan sesiones de inmediato.
+- [X] `pytest` pasa completo sobre PostgreSQL.
+- [X] Cada criterio de aceptación de `spec.md` tiene al menos una prueba automatizada.
+- [X] Los escenarios manuales 1–11 se completan con los resultados esperados.
+- [X] La auditoría no contiene secretos y es de solo inserción.
+- [X] Un tenant nunca ve datos de otro y un Responsable de almacén nunca ve otra región.
+- [X] La desactivación y la suspensión invalidan sesiones de inmediato.

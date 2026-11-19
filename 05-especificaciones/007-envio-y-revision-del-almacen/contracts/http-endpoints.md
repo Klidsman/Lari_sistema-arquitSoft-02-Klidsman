@@ -64,7 +64,7 @@ de Django, CSRF en `POST`, plantillas HTML y HTMX. No existe API REST ni respues
 
 **Respuesta `200`**:
 
-- Cabecera: ID, fecha, tenant, técnico, NIF, estado, región.
+- Cabecera: ID, fecha, tenant, técnicos y sus NIF, estado, región.
 - Líneas agrupadas por material, con serie o cantidad y lote.
 - Totales de series y cantidades.
 - Hash SHA-256, enlace de descarga y último intento de envío (estado y fecha).

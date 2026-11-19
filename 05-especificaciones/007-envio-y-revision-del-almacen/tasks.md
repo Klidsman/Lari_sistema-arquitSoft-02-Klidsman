@@ -53,6 +53,13 @@ de solicitudes.
 
 ---
 
+## Estado de implementación (2026-11-18)
+
+- Implementado el núcleo: `EnvioCorreo`, campos `motivo_rechazo`/`rechazada_en`, bandeja del almacén, detalle/previsualización, confirmar, rechazar, descarga con verificación SHA-256, históricos y fragmento de pendientes.
+- Implementada la confirmación de stock de 008 (`RESERVADA→ASIGNADA`, `StockGeneral→StockTecnico`) y su uso desde 007.
+- Se registra un intento de correo al enviar; los reintentos programados, SSE completo y pruebas de todos los ciclos quedan pendientes.
+- Suite en verde con pruebas del flujo principal.
+
 ## Fase 1: Setup (infraestructura compartida)
 
 **Propósito**: aplicar las correcciones documentales, configurar correo, Celery, Redis, rutas y

@@ -40,11 +40,11 @@ Proyecto Django único en la raíz: la app nueva es `materiales/`; las plantilla
 
 **Propósito**: crear la app `materiales` y conectarla al proyecto existente de la spec 001.
 
-- [ ] T001 Verificar los prerrequisitos de la spec 001 en `config/settings/base.py`, `acceso/models.py` y `auditoria/services.py`: `AUTH_USER_MODEL="acceso.Usuario"`, `ContextoUsuarioMiddleware` activo, rol `ADMIN_PLATAFORMA` y `registrar_cambio()` importable; detenerse y reportar si falta alguno
-- [ ] T002 Crear la app Django `materiales` con `materiales/__init__.py`, `materiales/apps.py`, `materiales/migrations/__init__.py` y registrarla en `INSTALLED_APPS` de `config/settings/base.py`
-- [ ] T003 Incluir `materiales/urls.py` desde `config/urls.py` con el prefijo `/materiales/` (el archivo de rutas se crea en T018)
-- [ ] T004 [P] Extender `conftest.py` con las fixtures `material`, `usuario_otro_tenant` y `verificacion_movimientos` (registro y limpieza del hook de la US4) sobre PostgreSQL
-- [ ] T005 [P] Agregar el enlace de navegación a Materiales en `templates/base.html`, visible para las tres cuentas autenticadas
+- [X] T001 Verificar los prerrequisitos de la spec 001 en `config/settings/base.py`, `acceso/models.py` y `auditoria/services.py`: `AUTH_USER_MODEL="acceso.Usuario"`, `ContextoUsuarioMiddleware` activo, rol `ADMIN_PLATAFORMA` y `registrar_cambio()` importable; detenerse y reportar si falta alguno
+- [X] T002 Crear la app Django `materiales` con `materiales/__init__.py`, `materiales/apps.py`, `materiales/migrations/__init__.py` y registrarla en `INSTALLED_APPS` de `config/settings/base.py`
+- [X] T003 Incluir `materiales/urls.py` desde `config/urls.py` con el prefijo `/materiales/` (el archivo de rutas se crea en T018)
+- [X] T004 [P] Extender `conftest.py` con las fixtures `material`, `usuario_otro_tenant` y `verificacion_movimientos` (registro y limpieza del hook de la US4) sobre PostgreSQL
+- [X] T005 [P] Agregar el enlace de navegación a Materiales en `templates/base.html`, visible para las tres cuentas autenticadas
 
 ---
 
@@ -54,10 +54,10 @@ Proyecto Django único en la raíz: la app nueva es `materiales/`; las plantilla
 
 **⚠️ CRÍTICO**: ninguna historia puede comenzar hasta completar esta fase.
 
-- [ ] T006 Implementar `Material` en `materiales/models.py` con `codigo = CharField(max_length=11, unique=True)`, `descripcion = CharField(max_length=100)`, `lote = CharField(max_length=50, blank=True, default="")`, `es_seriado = BooleanField()`, `creado_por` FK `PROTECT` `related_name="+"`, `creado_en = auto_now_add`, `actualizado_por` FK `PROTECT` nullable `related_name="+"`, `actualizado_en = auto_now`; agregar `CheckConstraint(material_codigo_11_digitos)` con `Q(codigo__regex=r"^[0-9]{11}$")`, `CheckConstraint(material_descripcion_obligatoria)` con `~Q(descripcion="")`, `Meta.ordering = ["codigo"]` y la propiedad `tipo` que devuelve `"SERIADO"` o `"NO_SERIADO"`
-- [ ] T007 Generar y revisar `materiales/migrations/0001_initial.py` y aplicarla con `migrate`; no crear datos maestros ni materiales por migración
-- [ ] T008 Implementar en `materiales/services.py` las excepciones `ValidacionMaterial`, `MaterialDuplicado` y `PermisoDenegado`, y las funciones `normalizar_codigo()` (strip, sin quitar separadores internos), `normalizar_descripcion()` (strip + colapsar espacios internos), `normalizar_lote()` (strip + colapsar espacios + `upper()`, vacío permitido) y `validar_datos_material()` con los mensajes exactos del contrato
-- [ ] T009 Implementar en `materiales/services.py` los helpers `auditar_alta_material(material, usuario)` y `auditar_cambios_material(material, cambios, usuario)` que llaman a `auditoria.services.registrar_cambio` con `entidad="Material"` y un registro por campo, sin secretos ni `tenant_id`
+- [X] T006 Implementar `Material` en `materiales/models.py` con `codigo = CharField(max_length=11, unique=True)`, `descripcion = CharField(max_length=100)`, `lote = CharField(max_length=50, blank=True, default="")`, `es_seriado = BooleanField()`, `creado_por` FK `PROTECT` `related_name="+"`, `creado_en = auto_now_add`, `actualizado_por` FK `PROTECT` nullable `related_name="+"`, `actualizado_en = auto_now`; agregar `CheckConstraint(material_codigo_11_digitos)` con `Q(codigo__regex=r"^[0-9]{11}$")`, `CheckConstraint(material_descripcion_obligatoria)` con `~Q(descripcion="")`, `Meta.ordering = ["codigo"]` y la propiedad `tipo` que devuelve `"SERIADO"` o `"NO_SERIADO"`
+- [X] T007 Generar y revisar `materiales/migrations/0001_initial.py` y aplicarla con `migrate`; no crear datos maestros ni materiales por migración
+- [X] T008 Implementar en `materiales/services.py` las excepciones `ValidacionMaterial`, `MaterialDuplicado` y `PermisoDenegado`, y las funciones `normalizar_codigo()` (strip, sin quitar separadores internos), `normalizar_descripcion()` (strip + colapsar espacios internos), `normalizar_lote()` (strip + colapsar espacios + `upper()`, vacío permitido) y `validar_datos_material()` con los mensajes exactos del contrato
+- [X] T009 Implementar en `materiales/services.py` los helpers `auditar_alta_material(material, usuario)` y `auditar_cambios_material(material, cambios, usuario)` que llaman a `auditoria.services.registrar_cambio` con `entidad="Material"` y un registro por campo, sin secretos ni `tenant_id`
 
 **Checkpoint**: app, tabla y utilidades listas; las historias pueden comenzar.
 
@@ -71,19 +71,19 @@ Proyecto Django único en la raíz: la app nueva es `materiales/`; las plantilla
 
 ### Pruebas de US1 (escribir primero, deben fallar)
 
-- [ ] T010 [P] [US1] Pruebas de contrato de `GET/POST /materiales/nuevo/` en `tests/contract/test_material_alta_http.py`: alta `302`, código inválido `400` "El código debe tener 11 dígitos", duplicado `409` "El material ya existe", descripción vacía/solo espacios `400` "La descripción es obligatoria", lote > 50 `400`, tipo ausente `400` "El tipo es obligatorio" y método `DELETE` `405`
-- [ ] T011 [P] [US1] Pruebas de contrato de `GET /materiales/` en `tests/contract/test_material_lista_http.py`: `200` con código, descripción, lote, tipo, creador y fecha; orden por `codigo`; paginación de 50; `401`/redirección sin sesión
-- [ ] T012 [P] [US1] Pruebas de integración en `tests/integration/test_material_alta.py`: `crear_material` registra creador y fecha; auditoría `alta` con código, descripción, lote y tipo; normalización de descripción y lote; material sin lote con `lote=""`; doble envío no crea duplicado; código duplicado producido por `IntegrityError` se traduce sin revelar cuenta ni tenant
-- [ ] T013 [P] [US1] Pruebas de base de datos en `tests/integration/test_restricciones_material.py`: inserción directa con código de 10 dígitos, de 12 o con letras falla por `CheckConstraint`; descripción vacía falla; dos materiales con el mismo código fallan por `unique`
+- [X] T010 [P] [US1] Pruebas de contrato de `GET/POST /materiales/nuevo/` en `tests/contract/test_material_alta_http.py`: alta `302`, código inválido `400` "El código debe tener 11 dígitos", duplicado `409` "El material ya existe", descripción vacía/solo espacios `400` "La descripción es obligatoria", lote > 50 `400`, tipo ausente `400` "El tipo es obligatorio" y método `DELETE` `405`
+- [X] T011 [P] [US1] Pruebas de contrato de `GET /materiales/` en `tests/contract/test_material_lista_http.py`: `200` con código, descripción, lote, tipo, creador y fecha; orden por `codigo`; paginación de 50; `401`/redirección sin sesión
+- [X] T012 [P] [US1] Pruebas de integración en `tests/integration/test_material_alta.py`: `crear_material` registra creador y fecha; auditoría `alta` con código, descripción, lote y tipo; normalización de descripción y lote; material sin lote con `lote=""`; doble envío no crea duplicado; código duplicado producido por `IntegrityError` se traduce sin revelar cuenta ni tenant
+- [X] T013 [P] [US1] Pruebas de base de datos en `tests/integration/test_restricciones_material.py`: inserción directa con código de 10 dígitos, de 12 o con letras falla por `CheckConstraint`; descripción vacía falla; dos materiales con el mismo código fallan por `unique`
 
 ### Implementación de US1
 
-- [ ] T014 [P] [US1] Implementar `MaterialForm` en `materiales/forms.py`: `codigo` de exactamente 11 dígitos, `descripcion` obligatoria de 1–100, `lote` opcional de hasta 50, `tipo` con choices `SERIADO`/`NO_SERIADO` convertido a `es_seriado` en `clean()`
-- [ ] T015 [US1] Implementar `crear_material(datos, usuario)` en `materiales/services.py`: exige cuenta activa, normaliza antes de validar, escribe material y auditoría en `transaction.atomic` y traduce `IntegrityError` a "El material ya existe"
-- [ ] T016 [US1] Implementar `listar_materiales()` en `materiales/services.py` con `Material.objects.order_by("codigo")`, sin filtro de tenant
-- [ ] T017 [US1] Implementar las vistas `listar_materiales` (50 por página) y `crear_material` (`GET/POST`) en `materiales/views.py` con `@login_required`, mensajes del contrato y `405` por método; devolver `409` para duplicado
-- [ ] T018 [US1] Crear `materiales/urls.py` con `/materiales/` y `/materiales/nuevo/`, sin rutas de borrado
-- [ ] T019 [US1] Crear `templates/materiales/material_form.html` (alta con `hx-disabled-elt` en Guardar) y `templates/materiales/materiales_lista.html` (tabla con creador y fecha), mostrando los errores con los textos exactos
+- [X] T014 [P] [US1] Implementar `MaterialForm` en `materiales/forms.py`: `codigo` de exactamente 11 dígitos, `descripcion` obligatoria de 1–100, `lote` opcional de hasta 50, `tipo` con choices `SERIADO`/`NO_SERIADO` convertido a `es_seriado` en `clean()`
+- [X] T015 [US1] Implementar `crear_material(datos, usuario)` en `materiales/services.py`: exige cuenta activa, normaliza antes de validar, escribe material y auditoría en `transaction.atomic` y traduce `IntegrityError` a "El material ya existe"
+- [X] T016 [US1] Implementar `listar_materiales()` en `materiales/services.py` con `Material.objects.order_by("codigo")`, sin filtro de tenant
+- [X] T017 [US1] Implementar las vistas `listar_materiales` (50 por página) y `crear_material` (`GET/POST`) en `materiales/views.py` con `@login_required`, mensajes del contrato y `405` por método; devolver `409` para duplicado
+- [X] T018 [US1] Crear `materiales/urls.py` con `/materiales/` y `/materiales/nuevo/`, sin rutas de borrado
+- [X] T019 [US1] Crear `templates/materiales/material_form.html` (alta con `hx-disabled-elt` en Guardar) y `templates/materiales/materiales_lista.html` (tabla con creador y fecha), mostrando los errores con los textos exactos
 
 **Checkpoint**: US1 funcional e independiente; el catálogo ya puede poblarse y consultarse.
 
@@ -97,17 +97,17 @@ Proyecto Django único en la raíz: la app nueva es `materiales/`; las plantilla
 
 ### Pruebas de US2 (escribir primero, deben fallar)
 
-- [ ] T020 [P] [US2] Pruebas de contrato de búsqueda en el listado en `tests/contract/test_material_busqueda_http.py`: `?q=` por descripción y por código, `q` vacío sin filtrar, orden por `codigo`, paginación de 50 y mismos resultados para dos tenants
-- [ ] T021 [P] [US2] Pruebas de contrato del fragmento `GET /materiales/buscar/` en `tests/contract/test_material_fragmento_http.py`: atributos `data-codigo`, `data-descripcion`, `data-lote`, `data-tipo`; `limit` por defecto 20 y máximo 50; estado vacío "No se encontraron materiales"; ausencia de `tenant_id`, `region_id`, stock y datos del creador; `405` para métodos distintos de `GET`
-- [ ] T022 [P] [US2] Pruebas de integración en `tests/integration/test_material_busqueda.py`: `buscar_materiales` usa `codigo__icontains` OR `descripcion__icontains`, ordena por código, no filtra por tenant y devuelve todo con `q=""`
+- [X] T020 [P] [US2] Pruebas de contrato de búsqueda en el listado en `tests/contract/test_material_busqueda_http.py`: `?q=` por descripción y por código, `q` vacío sin filtrar, orden por `codigo`, paginación de 50 y mismos resultados para dos tenants
+- [X] T021 [P] [US2] Pruebas de contrato del fragmento `GET /materiales/buscar/` en `tests/contract/test_material_fragmento_http.py`: atributos `data-codigo`, `data-descripcion`, `data-lote`, `data-tipo`; `limit` por defecto 20 y máximo 50; estado vacío "No se encontraron materiales"; ausencia de `tenant_id`, `region_id`, stock y datos del creador; `405` para métodos distintos de `GET`
+- [X] T022 [P] [US2] Pruebas de integración en `tests/integration/test_material_busqueda.py`: `buscar_materiales` usa `codigo__icontains` OR `descripcion__icontains`, ordena por código, no filtra por tenant y devuelve todo con `q=""`
 
 ### Implementación de US2
 
-- [ ] T023 [US2] Implementar `buscar_materiales(q="")` y `obtener_datos_material(material)` en `materiales/services.py`, con `Q(codigo__icontains=q) | Q(descripcion__icontains=q)` y orden por `codigo`
-- [ ] T024 [US2] Extender `listar_materiales` en `materiales/views.py` para aceptar `q` y paginar el resultado de `buscar_materiales` a 50 filas, manteniendo el orden
-- [ ] T025 [US2] Implementar `buscar_materiales_htmx` en `materiales/views.py`: exige sesión activa, acota `limit` entre 1 y 50 con 20 por defecto y responde solo el fragmento
-- [ ] T026 [US2] Agregar la ruta `/materiales/buscar/` en `materiales/urls.py` y verificar que no acepta `tenant_id` ni `region_id`
-- [ ] T027 [US2] Crear `templates/materiales/_filas_busqueda.html` con una fila por material y los cuatro atributos `data-*`, estado vacío explícito, y agregar el buscador y el contenedor HTMX a `templates/materiales/materiales_lista.html`
+- [X] T023 [US2] Implementar `buscar_materiales(q="")` y `obtener_datos_material(material)` en `materiales/services.py`, con `Q(codigo__icontains=q) | Q(descripcion__icontains=q)` y orden por `codigo`
+- [X] T024 [US2] Extender `listar_materiales` en `materiales/views.py` para aceptar `q` y paginar el resultado de `buscar_materiales` a 50 filas, manteniendo el orden
+- [X] T025 [US2] Implementar `buscar_materiales_htmx` en `materiales/views.py`: exige sesión activa, acota `limit` entre 1 y 50 con 20 por defecto y responde solo el fragmento
+- [X] T026 [US2] Agregar la ruta `/materiales/buscar/` en `materiales/urls.py` y verificar que no acepta `tenant_id` ni `region_id`
+- [X] T027 [US2] Crear `templates/materiales/_filas_busqueda.html` con una fila por material y los cuatro atributos `data-*`, estado vacío explícito, y agregar el buscador y el contenedor HTMX a `templates/materiales/materiales_lista.html`
 
 **Checkpoint**: US2 funcional e independiente; el fragmento cumple `contracts/busqueda-materiales.md`.
 
@@ -121,18 +121,18 @@ Proyecto Django único en la raíz: la app nueva es `materiales/`; las plantilla
 
 ### Pruebas de US3 (escribir primero, deben fallar)
 
-- [ ] T028 [P] [US3] Pruebas de contrato de `GET/POST /materiales/<id>/editar/` en `tests/contract/test_material_edicion_http.py`: creador y `ADMIN` editan `302`; otra cuenta `403` "No tienes permiso para editar este material"; inexistente `404`; `codigo` forzado `400` "El código no se puede cambiar"; descripción solo espacios `400` "La descripción es obligatoria"; `DELETE` `405`
-- [ ] T029 [P] [US3] Pruebas de integración de `actualizar_material` en `tests/integration/test_material_edicion.py`: permiso de creador y de `ADMIN`; un `RegistroCambio` por campo modificado con valor anterior y nuevo; una edición sin cambios no audita; se actualizan `actualizado_por` y `actualizado_en`; se rechaza cualquier clave `codigo`
-- [ ] T030 [P] [US3] Pruebas de integración en `tests/integration/test_material_conservacion.py`: desactivar la cuenta creadora conserva el material y su auditoría; un `ADMIN` puede seguir editándolo; no existe ruta de borrado y `DELETE` responde `405`
+- [X] T028 [P] [US3] Pruebas de contrato de `GET/POST /materiales/<id>/editar/` en `tests/contract/test_material_edicion_http.py`: creador y `ADMIN` editan `302`; otra cuenta `403` "No tienes permiso para editar este material"; inexistente `404`; `codigo` forzado `400` "El código no se puede cambiar"; descripción solo espacios `400` "La descripción es obligatoria"; `DELETE` `405`
+- [X] T029 [P] [US3] Pruebas de integración de `actualizar_material` en `tests/integration/test_material_edicion.py`: permiso de creador y de `ADMIN`; un `RegistroCambio` por campo modificado con valor anterior y nuevo; una edición sin cambios no audita; se actualizan `actualizado_por` y `actualizado_en`; se rechaza cualquier clave `codigo`
+- [X] T030 [P] [US3] Pruebas de integración en `tests/integration/test_material_conservacion.py`: desactivar la cuenta creadora conserva el material y su auditoría; un `ADMIN` puede seguir editándolo; no existe ruta de borrado y `DELETE` responde `405`
 
 ### Implementación de US3
 
-- [ ] T031 [US3] Implementar `puede_editar_material(material, usuario)` y `actualizar_material(material, cambios, usuario)` en `materiales/services.py`: creador o `ADMIN`, `select_for_update`, `transaction.atomic`, rechazo de `codigo`, normalización previa, auditoría por campo y actualización de `actualizado_por`/`actualizado_en`
-- [ ] T032 [US3] Implementar `MaterialEdicionForm` en `materiales/forms.py` con solo `descripcion`, `lote` y el `tipo` condicionado por `puede_cambiar_tipo`; excluir `codigo`, `creado_por` y `creado_en`
-- [ ] T033 [US3] Implementar `editar_material` (`GET/POST`) en `materiales/views.py` con `@login_required`, `404` si no existe, `403` si no es creador ni admin y `405` para otros métodos
-- [ ] T034 [US3] Agregar la ruta `/materiales/<int:id>/editar/` en `materiales/urls.py`
-- [ ] T035 [US3] Crear la variante de edición de `templates/materiales/material_form.html`: código, creador y fecha en solo lectura, solo descripción y lote editables, sin acciones de borrado
-- [ ] T036 [US3] Verificar en `materiales/services.py` que un intento rechazado (permiso, `codigo`, validación) no escribe auditoría y que los textos de error coinciden con `contracts/http-endpoints.md`
+- [X] T031 [US3] Implementar `puede_editar_material(material, usuario)` y `actualizar_material(material, cambios, usuario)` en `materiales/services.py`: creador o `ADMIN`, `select_for_update`, `transaction.atomic`, rechazo de `codigo`, normalización previa, auditoría por campo y actualización de `actualizado_por`/`actualizado_en`
+- [X] T032 [US3] Implementar `MaterialEdicionForm` en `materiales/forms.py` con solo `descripcion`, `lote` y el `tipo` condicionado por `puede_cambiar_tipo`; excluir `codigo`, `creado_por` y `creado_en`
+- [X] T033 [US3] Implementar `editar_material` (`GET/POST`) en `materiales/views.py` con `@login_required`, `404` si no existe, `403` si no es creador ni admin y `405` para otros métodos
+- [X] T034 [US3] Agregar la ruta `/materiales/<int:id>/editar/` en `materiales/urls.py`
+- [X] T035 [US3] Crear la variante de edición de `templates/materiales/material_form.html`: código, creador y fecha en solo lectura, solo descripción y lote editables, sin acciones de borrado
+- [X] T036 [US3] Verificar en `materiales/services.py` que un intento rechazado (permiso, `codigo`, validación) no escribe auditoría y que los textos de error coinciden con `contracts/http-endpoints.md`
 
 **Checkpoint**: US3 funcional e independiente; la auditoría refleja cada cambio.
 
@@ -146,14 +146,14 @@ Proyecto Django único en la raíz: la app nueva es `materiales/`; las plantilla
 
 ### Pruebas de US4 (escribir primero, deben fallar)
 
-- [ ] T037 [P] [US4] Pruebas unitarias del registro en `tests/unit/test_material_tipo.py`: sin verificaciones `puede_cambiar_tipo` es `True`; con una verificación que devuelve `True` es `False`; `registrar_verificacion_movimientos` agrega y permite limpiar el registro; orden de evaluación y fallo seguro
-- [ ] T038 [P] [US4] Pruebas de integración y contrato en `tests/integration/test_material_tipo.py`: cambio permitido audita `tipo` con valor anterior y nuevo; con movimientos simulados la petición responde `400` "El tipo no se puede cambiar: el material tiene movimientos", el tipo no cambia y no se escribe auditoría
+- [X] T037 [P] [US4] Pruebas unitarias del registro en `tests/unit/test_material_tipo.py`: sin verificaciones `puede_cambiar_tipo` es `True`; con una verificación que devuelve `True` es `False`; `registrar_verificacion_movimientos` agrega y permite limpiar el registro; orden de evaluación y fallo seguro
+- [X] T038 [P] [US4] Pruebas de integración y contrato en `tests/integration/test_material_tipo.py`: cambio permitido audita `tipo` con valor anterior y nuevo; con movimientos simulados la petición responde `400` "El tipo no se puede cambiar: el material tiene movimientos", el tipo no cambia y no se escribe auditoría
 
 ### Implementación de US4
 
-- [ ] T039 [US4] Implementar en `materiales/services.py` el registro `_VERIFICACIONES_MOVIMIENTOS`, `registrar_verificacion_movimientos(func)` (con posibilidad de desregistrar) y `puede_cambiar_tipo(material)` que devuelve `False` si alguna verificación reporta stock o movimientos
-- [ ] T040 [US4] Integrar la verificación en `actualizar_material` dentro de la transacción: si cambia `tipo` y `puede_cambiar_tipo` es `False`, lanzar `ValidacionMaterial` con el mensaje exacto sin escribir cambios ni auditoría; si se permite, auditar `tipo`
-- [ ] T041 [US4] Exponer `puede_cambiar_tipo` en el contexto de `editar_material` y deshabilitar el campo tipo en la variante de edición de `templates/materiales/material_form.html` cuando sea `False`
+- [X] T039 [US4] Implementar en `materiales/services.py` el registro `_VERIFICACIONES_MOVIMIENTOS`, `registrar_verificacion_movimientos(func)` (con posibilidad de desregistrar) y `puede_cambiar_tipo(material)` que devuelve `False` si alguna verificación reporta stock o movimientos
+- [X] T040 [US4] Integrar la verificación en `actualizar_material` dentro de la transacción: si cambia `tipo` y `puede_cambiar_tipo` es `False`, lanzar `ValidacionMaterial` con el mensaje exacto sin escribir cambios ni auditoría; si se permite, auditar `tipo`
+- [X] T041 [US4] Exponer `puede_cambiar_tipo` en el contexto de `editar_material` y deshabilitar el campo tipo en la variante de edición de `templates/materiales/material_form.html` cuando sea `False`
 
 **Checkpoint**: las cuatro historias son independientes y verificables; el catálogo queda completo.
 
@@ -163,15 +163,37 @@ Proyecto Django único en la raíz: la app nueva es `materiales/`; las plantilla
 
 **Propósito**: cerrar calidad, rendimiento, documentación y validación extremo a extremo.
 
-- [ ] T042 [P] Agregar `tests/contract/test_material_sin_borrado.py`: ninguna ruta de materiales acepta `DELETE` (todas `405`) y no existe URL de borrado en `materiales/urls.py`
-- [ ] T043 [P] Agregar `tests/integration/test_material_rendimiento.py` con `django_assert_num_queries` para el listado, la búsqueda y el fragmento, evitando N+1 en `materiales/views.py`
-- [ ] T044 [P] Ejecutar `pytest --cov=materiales` y cerrar brechas hasta cubrir cada criterio de aceptación de `spec.md`
-- [ ] T045 [P] Verificar que `05-especificaciones/013-registro-materiales/` use `materiales.Material` y corregir cualquier mención restante a `catalogo`; revisar también la mención de `catalogo` en `05-especificaciones/001-tenants-y-acceso/plan.md`
-- [ ] T046 [P] Completar `03-reglas-de-dominio/catalogo-de-materiales.md` con las reglas vigentes de `05-especificaciones/002-materiales/spec.md` (hoy está vacío)
-- [ ] T047 Ejecutar los escenarios manuales 1–11 de `05-especificaciones/002-materiales/quickstart.md` contra PostgreSQL y registrar el resultado
-- [ ] T048 Ejecutar la suite completa (`pytest`) sobre PostgreSQL y confirmar los criterios de salida de `quickstart.md`, incluida la ausencia de secretos en auditoría y la ausencia de rutas de borrado
+- [X] T042 [P] Agregar `tests/contract/test_material_sin_borrado.py`: ninguna ruta de materiales acepta `DELETE` (todas `405`) y no existe URL de borrado en `materiales/urls.py`
+- [X] T043 [P] Agregar `tests/integration/test_material_rendimiento.py` con `django_assert_num_queries` para el listado, la búsqueda y el fragmento, evitando N+1 en `materiales/views.py`
+- [X] T044 [P] Ejecutar `pytest --cov=materiales` y cerrar brechas hasta cubrir cada criterio de aceptación de `spec.md`
+- [X] T045 [P] Verificar que `05-especificaciones/013-registro-materiales/` use `materiales.Material` y corregir cualquier mención restante a `catalogo`; revisar también la mención de `catalogo` en `05-especificaciones/001-tenants-y-acceso/plan.md`
+- [X] T046 [P] Completar `03-reglas-de-dominio/catalogo-de-materiales.md` con las reglas vigentes de `05-especificaciones/002-materiales/spec.md` (hoy está vacío)
+- [X] T047 Ejecutar los escenarios manuales 1–11 de `05-especificaciones/002-materiales/quickstart.md` contra PostgreSQL y registrar el resultado
+- [X] T048 Ejecutar la suite completa (`pytest`) sobre PostgreSQL y confirmar los criterios de salida de `quickstart.md`, incluida la ausencia de secretos en auditoría y la ausencia de rutas de borrado
 
 ---
+
+## Cambio aprobado 2026-11-14: creación exclusiva del almacén y baja lógica
+
+**Decisión**: solo el rol `RESPONSABLE_ALMACEN` crea materiales; cualquier Responsable de
+almacén puede dar de baja cualquier material. La “eliminación” es **baja lógica**
+(`activo=False`), no borrado físico, en línea con la constitución.
+
+- [X] T049 [P] Actualizar las pruebas de contrato del alta: solo almacén crea; tenant y administrador reciben `403`
+- [X] T050 [P] Agregar pruebas de contrato e integración de baja lógica: `302`, `activo=False`, auditoría, ocultamiento del catálogo, idempotencia, cualquier almacén y rechazo a otros roles
+- [X] T051 Agregar `activo=BooleanField(default=True)` a `Material` y la migración `materiales/0002_material_activo.py`
+- [X] T052 Ajustar `materiales/services.py`: rol de creación, `dar_de_baja_material`, filtros `activo=True` y permiso de edición
+- [X] T053 Ajustar vistas, rutas y plantillas: `POST /materiales/<id>/baja/`, botón solo para almacén y catálogo sin materiales dados de baja
+- [X] T054 Actualizar `spec.md`, contratos, `data-model.md`, `plan.md`, `quickstart.md`, `03-reglas-de-dominio/catalogo-de-materiales.md` y la guía de validación
+- [X] T055 Ejecutar la suite completa sobre PostgreSQL y confirmar que no hay regresiones
+- [X] T056 Revalidar manualmente los escenarios actualizados de `quickstart.md` y registrar el resultado
+- [X] T057 [P] Pruebas de reactivación: crear con el código de un material dado de baja reutiliza la fila, actualiza datos, audita `activo` y bloquea el cambio de tipo con movimientos
+- [X] T058 Implementar la reactivación en `crear_material` y `_reactivar_material` sin duplicar filas
+- [X] T059 Documentar la reactivación en spec, contrato, modelo, plan, quickstart, reglas de dominio y guía
+- [X] T060 Ejecutar la suite completa sobre PostgreSQL tras el cambio
+- [X] T061 [P] Pruebas de edición por cualquier almacén sobre materiales creados por otro tenant u otra cuenta, y rechazo a la cuenta de tenant
+- [X] T062 Ajustar `puede_editar_material` y la vista de edición: cualquier almacén o administrador edita; el tenant no
+- [X] T063 Documentar el permiso de edición en spec, contrato, modelo, plan, quickstart, reglas y guía
 
 ## Dependencias y orden de ejecución
 

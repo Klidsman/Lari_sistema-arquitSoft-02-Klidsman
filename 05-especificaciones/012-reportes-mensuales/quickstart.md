@@ -42,13 +42,8 @@ de 006/007/008/010/011.
 ## Pruebas automatizadas
 
 ```powershell
-# Servicios y Excel
-pytest tests/unit/test_reportes_servicios.py tests/unit/test_reportes_excel.py
-
-# Integración
-pytest tests/integration/test_corte_mensual.py tests/integration/test_exportacion_auditoria.py
-pytest tests/integration/test_exportacion_conciliacion.py tests/integration/test_reportes_auditoria.py
-pytest tests/integration/test_reportes_concurrencia.py
+# Integración: cortes, merma y exportaciones
+pytest tests/integration/test_reportes.py
 
 # Contrato HTTP
 pytest tests/contract/test_reportes_http.py
@@ -167,3 +162,20 @@ La funcionalidad se considera validada cuando:
 - [ ] Regenerar audita valores anterior/nuevo y aumenta la versión.
 - [ ] 012 no modifica stock, series, asignaciones ni conciliaciones.
 - [ ] No se agregaron dependencias, Celery, correo ni permisos Django por cadena.
+
+## Registro de validación (2026-11-18)
+
+Validación automatizada sobre PostgreSQL con `.\.venv\Scripts\python.exe -m pytest -q`: **suite
+completa en verde**.
+
+| CA | Prueba real | Estado |
+|---|---|---|
+| CA-01 | `test_calcular_de_merma` (100 solicitados/asignados, 80 instalados, 5 devueltos) | Cubierto |
+| CA-02 | `test_calcular_de_merma` (15.00% de merma) y `test_asignados_cero_da_merma_cero` | Cubierto |
+| CA-03 | `test_exportar_auditoria_solo_del_tenant` y descarga HTTP | Cubierto |
+| CA-04 | `test_exportar_conciliacion_global_y_tenant` y descarga HTTP | Cubierto |
+
+Complementarios cubiertos: generación, duplicado `409`, regeneración con versión, permisos de
+alcance, mes inválido, corte ajeno `404`, `GET` en regenerar `405` y exportaciones `.xlsx` en
+memoria. Pendiente de validación manual: rendimiento y RLS de `reportes_cortemensual` (implementada en `0002_rls.py`).
+

@@ -35,6 +35,7 @@ el servidor; ocultar un control no es una autorización.
 | `POST /recojos/nuevo/` | No (`403`) | Sí | No (`403`) |
 | `GET /recojos/<id>/` | No (`403`) | Sí (solo su tenant) | No (`403`) |
 | `POST /recojos/validar-series/` | No (`403`) | Sí | No (`403`) |
+| `POST /recojos/<id>/anular/` | No (`403`) | Sí (dentro de 24 h) | No (`403`) |
 
 - El Administrador de plataforma no registra ni consulta recojos; su consulta es la auditoría
   administrativa de 001.
@@ -51,11 +52,11 @@ Listado paginado de los recojos del tenant de la sesión.
 | Aspecto | Contrato |
 |---|---|
 | Acceso | `TENANT` autenticado y activo; tenant activo |
-| Parámetros | `page` (opcional) |
-| Comportamiento | Devuelve todos los recojos del tenant, sin filtros de fecha |
+| Parámetros | `q` (opcional), `page` (opcional) |
+| Comportamiento | Sin `q` devuelve todos los recojos del tenant; con `q` filtra por nombre (`nombre__icontains`). `estado` acepta `todos`, `registrados` o `anulados` |
 | Orden | `fecha` descendente, `id` descendente |
 | Paginación | 50 filas por página |
-| Respuesta | `200` con identificador, fecha, número de líneas, total de series, total de cantidad y enlace al detalle |
+| Respuesta | `200` con identificador, nombre, estado, fecha, número de líneas, total de series, total de cantidad y enlace al detalle |
 | Sesión ausente | `401` o redirección a `/login/` |
 | Rol incorrecto | `403` "No tienes permiso para registrar recojos" |
 | Tenant suspendido | `403` "El tenant está suspendido" |
@@ -77,8 +78,10 @@ Formulario de alta de recojo.
 | Tenant suspendido | `403` "El tenant está suspendido" |
 | Otros métodos | `405` |
 
-- El selector de material usa `GET /materiales/buscar/?q=` de la spec 002 y copia `data-lote` y
-  `data-tipo`; el usuario no puede editar el tipo ni el lote.
+- El selector de material es una lista desplegable de materiales activos; al elegir uno se
+  muestran código, descripción, lote y tipo. El usuario no puede editar el tipo ni el lote.
+- El formulario permite buscar y cambiar el material de cada línea, limpiar una línea y agregar
+  más antes de guardar. El recojo guardado sigue siendo inmutable.
 - El formulario no incluye campos de tenant, región ni almacén.
 - El botón Guardar usa `hx-disabled-elt` para evitar el doble envío; el servidor revalida siempre.
 
@@ -89,9 +92,11 @@ Registra un recojo completo o no registra ninguno.
 | Aspecto | Contrato |
 |---|---|
 | Acceso | `TENANT` autenticado y activo; tenant activo |
-| Petición | `fecha`, `lineas-TOTAL_FORMS`, `lineas-INITIAL_FORMS`, `lineas-MIN_NUM_FORMS`, `lineas-MAX_NUM_FORMS`, `lineas-<n>-material_id`, `lineas-<n>-series`, `lineas-<n>-cantidad`, `csrfmiddlewaretoken` |
+| Petición | `nombre`, `fecha`, `lineas-TOTAL_FORMS`, `lineas-INITIAL_FORMS`, `lineas-MIN_NUM_FORMS`, `lineas-MAX_NUM_FORMS`, `lineas-<n>-material_id` o `lineas-<n>-material_codigo`, `lineas-<n>-series`, `lineas-<n>-cantidad`, `csrfmiddlewaretoken` |
 | Campos no aceptados | `tenant`, `tenant_id`, `region`, `region_id`, `almacen`, `almacen_id`; se ignoran y el alcance sale de la sesión |
 | Éxito | `302` al detalle `/recojos/<id>/`; recojo, líneas y series creados; stock incrementado; auditoría en la misma transacción |
+| Nombre vacío o solo espacios | `400` "El nombre es obligatorio" |
+| Nombre > 100 caracteres | `400` "El nombre no puede superar los 100 caracteres" |
 | Sin líneas | `400` "El recojo debe tener al menos una línea" |
 | Fecha ausente o inválida | `400` "La fecha es obligatoria" / "La fecha no es válida" |
 | Material inexistente | `400` "El material no existe en el catálogo" |
@@ -111,11 +116,32 @@ Registra un recojo completo o no registra ninguno.
 
 - La respuesta `400` vuelve a mostrar el formulario con los valores ingresados y los estados por
   serie; no se guarda nada.
+- Las series se aceptan una por línea o en una sola fila separadas por ` - `, `-` o espacios; el
+  servidor las separa antes de normalizar y validar.
 - La vista previa no es autoridad: el `POST` revalida formato, duplicados y existencia.
 - El mensaje de serie existente es uniforme y no revela el tenant, la región ni el recojo de
   origen.
 - El alta siempre usa la región del tenant; forzar `region_id` no cambia el recojo.
 - El recojo es inmutable después del alta; no hay ruta de edición ni de borrado.
+
+### `POST /recojos/<id>/anular/`
+
+Anulación lógica dentro de las 24 horas desde `creado_en`.
+
+| Aspecto | Contrato |
+|---|---|
+| Acceso | Solo `TENANT` dueño; tenant activo |
+| Petición | `motivo`, `csrfmiddlewaretoken` |
+| Éxito | `302` al detalle; estado `ANULADO`; stock revertido; series `INACTIVA`; auditoría |
+| Motivo vacío | `400` "El motivo de anulación es obligatorio" |
+| Motivo > 500 | `400` "El motivo no puede superar los 500 caracteres" |
+| Plazo vencido | `409` "El plazo de 24 horas para anular este recojo venció." |
+| Serie ya utilizada | `409` "No se puede anular: una serie ya fue utilizada" |
+| Stock insuficiente | `409` "No se puede anular: el stock del material ya fue utilizado" |
+| Ya anulado | `302` sin cambios ni auditoría nueva |
+| Recojo ajeno/inexistente | `404` "El recojo no existe" |
+| Rol incorrecto | `403` "No tienes permiso para registrar recojos" |
+| `GET`/`DELETE` | `405` |
 
 ### `GET /recojos/<id>/`
 
@@ -124,7 +150,7 @@ Detalle y confirmación del recojo.
 | Aspecto | Contrato |
 |---|---|
 | Acceso | `TENANT` autenticado y activo; tenant activo |
-| Respuesta | `200` con identificador, fecha, tenant, región, total de series, total de cantidad y líneas con material, descripción, lote, serie o cantidad |
+| Respuesta | `200` con identificador, nombre, estado, fecha, tenant, región, total de series, total de cantidad y líneas con material, descripción, lote, serie o cantidad. Si está anulado, muestra motivo, usuario y fecha de anulación |
 | Recojo de otro tenant | `404` "El recojo no existe" |
 | Recojo inexistente | `404` "El recojo no existe" |
 | Rol incorrecto | `403` "No tienes permiso para registrar recojos" |
@@ -174,7 +200,7 @@ Vista previa en tiempo real de las series de una línea seriada. El detalle del 
    auditoría.
 7. El alta del recojo y los incrementos de stock dejan auditoría en la misma transacción; no se
    auditan secretos.
-8. Un recojo no se edita ni se borra; `DELETE` responde `405`.
+8. Un recojo no se edita ni se borra físicamente; puede anularse lógicamente dentro de las 24 horas con motivo, revirtiendo stock y dejando las series inactivas. `DELETE` responde `405`.
 9. El listado y el detalle solo muestran recojos del tenant de la sesión.
 10. El tipo de un material con recojos o stock no se puede cambiar; 004 registra la verificación de
     movimientos en 002.

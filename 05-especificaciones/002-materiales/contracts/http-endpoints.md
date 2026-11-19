@@ -27,12 +27,17 @@ validan en el servidor; ocultar un control no es una autorización.
 |---|---|---|---|
 | `GET /materiales/` | Sí | Sí | Sí |
 | `GET /materiales/buscar/` | Sí | Sí | Sí |
-| `GET/POST /materiales/nuevo/` | Sí | Sí | Sí |
+| `GET/POST /materiales/nuevo/` | No | No | Sí |
 | `GET /materiales/<id>/editar/` | Sí | Sí | Sí |
-| `POST /materiales/<id>/editar/` | Sí | Solo si es creador | Solo si es creador |
+| `POST /materiales/<id>/editar/` | Sí | No | Sí (cualquier material activo) |
+| `POST /materiales/<id>/baja/` | No | No | Sí |
 
-- Crear está permitido a cualquier cuenta autenticada y activa.
-- Editar descripción y lote está permitido al creador o a `ADMIN`.
+- Crear y dar de baja está permitido únicamente al Responsable de almacén
+  (`RESPONSABLE_ALMACEN`), con cuenta activa.
+- Cualquier Responsable de almacén puede dar de baja cualquier material, aunque lo haya
+  creado otra cuenta.
+- Editar descripción y lote está permitido a cualquier Responsable de almacén activo o a
+  `ADMIN`. La cuenta de tenant no edita materiales.
 
 ## Rutas
 
@@ -69,10 +74,13 @@ Alta de material.
 | Aspecto | Contrato |
 |---|---|
 | Acceso | Cualquier cuenta autenticada y activa |
+| Acceso | Solo Responsable de almacén activo |
 | Petición (`POST`) | `codigo`, `descripcion`, `lote` (opcional), `tipo` (`SERIADO`/`NO_SERIADO`), `csrfmiddlewaretoken` |
 | Éxito | `302` al listado o al detalle; material creado; auditoría `alta` |
+| Rol distinto de almacén | `403` `"Solo el Responsable de almacén puede registrar materiales"` |
 | Código inválido (10/12 dígitos, letras, espacios o guiones internos) | `400` `"El código debe tener 11 dígitos"` |
-| Código duplicado | `409` `"El material ya existe"` |
+| Código de un material activo | `409` `"El material ya existe"` |
+| Código de un material dado de baja | `302`; reactiva la misma fila con los nuevos datos y audita la reactivación |
 | Descripción vacía o solo espacios | `400` `"La descripción es obligatoria"` |
 | Descripción > 100 caracteres | `400` `"La descripción no puede superar los 100 caracteres"` |
 | Lote > 50 caracteres | `400` `"El lote no puede superar los 50 caracteres"` |
@@ -90,12 +98,27 @@ Edición de descripción, lote y, cuando la regla lo permita, tipo. El código n
 | Petición (`POST`) | `descripcion`, `lote`, `tipo` opcional; `csrfmiddlewaretoken` |
 | Éxito | `302` al listado; cambios y auditoría por campo en la misma transacción |
 | Material inexistente | `404` |
-| No es creador ni `ADMIN` | `403` `"No tienes permiso para editar este material"` |
+| Cuenta de tenant | `403` `"No tienes permiso para editar este material"` |
 | Intento de enviar `codigo` | `400` `"El código no se puede cambiar"` |
 | Descripción vacía o solo espacios | `400` `"La descripción es obligatoria"` |
 | Lote > 50 caracteres | `400` `"El lote no puede superar los 50 caracteres"` |
 | Cambio de tipo con stock o movimientos | `400` `"El tipo no se puede cambiar: el material tiene movimientos"` |
 | `DELETE` u otro método | `405`; no existe ruta de borrado |
+
+### `POST /materiales/<id>/baja/`
+
+Baja lógica del material. No borra la fila ni su auditoría.
+
+| Aspecto | Contrato |
+|---|---|
+| Acceso | Responsable de almacén activo |
+| Petición | `csrfmiddlewaretoken` |
+| Éxito | `302` al listado; `activo=False`; el material deja de aparecer en listados y búsquedas; auditoría `activo` `True` → `False` |
+| Cualquier almacén | Puede dar de baja un material creado por otra cuenta |
+| Rol distinto de almacén | `403` `"Solo el Responsable de almacén puede dar de baja materiales"` |
+| Material ya dado de baja | `200` sin cambios ni auditoría nueva |
+| Material inexistente | `404` |
+| `DELETE` u otro método | `405` |
 
 ## Reglas transversales verificadas en el servidor
 
@@ -104,7 +127,10 @@ Edición de descripción, lote y, cuando la regla lo permita, tipo. El código n
    servicio rechaza la clave si se fuerza.
 3. El mensaje de duplicado es uniforme y no indica qué cuenta ni tenant creó el material.
 4. Toda alta y todo cambio de descripción, lote o tipo deja auditoría en la misma transacción.
-5. Un material no se elimina por ninguna ruta; `DELETE` responde `405`.
+5. Un material no se borra físicamente: la baja es lógica (`activo=False`), conserva la fila y
+   su auditoría, y `DELETE` responde `405`.
 6. La verificación de creador/administrador se repite en el servicio, no solo en la vista.
 7. El fragmento de búsqueda nunca devuelve datos de stock ni de tenants, solo los campos del
-   material definidos en su contrato.
+   material definidos en su contrato, y solo incluye materiales activos.
+8. Solo el Responsable de almacén crea y da de baja materiales; el servicio lo revalida aunque
+   se fuerce la petición.

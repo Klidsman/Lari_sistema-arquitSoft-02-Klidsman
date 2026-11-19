@@ -124,7 +124,7 @@ Debe invocarse dentro de la transacción abierta por 007. Si se invoca fuera, ab
 
 **Escrituras**
 
-- Cada serie: `estado = ASIGNADA`, `tecnico = solicitud.tecnico`, `asignada_en = ahora`.
+- Cada serie: `estado = ASIGNADA`, `tecnico = técnico de la línea`, `asignada_en = ahora`.
 - `StockTecnico`: `cantidad += series + cantidad_no_seriada` por material; crea la fila si no
   existe con `tenant = solicitud.tenant`.
 - `StockGeneral`: `cantidad -= series + cantidad_no_seriada` por material; nunca negativa.

@@ -51,6 +51,33 @@ Celery y **no** usa permisos Django por cadena.
 
 ---
 
+## Estado de implementación (2026-11-18)
+
+- **Implementado el núcleo**: app `conciliaciones`, modelos `Conciliacion`, `DiferenciaSerie`,
+  `DiferenciaCantidad` y `MaterialNoCatalogado` con restricciones e índices, migración
+  `0001_initial`, lectura del Excel `GENERAL`, clasificación de técnicos, validación de filas,
+  comparación de series/cantidades, huella de stock, carga, recálculo, aprobación con ajustes y
+  rechazo. Vistas, formulario, rutas y plantillas del tenant.
+- **Excel**: solo `.xlsx`; se normalizan encabezados y se aceptan columnas extra; se rechazan
+  hoja/columnas ausentes, cantidades negativas, series inválidas/duplicadas/instaladas y series de
+  otro tenant. Los materiales no catalogados se registran y bloquean la aprobación.
+- **Aprobación**: todo o nada en una transacción; crea series, reasigna al técnico reportado, marca
+  `INSTALADA` las no reportadas y fija el stock técnico al reporte usando los servicios de 008. No
+  toca `StockGeneral`. La huella detecta cambios y exige recálculo.
+- **Pruebas en verde** (24 pruebas de 010): lectura del Excel, CA-01…CA-12, auditoría, rechazo,
+  `HuboCambios`, rollback por fallo de stock y contrato HTTP.
+- **Pendientes de cierre**:
+  - RLS de `conciliaciones` implementada en `conciliaciones/migrations/0002_rls.py`.
+  - Concurrencia de dos aprobaciones cubierta en
+    `tests/integration/test_conciliacion_concurrencia.py`; rendimiento de 1 000 filas cubierto en
+    `tests/integration/test_conciliacion_rendimiento.py`; quedan la concurrencia de cargas y la
+    prueba de 10 000 filas.
+  - Validación manual de `quickstart.md` y unificación de nombres si se detectan divergencias
+    menores con los contratos (p. ej. excepción adicional `CantidadInvalida` y
+    `MaterialSerieIncoherente`).
+
+---
+
 ## Fase 1: Setup (infraestructura compartida)
 
 **Propósito**: verificar prerrequisitos y correcciones, crear la app, registrar rutas, preparar

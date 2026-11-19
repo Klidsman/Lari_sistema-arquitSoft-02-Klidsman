@@ -44,6 +44,35 @@ despachos desde materiales; **no** usa permisos Django por cadena.
 
 ---
 
+## Estado de implementación (2026-11-18)
+
+- **Implementado el núcleo**: app `registro_materiales`, modelos `MaterialHabilitado`,
+  `SaldoInicialPeriodo`, `DespachoAlmacen`, `CargaOrdenes`, `OrdenLiquidacion`,
+  `UsoMaterialOrden`, `AdvertenciaUso`, `CierreMensual`, `SaldoMensualMaterial` y
+  `JustificacionCierre` con restricciones e índices, migración `0001_initial`.
+- **Servicios**: normalización y carga idempotente, deshacer, búsqueda/alta de órdenes,
+  registro de usos con bloqueo de saldo negativo y advertencia atípica configurable,
+  saldo inicial manual/heredado, despachos de solo lectura, dashboard, pendientes, checklist,
+  cierre con snapshot y reapertura con motivo, historial y exportación Excel/CSV.
+- **Interfaz**: menú y rutas de carga, materiales, pendientes, catálogo, entradas, dashboard y
+  cierre; exportaciones servidas en memoria sin persistir archivos.
+- **Pruebas en verde** (18 pruebas de 013): normalización, carga idempotente, resumen, deshacer,
+  cantidades, bloqueo de negativo, advertencia, saldos/herencia/manual/despachos, historial,
+  pendientes, cierre/traspaso/reapertura y exportación; contrato HTTP básico.
+- **Pendientes de cierre**:
+  - RLS de las tablas de 013 implementada en
+    `registro_materiales/migrations/0002_rls.py`.
+  - Concurrencia de usos cubierta en
+    `tests/integration/test_registro_materiales_concurrencia.py`; rendimiento de exportación de
+    1 000 órdenes cubierto en `tests/integration/test_registro_materiales_rendimiento.py`; queda la
+    validación manual de `quickstart.md`.
+  - Integración de `validar_periodo_abierto` en cualquier pantalla futura de `DespachoAlmacen`
+    (hoy no existe una pantalla de despachos en el repositorio).
+  - La app usa `services.py` y `exportacion.py`; los módulos `carga.py`, `dashboard.py` y
+    `cierre.py` del plan quedaron agrupados en `services.py`.
+
+---
+
 ## Fase 1: Setup (infraestructura compartida)
 
 - [ ] T001 Verificar los prerrequisitos en `config/settings/base.py`, `acceso/models.py`, `tenants/models.py`, `materiales/models.py`, `tecnicos/models.py`, `registro_materiales/models.py` y `auditoria/models.py`: roles, `Material`, `Tecnico`, `MaterialHabilitado`, `SaldoInicialPeriodo`, `DespachoAlmacen`, tablas base de 013 y `RegistroCambio` con `tenant`; detenerse y reportar si falta alguna

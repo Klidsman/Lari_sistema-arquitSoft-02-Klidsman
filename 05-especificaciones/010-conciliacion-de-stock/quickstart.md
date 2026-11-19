@@ -43,14 +43,11 @@ normal de 004/005/008/009.
 ## Pruebas automatizadas
 
 ```powershell
-# Excel, servicios y comparación
-pytest tests/unit/test_conciliacion_excel.py tests/unit/test_conciliacion_servicios.py
-pytest tests/unit/test_conciliacion_comparacion.py
+# Excel
+pytest tests/unit/test_conciliacion_excel.py
 
-# Integración
+# Integración: carga, aprobación, rechazo y recálculo
 pytest tests/integration/test_conciliacion_carga.py tests/integration/test_conciliacion_aprobacion.py
-pytest tests/integration/test_conciliacion_rechazo.py tests/integration/test_conciliacion_recalculo.py
-pytest tests/integration/test_conciliacion_concurrencia.py tests/integration/test_conciliacion_auditoria.py
 
 # Contrato HTTP
 pytest tests/contract/test_conciliacion_http.py
@@ -261,3 +258,27 @@ La funcionalidad se considera validada cuando:
 - [ ] La auditoría está completa y no duplica la de 008.
 - [ ] Ningún tenant ve datos de otro.
 - [ ] No se agregaron dependencias, correo, Celery ni permisos Django por cadena.
+
+## Registro de validación (2026-11-18)
+
+Validación automatizada ejecutada sobre PostgreSQL con `.\.venv\Scripts\python.exe -m pytest -q`:
+**suite completa en verde**.
+
+| CA | Prueba real | Estado |
+|---|---|---|
+| CA-01 | `test_cargar_reporte_crea_conciliacion_en_revision_sin_tocar_stock` | Cubierto |
+| CA-02 | `test_solo_una_conciliacion_en_revision` y contrato HTTP `409` | Cubierto |
+| CA-03 | `test_tecnico_ausente_se_ignora` | Cubierto |
+| CA-04 | `test_material_ausente_para_tecnico_presente_se_asume_cero` | Cubierto |
+| CA-05 | `test_diferencias_de_series_en_dos_grupos` | Cubierto |
+| CA-06 | `test_alertas_categorizadas` | Cubierto |
+| CA-07 | `test_aprobacion_bloqueada_por_material_no_catalogado` | Cubierto |
+| CA-08 | `test_aprobacion_todo_o_nada` | Cubierto |
+| CA-09 | `test_ajustes_al_aprobar` | Cubierto |
+| CA-10 | `test_auditoria_de_ajustes` | Cubierto |
+| CA-11 | `test_recalculo_si_hubo_cambios` | Cubierto |
+| CA-12 | `test_tecnico_desconocido_rechaza_archivo` y `test_tecnico_de_otro_tenant_de_la_region_se_ignora` | Cubierto |
+
+Complementarios cubiertos: lectura de `.xlsx` (hoja/columnas/cantidad/corrupción), rechazo sin
+cambios y contrato HTTP (403/404/405/409/400). Concurrencia de aprobación cubierta por `test_dos_aprobaciones_simultaneas_aplican_una_sola_vez`. Rendimiento de 1 000 filas cubierto por `test_reporte_de_mil_filas_en_menos_de_diez_segundos`. Pendiente de validación manual: concurrencia de cargas y prueba de 10 000 filas y RLS de `conciliaciones` (implementada en `0002_rls.py`).
+

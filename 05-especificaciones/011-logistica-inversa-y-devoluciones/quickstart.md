@@ -42,14 +42,11 @@ flujo normal de 005/008/009.
 ## Pruebas automatizadas
 
 ```powershell
-# Servicios y acta
-pytest tests/unit/test_logistica_inversa_servicios.py tests/unit/test_logistica_inversa_acta.py
+# Acta
+pytest tests/unit/test_logistica_inversa_acta.py
 
-# Integración
-pytest tests/integration/test_devolucion_registro.py tests/integration/test_devolucion_stock.py
-pytest tests/integration/test_baja_registro.py tests/integration/test_baja_stock.py
-pytest tests/integration/test_logistica_inversa_concurrencia.py
-pytest tests/integration/test_logistica_inversa_auditoria.py
+# Integración: devoluciones y bajas
+pytest tests/integration/test_devolucion_registro.py tests/integration/test_baja_registro.py
 
 # Contrato HTTP
 pytest tests/contract/test_logistica_inversa_http.py
@@ -196,3 +193,22 @@ La funcionalidad se considera validada cuando:
 - [ ] La auditoría está completa y no duplica la de 008.
 - [ ] Ningún tenant ve datos de otro.
 - [ ] No se agregaron dependencias, correo, Celery ni permisos Django por cadena.
+
+## Registro de validación (2026-11-18)
+
+Validación automatizada sobre PostgreSQL con `.\.venv\Scripts\python.exe -m pytest -q`: **suite
+completa en verde**.
+
+| CA | Prueba real | Estado |
+|---|---|---|
+| CA-01 | `test_devolucion_libera_custodia_y_mueve_stock` | Cubierto |
+| CA-02 | `test_serie_devuelta_puede_reasignarse` | Cubierto |
+| CA-03 | `test_baja_de_serie_asignada_descuenta_stock_tecnico` | Cubierto |
+| CA-04 | `test_baja_de_serie_disponible_descuenta_stock_general` | Cubierto |
+| CA-05 | `test_acta_una_hoja_y_tabla` | Cubierto |
+| CA-06 | `test_auditoria_completa_de_devolucion` | Cubierto |
+
+Complementarios cubiertos: fecha futura, sin series, serie de otro técnico/tenant, serie reservada
+en traspaso, causa obligatoria/inválida, estados no admitidos, hash alterado y contrato HTTP.
+Concurrencia de devoluciones cubierta por `test_dos_devoluciones_simultaneas_de_la_misma_serie`. Pendiente de validación manual: rendimiento y RLS de `logistica_inversa` (implementada en `0002_rls.py`).
+

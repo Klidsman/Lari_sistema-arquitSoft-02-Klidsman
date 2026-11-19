@@ -6,9 +6,27 @@ Especificación técnica para la creación de solicitudes de asignación de mate
 
 Permitir que los tenants creen solicitudes de asignación de materiales a sus técnicos. Las solicitudes incluyen materiales seriados (series específicas) y no seriados (cantidades), se validan contra el stock disponible, generan un Excel estandarizado y pasan las series a estado Reservado hasta la confirmación del almacén.
 
+## Clarifications
+
+### Session 2026-11-19
+
+- Q: ¿Cómo se seleccionan varios técnicos en una solicitud? → A: Una solicitud puede incluir varios técnicos del tenant; el tenant los carga en orden (primero un técnico, luego otro) en la misma pantalla. Enmienda aprobada de la constitución 1.4.0.
+- Q: ¿Cómo se representa el reparto en el Excel? → A: Un único Excel por solicitud con una tabla; cada fila indica su NIF de técnico. Las filas siguen el orden en que se capturaron las líneas; el movimiento es Z31.
+- Q: ¿Qué cantidad sobrante se muestra? → A: Por material, el disponible del tenant menos las cantidades de la solicitud en curso; para seriados, las series disponibles menos las seleccionadas. Se actualiza al cambiar el formulario.
+- Q: ¿Puede el tenant descargar el Excel de asignación? → A: Sí, desde el detalle de la solicitud, verificando el hash SHA-256.
+- Q: ¿El almacén confirma o rechaza por técnico? → A: La solicitud completa, de una sola vez.
+- Q: ¿Qué materiales aparecen en la nueva solicitud? → A: Solo los que el tenant tiene con existencias: stock general disponible (no seriados) o series `DISPONIBLE`, provenientes de recojos o stock inicial. No se muestra todo el catálogo.
+- Q: En la ventana de series, ¿se puede marcar varias series a la vez? → A: Sí, selección múltiple; cada serie marcada se agrega como una fila.
+- Q: ¿Los bloques de técnicos siguen editables hasta enviar? → A: Sí, todos los bloques permanecen en la pantalla y se pueden editar o quitar antes de enviar; la solicitud y el Excel se generan una sola vez.
+- Q: ¿Qué pasa si se repite un material para el mismo técnico? → A: Se rechaza con un mensaje; no se unen ni se duplican líneas.
+- Q: ¿Cómo se agregan materiales desde el panel lateral? → A: Se pueden marcar varios y pulsar "Agregar seleccionados"; se agregan al bloque del técnico activo. Si no hay bloque, se pide agregar un técnico.
+- Q: ¿Dónde va el panel de materiales? → A: Fijo a la izquierda, siempre visible.
+- Q: Si el lote incluye varios seriados, ¿cómo se eligen sus series? → A: Se agregan todas las líneas; las seriadas quedan pendientes con "Elegir series" y solo la ventana del primer seriado se abre automáticamente.
+- Q: ¿El panel muestra cantidades actualizadas? → A: Sí, disponible y sobrante por material; se actualizan al agregar o quitar líneas y el material se deshabilita al llegar a 0.
+
 ## 2. Alcance
 
-- Creación de solicitudes de asignación por técnico
+- Creación de solicitudes de asignación para uno o más técnicos
 - Selección de series disponibles del inventario general
 - Ingreso de cantidades para materiales no seriados
 - Validación de disponibilidad (descontando lo reservado)
@@ -34,7 +52,7 @@ Permitir que los tenants creen solicitudes de asignación de materiales a sus t�
 - **HU-13** (RF-61): Como tenant, quiero ver los días en mano que tiene un equipo seriado
 
 ### Requisitos Funcionales
-- **RF-21**: Crear una solicitud de asignación por técnico, con líneas de material
+- **RF-21**: Crear una solicitud de asignación con líneas de material para uno o más técnicos
 - **RF-22**: En seriados, el tenant elige series Disponibles de su inventario. Cada serie es una fila con cantidad 1
 - **RF-23**: En no seriados, la cantidad es un entero mayor que 0 y no supera el disponible, descontando lo reservado
 - **RF-24**: Al enviar la solicitud, sus series y cantidades pasan a Reservada
@@ -50,18 +68,31 @@ Permitir que los tenants creen solicitudes de asignación de materiales a sus t�
 
 ## 5. Requisitos Funcionales
 
-### 5.1 Creación por Técnico (RF-21)
-- Cada solicitud de asignación pertenece a un solo técnico
-- El usuario selecciona el técnico de la lista del tenant
-- La solicitud puede tener múltiples líneas de material
+### 5.1 Creación por Bloques de Técnico (RF-21)
+- Una solicitud de asignación puede incluir uno o más técnicos del tenant
+- La pantalla trabaja por bloques: el usuario elige un técnico, agrega los materiales de ese técnico y luego agrega otro técnico con su propio bloque
+- Los bloques se mantienen visibles en la misma pantalla y se pueden editar o quitar antes de enviar
+- La solicitud y su único Excel se generan una sola vez, al enviar
+- Cada línea indica el técnico de su bloque
+- La solicitud puede tener múltiples líneas de material por técnico
 - Cada línea puede ser seriada o no seriada
+- Un material no puede repetirse para el mismo técnico; se rechaza con un mensaje
+- La pantalla tiene un panel de materiales **fijo a la izquierda**, siempre visible
+- El panel muestra solo materiales con existencias del tenant (stock general disponible o series `DISPONIBLE`), con su disponible y sobrante actualizados
+- Se pueden marcar varios materiales en el panel y pulsar "Agregar seleccionados"; se agregan al bloque del técnico activo
+- Si no hay bloque de técnico activo, se pide agregar un técnico antes de agregar materiales
+- Al llegar el sobrante a 0, el material se marca como no disponible y no se puede seleccionar
+- Se muestra la cantidad sobrante por material mientras se captura
 
 ### 5.2 Selección de Series (RF-22)
-- Para materiales seriados, el tenant elige series del inventario general del tenant
+- Al elegir un material seriado se abre una ventana con las series disponibles del material
+- La ventana tiene una barra de búsqueda por número de serie
+- Se pueden marcar varias series a la vez; cada serie marcada agrega una fila con cantidad 1
+- Si se agregan varios materiales seriados en lote, la ventana del primero se abre automáticamente y las demás líneas quedan pendientes con el botón "Elegir series"
+- No se puede enviar mientras una línea seriada no tenga series
 - Solo se muestran series en estado Disponible
-- Cada serie seleccionada es una fila con cantidad 1
+- Si no hay series disponibles, la ventana muestra un mensaje
 - No se escriben las series manualmente; se seleccionan del inventario disponible
-- El selector permite búsqueda por serie o material
 
 ### 5.3 Ingreso de Cantidades (RF-23)
 - Para materiales no seriados, el tenant ingresa la cantidad
@@ -174,18 +205,44 @@ Dado una serie en estado Reservada en otra asignación
 Cuando el tenant intenta seleccionarla para asignación
 Entonces la serie no aparece en el selector
 
+### CA-12: Ventana de Series con Búsqueda
+Dado un material seriado con series disponibles
+Cuando el tenant lo selecciona
+Entonces se abre una ventana con las series disponibles y una barra de búsqueda por número
+
+### CA-13: Varios Técnicos por Bloques
+Dado un técnico con materiales agregados
+Cuando el tenant agrega otro técnico y sus materiales
+Entonces ambos bloques permanecen en la misma solicitud y se genera un solo Excel
+
+### CA-14: Material Repetido para el Mismo Técnico
+Dado un material ya agregado a un técnico
+Cuando el tenant intenta agregarlo de nuevo para ese técnico
+Entonces la operación se rechaza con un mensaje
+
+### CA-15: Panel Lateral de Materiales
+Dado el formulario de asignación
+Cuando el tenant lo abre
+Entonces ve a la izquierda los materiales con existencias, su disponible y su sobrante, y puede marcar varios y agregarlos al bloque activo
+
+### CA-16: Seriados Pendientes de Series
+Dado un lote de materiales que incluye varios seriados
+Cuando el tenant los agrega
+Entonces todas las líneas se crean, solo la ventana del primer seriado se abre automáticamente y las demás quedan pendientes con "Elegir series"
+
 ## 8. Datos de Entrada
 
 ### Formulario de Solicitud de Asignación
 
 | Campo | Tipo | Requerido | Descripción |
 |---|---|---|---|
-| Técnico | Select | Sí | Técnico del tenant (solo activos) |
+| Técnico del bloque | Select | Sí | Técnico del tenant (solo activos) |
 | Fecha | Date | Sí | Fecha de la solicitud (por defecto: hoy) |
-| Material | Select | Condicional | Material del catálogo (por línea) |
+| Panel de materiales | Lista multi-select fija a la izquierda | Sí | Materiales con existencias, disponible y sobrante; se marcan varios y se agregan al bloque activo |
+| Material | Select | Condicional | Material con existencias del tenant (por línea) |
 | Tipo de material | Read-only | Condicional | Seriado o no seriado (del catálogo) |
 | Lote | Read-only | Condicional | Lote del material (del catálogo) |
-| Series | Multi-select | Condicional | Series disponibles (solo para seriados) |
+| Series | Ventana modal multi-select | Condicional | Series disponibles con búsqueda (solo para seriados) |
 | Cantidad | Number | Condicional | Cantidad (solo para no seriados) |
 
 ## 9. Datos de Salida
@@ -196,8 +253,8 @@ Entonces la serie no aparece en el selector
 |---|---|
 | ID de solicitud | Identificador único de la solicitud |
 | Estado | Borrador, Enviada, Confirmada, Rechazada, Cancelada |
-| Técnico | Técnico destinatario |
-| NIF | NIF del técnico |
+| Técnicos | Técnicos destinatarios |
+| NIF | NIF de cada técnico, por línea del Excel |
 | Fecha | Fecha de creación |
 | Líneas | Lista de materiales, series o cantidades |
 | Excel | Ruta del archivo Excel generado |
@@ -205,7 +262,7 @@ Entonces la serie no aparece en el selector
 
 ## 10. Reglas de Negocio
 
-1. Una solicitud de asignación pertenece a un solo técnico
+1. Una solicitud de asignación puede incluir varios técnicos del tenant; cada línea tiene su técnico
 2. Solo se pueden seleccionar series en estado Disponible
 3. La cantidad no puede superar el disponible (descontando lo reservado)
 4. Al enviar, las series pasan a Reservada
@@ -213,13 +270,15 @@ Entonces la serie no aparece en el selector
 6. El NIF se autocompleta y no es editable
 7. Los días en mano inician al aceptar la asignación
 8. Se alerta si el técnico supera 20 días en mano de seriados
+9. Un material no se repite para el mismo técnico en la solicitud; se rechaza con un mensaje
+10. Los bloques de técnicos se editan o quitan en pantalla hasta enviar; el Excel se genera una sola vez
 
 ## 11. Consideraciones de Implementación
 
 - La validación de disponibilidad debe ser eficiente (consultar índices de stock y series)
 - La generación del Excel debe usar openpyxl y calcular el hash SHA-256
 - La reserva de series debe ser transaccional
-- El selector de series debe soportar búsqueda y paginación para grandes volúmenes
+- La ventana de series debe soportar búsqueda y paginación para grandes volúmenes
 - El cálculo de días en mano se hace al confirmar la asignación (spec 007)
 - La alerta de cupo máximo se calcula sumando días en mano de todos los seriados del técnico
 - El envío del Excel por correo se implementa en spec 007

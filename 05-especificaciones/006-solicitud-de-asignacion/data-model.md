@@ -13,7 +13,7 @@ los contratos HTTP en `contracts/`.
 erDiagram
     TENANT ||--o{ SOLICITUD_ASIGNACION : "registra"
     REGION ||--o{ SOLICITUD_ASIGNACION : "ubica"
-    TECNICO ||--o{ SOLICITUD_ASIGNACION : "recibe"
+    TECNICO ||--o{ LINEA_ASIGNACION : "recibe"
     USUARIO ||--o{ SOLICITUD_ASIGNACION : "crea / actualiza"
     SOLICITUD_ASIGNACION ||--o{ LINEA_ASIGNACION : "contiene"
     MATERIAL ||--o{ LINEA_ASIGNACION : "se asigna"
@@ -33,14 +33,13 @@ erDiagram
 
 ### `asignaciones.SolicitudAsignacion`
 
-Cabecera de la solicitud. Pertenece a un solo tenant, una región y un técnico.
+Cabecera de la solicitud. Pertenece a un solo tenant y una región; los técnicos se guardan en cada línea.
 
 | Campo | Tipo | Nulo | Regla |
 |---|---|---|---|
 | `id` | `BigAutoField` | No | Clave primaria |
 | `tenant` | FK `tenants.Tenant` | No | `PROTECT`; se fija desde la sesión |
 | `region` | FK `tenants.Region` | No | `PROTECT`; instantánea de `tenant.region` |
-| `tecnico` | FK `tecnicos.Tecnico` | No | `PROTECT`; debe pertenecer al tenant |
 | `fecha` | `DateField` | No | Fecha de la solicitud; por defecto hoy |
 | `estado` | `CharField(20)` | No | `BORRADOR` por defecto; ver estados |
 | `excel_ruta` | `CharField(255)` | No | Vacío hasta el envío; relativa a `MEDIA_ROOT` |
@@ -58,14 +57,13 @@ Cabecera de la solicitud. Pertenece a un solo tenant, una región y un técnico.
 - `CheckConstraint(solicitud_asignacion_estado_valido)`:
   `estado IN ('BORRADOR','ENVIADA','CONFIRMADA','RECHAZADA','CANCELADA')`.
 - `Index(tenant, estado, name="solicitud_asign_tenant_estado")`.
-- `Index(tecnico, fecha, name="solicitud_asign_tecnico_fecha")`.
 - `Index(region, fecha, name="solicitud_asign_region_fecha")`.
 - `ordering = ["-fecha", "-id"]`.
 
 **Reglas de negocio**
 
 - `tenant` y `region` nunca se aceptan del cliente; la región se copia de `tenant.region`.
-- `tecnico.tenant` debe ser igual a `tenant`; se valida en el servicio y se prueba.
+- Cada línea valida que su `tecnico` pertenezca al tenant; se prueba en el servicio.
 - `excel_ruta`, `excel_hash` y `excel_generado_en` quedan vacíos mientras está `BORRADOR`.
 - Una solicitud `ENVIADA` no se edita; su Excel es inmutable.
 - `confirmada_en` solo lo escribe 007. Es respaldo histórico: la fuente actual es
@@ -82,6 +80,7 @@ Línea de la solicitud. Puede representar una serie (cantidad 1) o un material n
 | `id` | `BigAutoField` | No | Clave primaria |
 | `tenant` | FK `tenants.Tenant` | No | `PROTECT`; se copia de `solicitud.tenant` |
 | `solicitud` | FK `SolicitudAsignacion` | No | `PROTECT`, `related_name="lineas"` |
+| `tecnico` | FK `tecnicos.Tecnico` | No | `PROTECT`; debe pertenecer al tenant |
 | `material` | FK `materiales.Material` | No | `PROTECT`; catálogo global |
 | `lote` | `CharField(50)` | No | Copiado de `material.lote`; no editable |
 | `serie` | FK `series.Serie` | Sí | `PROTECT`; obligatoria solo en seriados |
@@ -93,8 +92,9 @@ Línea de la solicitud. Puede representar una serie (cantidad 1) o un material n
 - `CheckConstraint(linea_asignacion_serie_cantidad_uno)`: `serie IS NULL OR cantidad = 1`.
 - `CheckConstraint(linea_asignacion_cantidad_no_negativa)`: `cantidad >= 0`.
 - `UniqueConstraint(solicitud, serie, condition=serie IS NOT NULL, name="linea_asignacion_serie_unica_en_solicitud")`.
-- `UniqueConstraint(solicitud, material, condition=serie IS NULL, name="linea_asignacion_no_seriada_unica")`.
+- `UniqueConstraint(solicitud, tecnico, material, condition=serie IS NULL, name="linea_asignacion_no_seriada_unica")`.
 - `Index(solicitud, material, name="linea_asign_solicitud_material")`.
+- `Index(solicitud, tecnico, name="linea_asign_solicitud_tecnico")`.
 - `Index(tenant, material, name="linea_asign_tenant_material")`.
 - `Index(serie, name="linea_asign_serie")`.
 
@@ -103,7 +103,7 @@ Línea de la solicitud. Puede representar una serie (cantidad 1) o un material n
 - Para un material seriado: `serie` no nula, `cantidad = 1` y `serie.material == material`.
 - Para un material no seriado: `serie` nula, `cantidad > 0` y una sola línea por material en la
   solicitud (las filas del formulario se agrupan sumando).
-- `tenant` se fija desde `solicitud.tenant`; nunca se acepta del cliente.
+- `tenant` se fija desde `solicitud.tenant`; el `tecnico` se valida contra el tenant y nunca se acepta de otro tenant.
 - `lote` se copia del catálogo; el valor del formulario se ignora.
 - La unicidad de `serie` por solicitud no impide que la misma serie aparezca en otra solicitud
   histórica; la disponibilidad la decide `Serie.estado`.
@@ -115,7 +115,7 @@ Línea de la solicitud. Puede representar una serie (cantidad 1) o un material n
 | `series.Serie` | 004 | Series del inventario general; `DISPONIBLE` se selecciona y `RESERVADA` al enviar | Solo `estado` y `actualizado_por` al enviar |
 | `stock.StockGeneral` | 008 | Stock general del tenant para calcular disponibilidad | Ninguna; solo lectura y bloqueo |
 | `stock.StockTecnico` | 008 | No se usa en 006 | Ninguna |
-| `tecnicos.Tecnico` | 003 | Destinatario; solo activos del tenant | Ninguna |
+| `tecnicos.Tecnico` | 003 | Destinatario de cada línea; solo activos del tenant | Ninguna |
 | `materiales.Material` | 002 | Código, descripción, lote y tipo | Ninguna |
 | `tenants.Tenant`, `tenants.Region`, `tenants.Almacen` | 001 | Alcance, región y metadatos del Excel | Ninguna |
 | `auditoria.RegistroCambio` | 001 | Trazabilidad de la operación | Solo alta de registros |

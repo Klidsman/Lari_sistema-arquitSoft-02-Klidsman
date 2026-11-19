@@ -8,7 +8,7 @@ Los servicios viven en `registro_materiales/services.py`, `carga.py`, `dashboard
 | Tipo | Definición |
 |---|---|
 | `tenant` | `tenants.Tenant` de la sesión |
-| `tecnico` | `tecnicos.Tecnico` del tenant |
+| `tecnico` | `tecnicos.Tecnico` del tenant; se resuelve con `tecnicos.services.obtener_tecnico` y se valida con `validar_tecnico_para_operacion`; los selectores usan `tecnicos_para_operacion(tenant)` |
 | `periodo` | `YYYY-MM` |
 | `texto` | Texto pegado de órdenes |
 | `cantidades` | `material_id -> cantidad` |

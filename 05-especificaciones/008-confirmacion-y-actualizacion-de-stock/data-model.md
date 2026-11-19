@@ -147,7 +147,7 @@ RESERVADA  ── rechazar (007) ────▶ DISPONIBLE
 ASIGNADA   ── devolución (011) ──▶ DISPONIBLE
 ```
 
-- 008 solo ejecuta `RESERVADA→ASIGNADA` al confirmar y fija `tecnico = solicitud.tecnico` y
+- 008 solo ejecuta `RESERVADA→ASIGNADA` al confirmar y fija `tecnico = técnico de la línea` y
   `asignada_en = ahora`.
 - La transición es irreversible dentro de 008; para liberar se requiere devolución o traspaso.
 - Una serie que no está `RESERVADA`, o que no pertenece al tenant/material, aborta la confirmación.

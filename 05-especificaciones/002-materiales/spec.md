@@ -22,6 +22,7 @@ asignaciones y traspasos de todos los tenants.
 | Descripción | Sí | Entre 1 y 100 caracteres, sin espacios al inicio o final. |
 | Lote | No | Hasta 50 caracteres. Atributo fijo del material; puede quedar vacío. |
 | Tipo | Sí | Seriado o No seriado. |
+| Estado | Sí | Activo o dado de baja. La baja es lógica: no borra la fila. |
 
 ## Reglas de negocio
 - El catálogo es compartido: todos los tenants ven los mismos materiales.
@@ -31,14 +32,22 @@ asignaciones y traspasos de todos los tenants.
 - El lote es informativo: no separa el stock.
 - El código no se edita después de creado.
 - El sistema registra quién creó el material y cuándo.
-- Solo el creador del material o un administrador de plataforma puede
-  editar descripción o lote.
+- Solo el Responsable de almacén registra materiales.
+- Cualquier Responsable de almacén puede dar de baja cualquier material del
+  catálogo, aunque lo haya creado otra cuenta.
+- Cualquier Responsable de almacén o un administrador de plataforma puede
+  editar descripción y lote de cualquier material activo, aunque lo haya creado
+  otra cuenta. La cuenta de tenant no edita materiales.
 - El tipo no se puede cambiar si el material ya tiene stock o movimientos
   en cualquier tenant.
-- Cada alta y cada cambio queda auditado: usuario, fecha, campo, valor
+- Cada alta, cambio y baja queda auditado: usuario, fecha, campo, valor
   anterior y valor nuevo.
-- En esta versión no se borran materiales.
-- La búsqueda por código o por descripción devuelve materiales de todo el catálogo.
+- No se borran materiales: se dan de baja lógicamente. La fila, su creador y
+  su auditoría se conservan; el material deja de aparecer en listados y búsquedas.
+- Si se registra de nuevo un código que pertenece a un material dado de baja, el material
+  se reactiva (`activo=True`) y se actualizan descripción, lote y tipo, conservando la misma
+  fila y su historial. Se audita la reactivación.
+- La búsqueda por código o por descripción devuelve materiales activos de todo el catálogo.
 
 ## Criterios de aceptación
 - Dado un código nuevo de 11 dígitos con descripción y tipo,
@@ -57,9 +66,9 @@ asignaciones y traspasos de todos los tenants.
   cuando se guarda,
   entonces el lote queda vacío.
 - Dado un material existente,
-  cuando su creador cambia la descripción,
+  cuando un Responsable de almacén cambia la descripción,
   entonces el cambio se guarda y queda registrado el valor anterior y el nuevo.
-- Dado un usuario que no es creador ni administrador de plataforma,
+- Dada una cuenta de tenant,
   cuando intenta editar la descripción o el lote,
   entonces la acción no está disponible y el servidor la rechaza si se fuerza.
 - Dado un material existente,
@@ -76,6 +85,19 @@ asignaciones y traspasos de todos los tenants.
   entonces la segunda se rechaza con "El material ya existe" y no se crea un duplicado.
 - Dado el texto "ROSETA" en la búsqueda,
   entonces aparece el material 10402520279 con su descripción y su lote.
+- Dada una cuenta de tenant o un Administrador de plataforma,
+  cuando intenta registrar un material,
+  entonces el servidor rechaza la operación porque solo el Responsable de almacén crea materiales.
+- Dado un material activo y un Responsable de almacén,
+  cuando lo da de baja,
+  entonces el material deja de aparecer en el catálogo y la búsqueda, la fila se conserva
+  y la baja queda auditada con valor anterior y nuevo.
+- Dado un material ya dado de baja,
+  cuando se intenta dar de baja de nuevo,
+  entonces no se modifica ni se audita otra vez.
+- Dado un material dado de baja, cuando el Responsable de almacén registra un material con
+  ese mismo código, entonces el material se reactiva con los nuevos datos y la reactivación
+  queda auditada, sin crear una fila duplicada.
 
 ## Casos borde
 - Espacios al inicio, al final o repetidos dentro de descripción y lote.
@@ -91,7 +113,7 @@ asignaciones y traspasos de todos los tenants.
 
 ## Fuera de alcance
 - Carga masiva de materiales por Excel.
-- Eliminación de materiales.
+- Borrado físico de materiales (solo existe baja lógica).
 - Cambio de código.
 - Varios lotes por material.
 - Detección de descripciones parecidas con códigos distintos (mejora posterior).

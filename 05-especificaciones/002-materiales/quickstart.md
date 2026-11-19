@@ -54,6 +54,8 @@ Datos mínimos para las pruebas manuales (crear desde la interfaz de la spec 001
 2. Un tenant y su cuenta activa.
 3. Una segunda cuenta de otro tenant para comprobar el catálogo compartido.
 4. Un Administrador de plataforma con segundo factor.
+5. Al menos una cuenta de **Responsable de almacén** activa, que es la única que crea
+   materiales y la que puede darlos de baja.
 
 ## Pruebas automatizadas
 
@@ -75,7 +77,7 @@ regular, unicidad global y concurrencia real.
 
 ### 1. Alta de material
 
-1. Iniciar sesión con la cuenta del tenant.
+1. Iniciar sesión con la cuenta del Responsable de almacén.
 2. Ir a `/materiales/nuevo/`.
 3. Registrar código `10402520279`, descripción `ROSETA`, lote `FIBERHOME` y tipo `Seriado`.
 4. **Esperado**: el material aparece en `/materiales/` con creador y fecha; la auditoría
@@ -93,11 +95,17 @@ regular, unicidad global y concurrencia real.
 
 1. Guardar de nuevo el código `10402520279` desde la misma cuenta.
 2. **Esperado**: `"El material ya existe"`, sin indicar qué cuenta o tenant lo creó.
-3. Desde la cuenta del segundo tenant, intentar registrar el mismo código.
-4. **Esperado**: el mismo mensaje uniforme.
-5. Hacer doble clic en Guardar con un código nuevo.
-6. **Esperado**: se crea un solo material y la segunda petición responde
+3. Con otro Responsable de almacén (otra región), intentar registrar el mismo código.
+4. **Esperado**: el mismo mensaje uniforme; el catálogo es global.
+5. Con una cuenta de tenant o un Administrador de plataforma, intentar abrir
+   `/materiales/nuevo/`.
+6. **Esperado**: `403`; solo el Responsable de almacén crea materiales.
+7. Hacer doble clic en Guardar con un código nuevo desde la cuenta de almacén.
+8. **Esperado**: se crea un solo material y la segunda petición responde
    `"El material ya existe"`.
+9. Dar de baja un material y volver a registrarlo con el mismo código.
+10. **Esperado**: no se crea otra fila; el material se reactiva con los nuevos datos y la
+    reactivación queda auditada.
 
 ### 4. Normalización de descripción y lote
 
@@ -126,10 +134,10 @@ regular, unicidad global y concurrencia real.
 
 ### 7. Edición y permisos
 
-1. Como creador, abrir `/materiales/<id>/editar/` y cambiar la descripción.
+1. Como Responsable de almacén (aunque el material lo haya creado otra cuenta), abrir
+   `/materiales/<id>/editar/` y cambiar la descripción.
 2. **Esperado**: se guarda y la auditoría muestra el valor anterior y el nuevo.
-3. Iniciar sesión con otra cuenta del mismo u otro tenant (sin ser creador ni administrador) e
-   intentar editar el mismo material por URL directa.
+3. Iniciar sesión con una cuenta de tenant e intentar editar el mismo material por URL directa.
 4. **Esperado**: `403` `"No tienes permiso para editar este material"`.
 5. Iniciar sesión como Administrador de plataforma y editar la descripción.
 6. **Esperado**: se permite y se audita.
@@ -145,12 +153,17 @@ regular, unicidad global y concurrencia real.
 4. Intentar cambiar el tipo.
 5. **Esperado**: `"El tipo no se puede cambiar: el material tiene movimientos"`.
 
-### 9. Sin eliminación y conservación
+### 9. Baja lógica, sin eliminación y conservación
 
-1. Enviar `DELETE` a `/materiales/<id>/editar/`.
-2. **Esperado**: `405`; no existe ruta de borrado.
-3. Desactivar la cuenta del creador desde la spec 001.
-4. **Esperado**: el material se conserva, sigue visible y su auditoría permanece.
+1. Como Responsable de almacén, abrir `/materiales/` y pulsar **Dar de baja**.
+2. **Esperado**: el material desaparece del listado y de la búsqueda; la fila se conserva con
+   `activo=False` y la auditoría registra el cambio `True` → `False`.
+3. Repetir la baja del mismo material.
+4. **Esperado**: `200`, sin cambios ni auditoría nueva.
+5. Enviar `DELETE` a `/materiales/<id>/editar/` y a `/materiales/<id>/baja/`.
+6. **Esperado**: `405`; no existe borrado físico.
+7. Desactivar la cuenta del creador desde la spec 001.
+8. **Esperado**: el material y su auditoría se conservan.
 
 ### 10. Auditoría
 
@@ -168,15 +181,43 @@ regular, unicidad global y concurrencia real.
 2. **Esperado**: una alta tiene éxito y la otra falla con `"El material ya existe"`; existe una
    sola fila en la base.
 
+## Registro de validación manual
+
+**Fecha**: 2026-11-14
+**Entorno**: Windows, PostgreSQL 16 (contenedor `lari-postgres` en el puerto 5434), Redis 7,
+Django 5.2 y Python 3.12.
+**Guía seguida**: `05-especificaciones/002-materiales/guia-validacion-manual.md`.
+
+| # | Escenario | Resultado |
+|---|---|---|
+| 1 | Alta de material | OK |
+| 2 | Código de 11 dígitos | OK |
+| 3 | Código único, doble clic y reactivación | OK |
+| 4 | Normalización | OK |
+| 5 | Catálogo compartido | OK |
+| 6 | Búsqueda | OK |
+| 7 | Edición y permisos | OK |
+| 8 | Tipo inmutable | OK |
+| 9 | Baja lógica y conservación | OK |
+| 10 | Auditoría | OK |
+| 11 | Concurrencia | OK |
+
+Los 11 escenarios se completaron con los resultados esperados, incluida la creación exclusiva
+por el Responsable de almacén, la baja lógica, la reactivación al re-registrar el código y la
+edición por cualquier almacén.
+
 ## Criterios de salida
 
 La funcionalidad se considera validada cuando:
 
-- [ ] `pytest` pasa completo sobre PostgreSQL.
-- [ ] Cada criterio de aceptación de `spec.md` tiene al menos una prueba automatizada.
-- [ ] Los escenarios manuales 1–11 se completan con los resultados esperados.
-- [ ] El catálogo es visible para todos los tenants y no se filtra por tenant.
-- [ ] El código no se puede modificar por ninguna vía.
-- [ ] Solo el creador o el Administrador de plataforma editan descripción y lote.
-- [ ] La auditoría registra altas y cambios por campo, sin secretos y en la misma transacción.
-- [ ] No existe ninguna ruta de borrado de materiales.
+- [X] `pytest` pasa completo sobre PostgreSQL.
+- [X] Cada criterio de aceptación de `spec.md` tiene al menos una prueba automatizada.
+- [X] Los escenarios manuales 1–11 se completan con los resultados esperados.
+- [X] El catálogo es visible para todos los tenants y no se filtra por tenant.
+- [X] El código no se puede modificar por ninguna vía.
+- [X] Solo el Responsable de almacén crea materiales.
+- [X] Cualquier Responsable de almacén puede dar de baja cualquier material.
+- [X] La baja es lógica: no borra la fila, la oculta de listados y búsquedas y queda auditada.
+- [X] Cualquier Responsable de almacén o el Administrador de plataforma editan descripción y lote; la cuenta de tenant no.
+- [X] La auditoría registra altas, cambios, bajas y reactivaciones por campo, sin secretos y en la misma transacción.
+- [X] No existe ninguna ruta de borrado físico de materiales; `DELETE` responde `405`.
