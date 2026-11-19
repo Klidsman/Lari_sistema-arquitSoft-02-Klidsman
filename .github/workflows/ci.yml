@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main, especificaciones]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Django + PostgreSQL + Redis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lari_app
+          POSTGRES_PASSWORD: lari_app
+          POSTGRES_DB: lari
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lari_app -d lari"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.test
+      SECRET_KEY: ci-solo-pruebas
+      DEBUG: "False"
+      DATABASE_URL: postgresql://lari_app:lari_app@localhost:5432/lari
+      TEST_DATABASE_NAME: test_lari
+      REDIS_URL: redis://localhost:6379/0
+      EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
+      TOTP_ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Comprobar configuración
+        run: python manage.py check
+
+      - name: Comprobar migraciones pendientes
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Aplicar migraciones
+        run: python manage.py migrate --noinput
+
+      - name: Verificar que no queden migraciones sin aplicar
+        run: python manage.py migrate --check
+
+      - name: Ejecutar pruebas
+        run: python -m pytest -q
