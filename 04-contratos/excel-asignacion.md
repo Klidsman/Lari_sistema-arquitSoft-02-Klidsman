@@ -4,99 +4,68 @@ Formato y estructura del archivo Excel de asignación generado por el sistema.
 
 ## 1. Propósito
 
-El Excel de asignación es el documento estandarizado que el sistema genera automáticamente cuando un tenant crea una solicitud de asignación de materiales a un técnico. Este Excel se envía al almacén central de la región para su confirmación y contiene toda la información necesaria para el despacho físico de los materiales.
+El Excel de asignación es el documento estandarizado que el sistema genera automáticamente cuando un tenant envía una solicitud de asignación de materiales a uno o más técnicos. Este Excel se envía al almacén central de la región para su confirmación y contiene toda la información necesaria para el despacho físico de los materiales.
 
 ## 2. Generación
 
-- El sistema genera el Excel automáticamente al crear una solicitud de asignación
+- El sistema genera el Excel automáticamente al enviar la solicitud (`BORRADOR → ENVIADA`)
 - No se puede editar manualmente el Excel antes de generarlo
+- Un único Excel por solicitud, aunque incluya varios técnicos
 - El Excel se guarda de forma inmutable con firma SHA-256 para garantizar su integridad
 - El Excel se envía por correo al buzón del almacén de la región, con reintentos si falla
+- El tenant puede descargar el Excel desde el detalle de la solicitud, verificando su hash
 
 ## 3. Estructura del Archivo
 
-El Excel de asignación contiene tres secciones principales:
+El Excel de asignación es una **única tabla** con una hoja. Cada fila es una unidad seriada o una línea de material no seriado de un técnico.
 
-### 3.1 Metadatos de Cuadrilla
-
-Información general de la asignación y el técnico.
-
-| Campo | Descripción | Valor |
+| Columna | Descripción | Valor |
 |---|---|---|
-| **Movimiento** | Tipo de movimiento SAP | Z31 (asignación - el técnico recibe) |
-| **Centro** | Centro de costo | PR05 (parámetro de la región) |
-| **Almacén** | Código de almacén | BE03 (parámetro de la región) |
-| **NIF** | Identificador del técnico | LAxxxx (completado desde el técnico elegido) |
-| **Fecha de solicitud** | Fecha de creación de la solicitud | Fecha actual |
-| **Tenant** | Nombre/código del tenant | Completado automáticamente |
-| **Región** | Región del tenant | Completado automáticamente |
-| **ID de solicitud** | Identificador único de la solicitud | Generado por el sistema |
+| **Movimiento** | Tipo de movimiento SAP | `Z31` (asignación: el técnico recibe) |
+| **Centro** | Centro de costo | Parámetro de la región (hoy `PR05`) |
+| **Almacén** | Código de almacén | Parámetro de la región (hoy `BE03`) |
+| **Material** | Código del material (11 dígitos) | Del catálogo |
+| **Descripción de materiales** | Descripción del material | Del catálogo |
+| **Cantidad** | Unidades de la fila | `1` para seriados; cantidad total para no seriados |
+| **NIF Técnico** | Identificador del técnico de la fila | `LAxxxx`, completado desde el técnico elegido |
+| **Lote** | Lote del material | Del catálogo |
+| **Serie** | Serie individual (12 caracteres) | Vacía para no seriados |
 
 **Reglas:**
-- Movimiento, Centro y Almacén son fijos y se autorrellenan
-- El NIF se completa desde el técnico elegido y no es editable
-- Centro y Almacén son parámetros de la región; hoy tienen el mismo valor en todas las regiones, pero no están fijados en el código
 
-### 3.2 Tabla de Seriales
-
-Para materiales seriados, cada serie individual se lista en una fila separada.
-
-| Columna | Descripción | Ejemplo |
-|---|---|---|
-| **Código de material** | Código del material (11 dígitos) | 12345678901 |
-| **Descripción** | Descripción del material | Router Huawei |
-| **Lote** | Lote del material | LOT-2024-001 |
-| **Serie** | Serie individual (12 caracteres) | ABC123456789 |
-| **Cantidad** | Cantidad de unidades | 1 (siempre 1 para seriados) |
-
-**Reglas:**
-- Cada serie es una fila con Cantidad = 1
+- Movimiento, Centro y Almacén son fijos y se autorrellenan; Centro y Almacén son parámetros de la región y no están fijados en el código
+- Cada serie seleccionada es una fila con Cantidad = 1 y su Serie
+- Cada material no seriado de un técnico es una fila con su cantidad total
+- Las filas siguen el **orden de captura**: el orden en que se agregaron las líneas a la solicitud, sin reordenar por técnico ni por material
+- Un mismo material puede aparecer para varios técnicos; cada técnico tiene sus propias filas
 - Código, Descripción y Lote se completan desde el catálogo de materiales
 - Las series se eligen del inventario general del tenant (solo estado Disponible)
-- No se escriben las series manualmente; se seleccionan del inventario disponible
-
-### 3.3 Tabla de Material Menor
-
-Para materiales no seriados, se agrupan por material con la cantidad total.
-
-| Columna | Descripción | Ejemplo |
-|---|---|---|
-| **Código de material** | Código del material (11 dígitos) | 98765432109 |
-| **Descripción** | Descripción del material | Cable coaxial 10m |
-| **Lote** | Lote del material | LOT-2024-002 |
-| **Cantidad** | Cantidad total de unidades | 50 |
-
-**Reglas:**
-- La cantidad es un entero mayor que 0
-- No supera el disponible, descontando lo reservado
-- Código, Descripción y Lote se completan desde el catálogo de materiales
-- La cantidad la digita el tenant
+- No se escriben series ni NIF manualmente
 
 ## 4. Campos No Editables
 
 Los siguientes campos se completan automáticamente y **no son editables** por el usuario:
-- NIF (se completa desde la lista de técnicos del tenant)
+- NIF Técnico (se completa desde la lista de técnicos del tenant)
 - Movimiento (Z31)
-- Centro (PR05)
-- Almacén (BE03)
-- Código de material
-- Descripción
-- Lote
+- Centro y Almacén (parámetros de la región)
+- Material, Descripción de materiales y Lote
 
 ## 5. Validaciones del Excel
 
 El sistema valida que:
 - Cada serie tenga el formato correcto (12 caracteres alfanuméricos A-Z, 0-9)
-- Las series sean únicas (no haya duplicados)
+- Las series sean únicas en la solicitud, aunque se asignen a técnicos distintos
 - Las series estén disponibles en el inventario del tenant
-- La cantidad de no seriados no supere el disponible (descontando lo reservado)
+- La suma de cantidades de no seriados de un material, entre todos los técnicos de la solicitud, no supere el disponible (descontando lo reservado)
 - Código, Descripción y Lote coincidan con el catálogo de materiales
+- Cada técnico pertenezca al tenant y esté activo
 
 ## 6. Integridad del Archivo
 
 - El Excel se guarda con una firma SHA-256 para garantizar que no fue alterado
 - El hash se registra en el sistema junto con el envío
 - El almacén puede verificar el hash del Excel recibido contra el registrado
+- El tenant puede descargar el Excel de sus solicitudes verificando el hash; si no coincide, la descarga se bloquea
 - Se puede buscar y descargar Excels históricos verificando su hash SHA-256
 
 ## 7. Envío al Almacén
@@ -120,13 +89,13 @@ La solicitud de asignación (y su Excel asociado) puede estar en los siguientes 
 
 ## 9. Confirmación del Almacén
 
-- El Responsable de almacén confirma o rechaza la solicitud dentro del sistema
+- El Responsable de almacén confirma o rechaza la solicitud completa dentro del sistema
 - Puede añadir un comentario del error si se rechaza
-- Al confirmar: las series pasan a Asignada al técnico, el stock del técnico sube y el stock general baja
+- Al confirmar: cada serie pasa a Asignada a su técnico de la línea, el stock de cada técnico sube y el stock general baja
 - Al rechazar: las series vuelven a Disponible en el stock general
 
 ## 10. Regla de Todo o Nada
 
 - El Excel se aplica completo o no se aplica
-- Si hay algún error (serie inválida, duplicada, no disponible, cantidad excesiva), no se guarda ningún recojo
-- Nunca quedan asignaciones a medias
+- Si hay algún error (serie inválida, duplicada, no disponible, cantidad excesiva), no se guarda ninguna asignación
+- Nunca quedan asignaciones a medias, ni entre técnicos de la misma solicitud
