@@ -13,16 +13,19 @@ from asignaciones.services import (
     CantidadExcedeDisponible,
     EstadoSolicitudInvalido,
     MaterialDuplicado,
+    actualizar_borrador_solicitud,
     calcular_disponible,
     calcular_reservado,
     calcular_sobrante,
     cancelar_solicitud,
     crear_borrador_solicitud,
     crear_y_enviar_solicitud,
+    datos_iniciales_solicitud,
     enviar_solicitud,
     materiales_disponibles_para_asignacion,
     verificar_excel_solicitud,
 )
+from auditoria.models import RegistroCambio
 from series.models import EstadoSerie, Serie
 from stock.models import StockGeneral, StockTecnico
 from tecnicos.models import Tecnico
@@ -155,6 +158,50 @@ def test_no_seriado_suma_entre_tecnicos_y_no_supera_disponible(
             usuario_tenant,
         )
     assert not LineaAsignacion.objects.exists()
+
+
+@pytest.mark.django_db
+def test_dos_unidades_solo_permiten_una_al_segundo_tecnico(
+    usuario_tenant, tenant, tecnico, segundo_tecnico, material_no_seriado, almacen
+):
+    StockGeneral.objects.create(
+        tenant=tenant, material=material_no_seriado, cantidad=2
+    )
+    with pytest.raises(CantidadExcedeDisponible, match="solo quedan 2"):
+        crear_y_enviar_solicitud(
+            tenant,
+            date.today(),
+            [
+                {"tecnico_id": tecnico.pk, "material_id": material_no_seriado.pk, "cantidad": 1},
+                {"tecnico_id": segundo_tecnico.pk, "material_id": material_no_seriado.pk, "cantidad": 2},
+            ],
+            usuario_tenant,
+        )
+    assert not LineaAsignacion.objects.exists()
+
+
+@pytest.mark.django_db
+def test_sobrante_refleja_el_exceso_entre_tecnicos(
+    usuario_tenant, tenant, tecnico, segundo_tecnico, material_no_seriado, almacen
+):
+    StockGeneral.objects.create(
+        tenant=tenant, material=material_no_seriado, cantidad=2
+    )
+    resumen = calcular_sobrante(
+        tenant,
+        [
+            {"tecnico_id": tecnico.pk, "material_id": material_no_seriado.pk, "cantidad": "1"},
+            {"tecnico_id": segundo_tecnico.pk, "material_id": material_no_seriado.pk, "cantidad": "2"},
+        ],
+    )
+    fila = next(
+        item
+        for item in resumen
+        if item.material.pk == material_no_seriado.pk
+    )
+    assert fila.disponible == 2
+    assert fila.solicitado == 3
+    assert fila.sobrante == -1
 
 
 @pytest.mark.django_db
@@ -358,3 +405,170 @@ def test_material_repetido_para_el_mismo_tecnico_se_rechaza(
             usuario_tenant,
         )
     assert not LineaAsignacion.objects.exists()
+
+@pytest.mark.django_db
+def test_editar_borrador_actualiza_todo_y_audita(
+    usuario_tenant,
+    tenant,
+    tecnico,
+    segundo_tecnico,
+    material_no_seriado,
+    almacen,
+):
+    StockGeneral.objects.create(
+        tenant=tenant, material=material_no_seriado, cantidad=10
+    )
+    solicitud = crear_borrador_solicitud(
+        tenant,
+        date(2026, 11, 10),
+        [
+            {
+                "tecnico_id": tecnico.pk,
+                "material_id": material_no_seriado.pk,
+                "cantidad": 2,
+            }
+        ],
+        usuario_tenant,
+    )
+    actualizar_borrador_solicitud(
+        solicitud,
+        date(2026, 12, 1),
+        [
+            {
+                "tecnico_id": segundo_tecnico.pk,
+                "material_id": material_no_seriado.pk,
+                "cantidad": 3,
+            }
+        ],
+        usuario_tenant,
+    )
+
+    solicitud.refresh_from_db()
+    linea = solicitud.lineas.get()
+    assert solicitud.estado == EstadoSolicitud.BORRADOR
+    assert solicitud.fecha == date(2026, 12, 1)
+    assert linea.tecnico_id == segundo_tecnico.pk
+    assert linea.cantidad == 3
+    assert solicitud.excel_ruta == ""
+    assert (
+        StockGeneral.objects.get(
+            tenant=tenant, material=material_no_seriado
+        ).cantidad
+        == 10
+    )
+    assert RegistroCambio.objects.filter(
+        entidad="LineaAsignacion", campo="baja"
+    ).exists()
+    assert RegistroCambio.objects.filter(
+        entidad="LineaAsignacion", campo="alta"
+    ).exists()
+    assert RegistroCambio.objects.filter(
+        entidad="SolicitudAsignacion",
+        entidad_id=solicitud.pk,
+        campo="actualizado",
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_datos_iniciales_precargan_series_agrupadas(
+    usuario_tenant, tenant, tecnico, material_seriado, almacen
+):
+    series = [
+        Serie.objects.create(
+            numero=f"SER00000000{indice}",
+            tenant=tenant,
+            region=tenant.region,
+            material=material_seriado,
+            lote=material_seriado.lote,
+            estado=EstadoSerie.DISPONIBLE,
+            creado_por=usuario_tenant,
+        )
+        for indice in range(1, 3)
+    ]
+    solicitud = crear_borrador_solicitud(
+        tenant,
+        date.today(),
+        [
+            {
+                "tecnico_id": tecnico.pk,
+                "material_id": material_seriado.pk,
+                "serie_ids": [serie.pk for serie in series],
+            }
+        ],
+        usuario_tenant,
+    )
+    datos = datos_iniciales_solicitud(solicitud)
+    assert len(datos) == 1
+    assert len(datos[0]["filas"]) == 1
+    assert datos[0]["filas"][0]["series"] == [serie.pk for serie in series]
+
+
+@pytest.mark.django_db
+def test_no_editar_solicitud_enviada(
+    usuario_tenant, tenant, tecnico, material_no_seriado, almacen
+):
+    StockGeneral.objects.create(
+        tenant=tenant, material=material_no_seriado, cantidad=10
+    )
+    solicitud = crear_y_enviar_solicitud(
+        tenant,
+        date.today(),
+        [
+            {
+                "tecnico_id": tecnico.pk,
+                "material_id": material_no_seriado.pk,
+                "cantidad": 1,
+            }
+        ],
+        usuario_tenant,
+    )
+    with pytest.raises(EstadoSolicitudInvalido):
+        actualizar_borrador_solicitud(
+            solicitud,
+            date.today(),
+            [
+                {
+                    "tecnico_id": tecnico.pk,
+                    "material_id": material_no_seriado.pk,
+                    "cantidad": 1,
+                }
+            ],
+            usuario_tenant,
+        )
+
+
+@pytest.mark.django_db
+def test_editar_borrador_revalida_stock(
+    usuario_tenant, tenant, tecnico, material_no_seriado, almacen
+):
+    stock = StockGeneral.objects.create(
+        tenant=tenant, material=material_no_seriado, cantidad=2
+    )
+    solicitud = crear_borrador_solicitud(
+        tenant,
+        date.today(),
+        [
+            {
+                "tecnico_id": tecnico.pk,
+                "material_id": material_no_seriado.pk,
+                "cantidad": 2,
+            }
+        ],
+        usuario_tenant,
+    )
+    StockGeneral.objects.filter(pk=stock.pk).update(cantidad=1)
+
+    with pytest.raises(CantidadExcedeDisponible, match="solo quedan 1"):
+        actualizar_borrador_solicitud(
+            solicitud,
+            date.today(),
+            [
+                {
+                    "tecnico_id": tecnico.pk,
+                    "material_id": material_no_seriado.pk,
+                    "cantidad": 2,
+                }
+            ],
+            usuario_tenant,
+        )
+    assert solicitud.lineas.get().cantidad == 2

@@ -43,6 +43,7 @@
   {% endif %}
 
   {% if puede_enviar %}
+    <p><a class="boton" href="{% url 'editar_asignacion' solicitud.pk %}">Editar borrador</a></p>
     <form method="post" action="{% url 'enviar_asignacion' solicitud.pk %}"
           data-confirmar="¿Enviar esta solicitud al almacén?">
       {% csrf_token %}

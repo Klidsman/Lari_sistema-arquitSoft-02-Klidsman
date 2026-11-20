@@ -112,11 +112,15 @@ tenant y la región salen de la sesión.
    Se crean las líneas en el bloque; la ventana de series del primer seriado se abre automáticamente.
 5. En esa ventana, buscar por número y marcar **varias** series. El otro seriado queda pendiente con
    su botón "Elegir series"; completarlo.
-6. Verificar que el sobrante del panel baja al agregar y que un material agotado se deshabilita.
+6. Verificar que el sobrante del panel baja al agregar, que la etiqueta “disponible” del
+   desplegable de materiales también baja y que un material agotado se deshabilita.
 7. Pulsar "Agregar técnico", elegir `LA0002` y repetir con sus materiales.
-8. Verificar que el bloque de `LA0001` sigue visible y que se puede editar o quitar.
-9. Intentar agregar otra vez el mismo material para `LA0001`: debe rechazarse con un mensaje.
-10. Pulsar "Enviar" y abrir el detalle.
+8. Con un material de 2 unidades, asignar 1 a `LA0001` e intentar 2 a `LA0002`: el campo debe
+   limitarse a 1 y mostrar "solo quedan 1".
+9. Quitar una línea y verificar que el sobrante del panel se recupera.
+10. Verificar que el bloque de `LA0001` sigue visible y que se puede editar o quitar.
+11. Intentar agregar otra vez el mismo material para `LA0001`: debe rechazarse con un mensaje.
+12. Pulsar "Enviar" y abrir el detalle.
 
 **Resultado esperado**:
 
@@ -124,8 +128,21 @@ tenant y la región salen de la sesión.
 - El Excel es una tabla con columnas Movimiento (Z31), Centro, Almacén, Material, Descripción,
   Cantidad, NIF Técnico, Lote y Serie; las filas siguen el orden de captura.
 - Un material repetido para el mismo técnico se rechaza, no se une ni se duplica.
+- La cantidad nunca supera el sobrante y el panel lo refleja en vivo.
 - El detalle ofrece "Descargar Excel de asignación" al tenant.
 - Cada serie queda reservada; el stock no cambia hasta la confirmación.
+
+### Escenario 0.1 — Editar un borrador
+
+1. Crear una solicitud y pulsar "Guardar borrador".
+2. Desde el listado o el detalle, pulsar "Editar".
+3. Verificar que se precargan técnicos, fecha, líneas, cantidades y series.
+4. Cambiar un técnico, la fecha, una cantidad y una serie; pulsar "Guardar cambios".
+5. Verificar que la solicitud sigue en `BORRADOR`, sin Excel y sin reservas.
+6. Enviar la solicitud y verificar que "Editar" ya no está disponible o responde `409`.
+
+**Resultado esperado**: los cambios se guardan, la solicitud permanece en borrador y el stock se
+revalida. Una solicitud enviada no se puede editar.
 
 ### Escenario 1 — Crear y enviar una solicitud válida (CA-01, CA-05, CA-06)
 

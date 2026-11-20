@@ -26,6 +26,11 @@ urlpatterns = [
         name="excel_asignacion",
     ),
     path(
+        "<int:solicitud_id>/editar/",
+        views.editar_asignacion,
+        name="editar_asignacion",
+    ),
+    path(
         "<int:solicitud_id>/enviar/",
         views.enviar_asignacion,
         name="enviar_asignacion",

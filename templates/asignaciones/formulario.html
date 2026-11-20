@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Nueva asignación · Lari{% endblock %}
+{% block title %}{% if solicitud %}Editar solicitud {{ solicitud.pk }}{% else %}Nueva asignación{% endif %} · Lari{% endblock %}
 
 {% block contenido %}
-  <h1>Nueva solicitud de asignación</h1>
+  <h1>{% if solicitud %}Editar solicitud {{ solicitud.pk }}{% else %}Nueva solicitud de asignación{% endif %}</h1>
 
   {% if error %}<p class="mensaje mensaje-error" role="alert">{{ error }}</p>{% endif %}
 
@@ -23,7 +23,9 @@
           <a href="{% url 'lista_recojos' %}">recojo de materiales</a>.</p>
       {% endif %}
 
-      <form method="post" action="{% url 'nueva_asignacion' %}" id="form-asignacion">
+      <form method="post"
+            action="{% if solicitud %}{% url 'editar_asignacion' solicitud.pk %}{% else %}{% url 'nueva_asignacion' %}{% endif %}"
+            id="form-asignacion">
         {% csrf_token %}
         <input type="hidden" name="lineas-TOTAL_FORMS" id="total-filas" value="0">
         <input type="hidden" name="lineas-INITIAL_FORMS" value="0">
@@ -47,9 +49,13 @@
 
         <div id="bloques"></div>
 
-        <button type="submit" name="accion" value="borrador">Guardar borrador</button>
-        <button type="submit" name="accion" value="enviar">Enviar solicitud</button>
-        <a href="{% url 'lista_asignaciones' %}">Cancelar</a>
+        {% if solicitud %}
+          <button type="submit" name="accion" value="borrador">Guardar cambios</button>
+        {% else %}
+          <button type="submit" name="accion" value="borrador">Guardar borrador</button>
+          <button type="submit" name="accion" value="enviar">Enviar solicitud</button>
+        {% endif %}
+        <a href="{% if solicitud %}{% url 'detalle_asignacion' solicitud.pk %}{% else %}{% url 'lista_asignaciones' %}{% endif %}">Cancelar</a>
       </form>
     </div>
   </div>
@@ -83,7 +89,7 @@
         <select name="lineas-__INDICE__-material_id" class="material-fila">
           <option value="">Selecciona un material</option>
           {% for item in materiales %}
-            <option value="{{ item.material.pk }}" data-seriado="{% if item.seriado %}1{% else %}0{% endif %}">{{ item.material.codigo }} - {{ item.material.descripcion }} (disponible: {{ item.disponible }})</option>
+            <option value="{{ item.material.pk }}" data-seriado="{% if item.seriado %}1{% else %}0{% endif %}" data-disponible="{{ item.disponible }}" data-etiqueta="{{ item.material.codigo }} - {{ item.material.descripcion }}">{{ item.material.codigo }} - {{ item.material.descripcion }} (disponible: {{ item.disponible }})</option>
           {% endfor %}
         </select>
       </label>
@@ -94,10 +100,13 @@
       </div>
       <div class="bloque-no-seriados" hidden>
         <label>Cantidad <input type="number" min="1" name="lineas-__INDICE__-cantidad"></label>
+        <span class="aviso-cantidad" role="status"></span>
       </div>
       <button type="button" class="quitar-fila">Quitar material</button>
     </div>
   </template>
+
+  {{ datos_iniciales|json_script:"datos-iniciales" }}
 {% endblock %}
 
 {% block extra_scripts %}
@@ -211,7 +220,20 @@
     var fila = contenedor.firstElementChild;
     bloque.querySelector(".filas-bloque").appendChild(fila);
     actualizarTotal();
+    actualizarMaximo(fila, false);
+    actualizarEtiquetasMateriales();
     return fila;
+  }
+
+  function crearBloque(tecnicoId, titulo) {
+    var html = plantillaBloque.innerHTML
+      .split("__TECNICO__").join(tecnicoId);
+    var contenedor = document.createElement("div");
+    contenedor.innerHTML = html;
+    var bloque = contenedor.firstElementChild;
+    bloque.querySelector(".titulo-bloque").textContent = titulo;
+    contenedorBloques.appendChild(bloque);
+    return bloque;
   }
 
   function agregarBloque() {
@@ -224,13 +246,7 @@
       mostrarMensaje("Ese técnico ya tiene un bloque en esta solicitud.");
       return;
     }
-    var html = plantillaBloque.innerHTML
-      .split("__TECNICO__").join(opcion.value);
-    var contenedor = document.createElement("div");
-    contenedor.innerHTML = html;
-    var bloque = contenedor.firstElementChild;
-    bloque.querySelector(".titulo-bloque").textContent = opcion.text;
-    contenedorBloques.appendChild(bloque);
+    var bloque = crearBloque(opcion.value, opcion.text);
     agregarFila(bloque);
     selectorTecnico.value = "";
     activarBloque(bloque);
@@ -247,6 +263,87 @@
     var seriado = esSeriado(opcion);
     fila.querySelector(".bloque-seriados").hidden = !seriado;
     fila.querySelector(".bloque-no-seriados").hidden = seriado || !opcion;
+  }
+
+  function cantidadDe(fila) {
+    var input = fila.querySelector(".bloque-no-seriados input[type=number]");
+    if (!input) return 0;
+    var valor = parseInt(input.value, 10);
+    return isNaN(valor) || valor < 0 ? 0 : valor;
+  }
+
+  function maximoParaFila(fila) {
+    var opcion = materialDe(fila);
+    if (!opcion || esSeriado(opcion)) return null;
+    var disponible = parseInt(opcion.dataset.disponible || "0", 10);
+    if (isNaN(disponible)) disponible = 0;
+    var usadoOtros = 0;
+    filasDe(contenedorBloques).forEach(function (otra) {
+      if (otra === fila) return;
+      var otraOpcion = materialDe(otra);
+      if (otraOpcion && otraOpcion.value === opcion.value) {
+        usadoOtros += cantidadDe(otra);
+      }
+    });
+    return Math.max(0, disponible - usadoOtros);
+  }
+
+  function actualizarAvisoCantidad(fila, maximo) {
+    var aviso = fila.querySelector(".aviso-cantidad");
+    var input = fila.querySelector(".bloque-no-seriados input[type=number]");
+    if (!aviso || !input) return;
+    var valor = parseInt(input.value, 10);
+    if (maximo === 0 && (!input.value || valor === 0)) {
+      aviso.textContent = "No quedan unidades disponibles.";
+    } else if (!isNaN(valor) && valor > maximo) {
+      aviso.textContent = "Solo quedan " + maximo + ".";
+    } else {
+      aviso.textContent = "";
+    }
+  }
+
+  function actualizarMaximo(fila, ajustar) {
+    var maximo = maximoParaFila(fila);
+    if (maximo === null) return;
+    var input = fila.querySelector(".bloque-no-seriados input[type=number]");
+    if (!input) return;
+    input.max = String(maximo);
+    var valor = parseInt(input.value, 10);
+    if (ajustar && !isNaN(valor) && valor > maximo) {
+      input.value = maximo > 0 ? String(maximo) : "";
+    }
+    actualizarAvisoCantidad(fila, maximo);
+  }
+
+  function actualizarMaximos() {
+    filasDe(contenedorBloques).forEach(function (fila) {
+      actualizarMaximo(fila, false);
+    });
+  }
+
+  function actualizarEtiquetasMateriales() {
+    var totales = {};
+    filasDe(contenedorBloques).forEach(function (fila) {
+      var opcion = materialDe(fila);
+      if (!opcion) return;
+      var datos = totales[opcion.value] || { seriado: esSeriado(opcion), cantidad: 0 };
+      datos.cantidad += datos.seriado
+        ? seriesDeFila(fila).length
+        : cantidadDe(fila);
+      totales[opcion.value] = datos;
+    });
+    Array.prototype.slice
+      .call(document.querySelectorAll(".material-fila option[value]"))
+      .forEach(function (opcion) {
+        if (!opcion.value) return;
+        var base = opcion.dataset.etiqueta;
+        if (!base) return;
+        var disponible = parseInt(opcion.dataset.disponible || "0", 10);
+        if (isNaN(disponible)) disponible = 0;
+        var datos = totales[opcion.value];
+        var restante = disponible - (datos ? datos.cantidad : 0);
+        opcion.textContent = base + " (disponible: " + restante + ")";
+      });
   }
 
   function verificarDuplicado(fila) {
@@ -342,6 +439,7 @@
     filaSeriesActual.querySelector(".resumen-series").textContent = marcadas.length
       ? marcadas.length + " serie(s) seleccionada(s)"
       : "Sin series";
+    actualizarEtiquetasMateriales();
     dialogo.close();
     filaSeriesActual = null;
     actualizarSobrante();
@@ -401,9 +499,57 @@
         if (cantidad) cantidad.focus();
       }
     });
+    actualizarMaximos();
+    actualizarEtiquetasMateriales();
     actualizarPanelBloqueActivo();
     actualizarSobrante();
     if (primerSeriado) abrirSeries(primerSeriado);
+  }
+
+  function cargarIniciales() {
+    var script = document.getElementById("datos-iniciales");
+    if (!script) return;
+    var datos = [];
+    try {
+      datos = JSON.parse(script.textContent || "[]");
+    } catch (error) {
+      datos = [];
+    }
+    datos.forEach(function (datosBloque) {
+      var bloque = crearBloque(
+        String(datosBloque.tecnico),
+        datosBloque.titulo
+      );
+      datosBloque.filas.forEach(function (datosFila) {
+        var fila = agregarFila(bloque);
+        fila.querySelector(".material-fila").value = String(datosFila.material);
+        actualizarFila(fila);
+        if (datosFila.seriado) {
+          var contenedorSeries = fila.querySelector(".series-seleccionadas");
+          datosFila.series.forEach(function (serieId) {
+            var input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "lineas-" + fila.dataset.indice + "-serie_ids";
+            input.value = String(serieId);
+            contenedorSeries.appendChild(input);
+          });
+          fila.querySelector(".resumen-series").textContent = datosFila.series.length
+            ? datosFila.series.length + " serie(s) seleccionada(s)"
+            : "Sin series";
+        } else {
+          var cantidad = fila.querySelector(
+            '.bloque-no-seriados input[type="number"]'
+          );
+          cantidad.value = String(datosFila.cantidad);
+          actualizarMaximo(fila, false);
+        }
+      });
+    });
+    if (datos.length) {
+      activarBloque(
+        contenedorBloques.querySelector(".bloque-tecnico")
+      );
+    }
   }
 
   botonAgregarBloque.addEventListener("click", agregarBloque);
@@ -424,11 +570,15 @@
         var restantes = contenedorBloques.querySelectorAll(".bloque-tecnico");
         activarBloque(restantes.length ? restantes[restantes.length - 1] : null);
       }
+      actualizarMaximos();
+      actualizarEtiquetasMateriales();
       actualizarSobrante();
       return;
     }
     if (evento.target.classList.contains("quitar-fila")) {
       evento.target.closest(".fila-asignacion").remove();
+      actualizarMaximos();
+      actualizarEtiquetasMateriales();
       actualizarPanelBloqueActivo();
       actualizarSobrante();
       return;
@@ -441,12 +591,17 @@
   contenedorBloques.addEventListener("change", function (evento) {
     if (!evento.target.classList.contains("material-fila")) return;
     var fila = evento.target.closest(".fila-asignacion");
+    var cantidadInput = fila.querySelector('.bloque-no-seriados input[type=number]');
+    if (cantidadInput) cantidadInput.value = "";
     limpiarSeries(fila);
     actualizarFila(fila);
     if (verificarDuplicado(fila)) {
       actualizarPanelBloqueActivo();
       return;
     }
+    actualizarMaximo(fila, true);
+    actualizarMaximos();
+    actualizarEtiquetasMateriales();
     actualizarPanelBloqueActivo();
     actualizarSobrante();
     var opcion = materialDe(fila);
@@ -457,6 +612,10 @@
 
   contenedorBloques.addEventListener("input", function (evento) {
     if (evento.target.matches("input[type=number]")) {
+      var fila = evento.target.closest(".fila-asignacion");
+      actualizarMaximo(fila, true);
+      actualizarMaximos();
+      actualizarEtiquetasMateriales();
       actualizarSobrante();
     }
   });
@@ -493,6 +652,8 @@
         var cantidad = fila.querySelector('input[type="number"]');
         if (!cantidad || !cantidad.value || Number(cantidad.value) < 1) {
           problema = "Cada material no seriado debe tener una cantidad mayor a 0.";
+        } else if (Number(cantidad.value) > Number(cantidad.max)) {
+          problema = "La cantidad supera el sobrante disponible.";
         }
       }
     });
@@ -504,7 +665,10 @@
     actualizarTotal();
   });
 
+  cargarIniciales();
   actualizarTotal();
+  actualizarMaximos();
+  actualizarEtiquetasMateriales();
   actualizarPanelBloqueActivo();
 })();
 </script>

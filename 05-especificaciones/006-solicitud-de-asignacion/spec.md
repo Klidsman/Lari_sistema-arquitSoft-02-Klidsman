@@ -23,6 +23,11 @@ Permitir que los tenants creen solicitudes de asignación de materiales a sus t�
 - Q: ¿Dónde va el panel de materiales? → A: Fijo a la izquierda, siempre visible.
 - Q: Si el lote incluye varios seriados, ¿cómo se eligen sus series? → A: Se agregan todas las líneas; las seriadas quedan pendientes con "Elegir series" y solo la ventana del primer seriado se abre automáticamente.
 - Q: ¿El panel muestra cantidades actualizadas? → A: Sí, disponible y sobrante por material; se actualizan al agregar o quitar líneas y el material se deshabilita al llegar a 0.
+- Q: ¿Qué pasa si se intenta asignar más de lo que queda disponible? → A: El campo se limita al sobrante en ese momento, muestra "solo quedan N" y el panel baja en vivo. El servidor vuelve a validar al enviar.
+- Q: ¿Qué pasa si el stock cambia mientras el formulario está abierto? → A: Se revalida al enviar; si ya no alcanza, se rechaza con un mensaje y se refresca el sobrante. No hay refresco automático mientras se escribe.
+- Q: ¿El desplegable de materiales debe mostrar la cantidad actualizada? → A: Sí; debe mostrar el sobrante y bajar a medida que se asignan materiales, recuperándose al quitar líneas. No debe quedarse en el disponible inicial.
+- Q: Al guardar un borrador editado, ¿sigue siendo borrador? → A: Sí; “Guardar cambios” mantiene el estado `BORRADOR` y el envío sigue siendo una acción separada.
+- Q: ¿Qué se puede editar en un borrador? → A: Todo: técnicos, fecha, materiales, cantidades y series, revalidando el stock al guardar.
 
 ## 2. Alcance
 
@@ -79,6 +84,7 @@ Permitir que los tenants creen solicitudes de asignación de materiales a sus t�
 - Un material no puede repetirse para el mismo técnico; se rechaza con un mensaje
 - La pantalla tiene un panel de materiales **fijo a la izquierda**, siempre visible
 - El panel muestra solo materiales con existencias del tenant (stock general disponible o series `DISPONIBLE`), con su disponible y sobrante actualizados
+- El desplegable de materiales muestra el **sobrante actualizado**, no el disponible inicial; baja al asignar y se recupera al quitar líneas
 - Se pueden marcar varios materiales en el panel y pulsar "Agregar seleccionados"; se agregan al bloque del técnico activo
 - Si no hay bloque de técnico activo, se pide agregar un técnico antes de agregar materiales
 - Al llegar el sobrante a 0, el material se marca como no disponible y no se puede seleccionar
@@ -91,15 +97,19 @@ Permitir que los tenants creen solicitudes de asignación de materiales a sus t�
 - Si se agregan varios materiales seriados en lote, la ventana del primero se abre automáticamente y las demás líneas quedan pendientes con el botón "Elegir series"
 - No se puede enviar mientras una línea seriada no tenga series
 - Solo se muestran series en estado Disponible
+- La ventana excluye las series ya seleccionadas en otras líneas de la solicitud
 - Si no hay series disponibles, la ventana muestra un mensaje
 - No se escriben las series manualmente; se seleccionan del inventario disponible
 
 ### 5.3 Ingreso de Cantidades (RF-23)
 - Para materiales no seriados, el tenant ingresa la cantidad
 - La cantidad debe ser un entero mayor que 0
-- La cantidad no puede superar el disponible en stock general
+- La cantidad no puede superar el sobrante del material en toda la solicitud, sumando todos los técnicos
+- El campo de cantidad se limita al sobrante en vivo; si se intenta superar, muestra "solo quedan N" y no lo permite
+- El sobrante del panel y la etiqueta del desplegable de materiales bajan al agregar una línea y se recuperan al quitarla
 - La disponibilidad se calcula descontando lo reservado en asignaciones pendientes
-- Fórmula: `Disponible = Stock General - Reservado`
+- Fórmula: `Sobrante = Stock General - Reservado - Cantidad de la solicitud en curso`
+- Al enviar se revalida; si el stock cambió, se rechaza con un mensaje y se refresca el sobrante
 
 ### 5.4 Reserva al Enviar (RF-24)
 - Al enviar la solicitud, las series seleccionadas pasan a estado Reservada
@@ -127,9 +137,19 @@ Permitir que los tenants creen solicitudes de asignación de materiales a sus t�
 
 ### 5.8 Alerta de Cupo Máximo (RF-63)
 - Para equipos seriados, el sistema emite una alerta si un técnico supera 20 días en mano
-- La alerta se muestra al tenant cuando intenta crear una nueva asignación
+- La alerta se muestra al tenant cuando intenta crear o editar una asignación
 - La alerta no bloquea la asignación, solo informa
 - El propósito es cumplir la política de custodia de equipos
+
+### 5.9 Edición de Borrador (RF-21)
+- Una solicitud en estado `BORRADOR` se puede editar desde el listado y desde el detalle con la acción "Editar"
+- La pantalla de edición precarga técnicos, fecha, líneas, cantidades y series existentes
+- Se pueden cambiar técnicos, fecha, materiales, cantidades y series
+- Al guardar se reemplazan las líneas de la solicitud, se revalida la disponibilidad y el sobrante, y la solicitud sigue en `BORRADOR`
+- Guardar la edición no reserva series, no genera Excel y no envía correo
+- Una solicitud que no está en `BORRADOR` no se puede editar; responde `409`
+- Si el stock cambió y ya no alcanza, se rechaza el guardado con un mensaje y no se modifica la solicitud
+- Cada cambio queda auditado con usuario, fecha y valores anterior/nuevo
 
 ## 6. Requisitos No Funcionales
 
@@ -230,6 +250,31 @@ Dado un lote de materiales que incluye varios seriados
 Cuando el tenant los agrega
 Entonces todas las líneas se crean, solo la ventana del primer seriado se abre automáticamente y las demás quedan pendientes con "Elegir series"
 
+### CA-17: Límite en Vivo del Sobrante
+Dado un material con 2 unidades disponibles
+Cuando el tenant asigna 1 a un técnico e intenta asignar 2 a otro
+Entonces la segunda línea solo permite 1, muestra "solo quedan 1" y el panel reduce el sobrante en vivo
+
+### CA-18: Revalidación al Enviar
+Dado un formulario abierto con un sobrante calculado
+Cuando el stock cambia antes de enviar
+Entonces el envío se rechaza con un mensaje, no se reserva nada y el panel se refresca con el sobrante real
+
+### CA-19: Desplegable de Materiales Actualizado
+Dado un material con 2 unidades disponibles
+Cuando el tenant asigna 1 unidad
+Entonces la etiqueta del material en el desplegable muestra 1 restante y vuelve a 2 si se quita la línea
+
+### CA-20: Editar un Borrador
+Dado un borrador guardado
+Cuando el tenant pulsa "Editar", cambia técnicos, fecha, materiales o cantidades y guarda
+Entonces la solicitud sigue en `BORRADOR`, con las líneas actualizadas y el stock revalidado
+
+### CA-21: No Editar una Solicitud Enviada
+Dada una solicitud en estado `ENVIADA`
+Cuando el tenant intenta abrir o guardar su edición
+Entonces la operación se rechaza con `409` y no se modifica nada
+
 ## 8. Datos de Entrada
 
 ### Formulario de Solicitud de Asignación
@@ -243,7 +288,7 @@ Entonces todas las líneas se crean, solo la ventana del primer seriado se abre 
 | Tipo de material | Read-only | Condicional | Seriado o no seriado (del catálogo) |
 | Lote | Read-only | Condicional | Lote del material (del catálogo) |
 | Series | Ventana modal multi-select | Condicional | Series disponibles con búsqueda (solo para seriados) |
-| Cantidad | Number | Condicional | Cantidad (solo para no seriados) |
+| Cantidad | Number | Condicional | Cantidad no seriada; máximo el sobrante en vivo |
 
 ## 9. Datos de Salida
 
@@ -264,7 +309,7 @@ Entonces todas las líneas se crean, solo la ventana del primer seriado se abre 
 
 1. Una solicitud de asignación puede incluir varios técnicos del tenant; cada línea tiene su técnico
 2. Solo se pueden seleccionar series en estado Disponible
-3. La cantidad no puede superar el disponible (descontando lo reservado)
+3. La cantidad no puede superar el sobrante del material en toda la solicitud, sumando todos los técnicos
 4. Al enviar, las series pasan a Reservada
 5. El Excel se genera automáticamente con metadatos fijos
 6. El NIF se autocompleta y no es editable
@@ -272,10 +317,16 @@ Entonces todas las líneas se crean, solo la ventana del primer seriado se abre 
 8. Se alerta si el técnico supera 20 días en mano de seriados
 9. Un material no se repite para el mismo técnico en la solicitud; se rechaza con un mensaje
 10. Los bloques de técnicos se editan o quitan en pantalla hasta enviar; el Excel se genera una sola vez
+11. El campo de cantidad se limita en vivo al sobrante; el servidor revalida al enviar
+12. Si el stock cambió mientras el formulario estaba abierto, se rechaza el envío y se refresca el sobrante
+13. Un borrador se puede editar completo: técnicos, fecha, líneas, cantidades y series; guardar no lo envía
+14. Solo se edita un borrador; cualquier otro estado se rechaza y no se modifica nada
 
 ## 11. Consideraciones de Implementación
 
 - La validación de disponibilidad debe ser eficiente (consultar índices de stock y series)
+- El formulario debe recalcular el sobrante por material al cambiar cualquier línea y aplicar un máximo a las cantidades no seriadas
+- La validación del servidor es la autoridad final; el límite en vivo solo mejora la experiencia
 - La generación del Excel debe usar openpyxl y calcular el hash SHA-256
 - La reserva de series debe ser transaccional
 - La ventana de series debe soportar búsqueda y paginación para grandes volúmenes

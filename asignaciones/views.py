@@ -54,13 +54,23 @@ def _lineas_de_post(request):
     return lineas
 
 
-def _contexto_formulario(tenant):
+def _contexto_formulario(tenant, solicitud=None):
+    if solicitud is not None:
+        lineas_sobrante = services.lineas_para_sobrante(solicitud)
+        datos_iniciales = services.datos_iniciales_solicitud(solicitud)
+    else:
+        lineas_sobrante = []
+        datos_iniciales = []
     return {
         "tecnicos": Tecnico.objects.filter(tenant=tenant, activo=True).order_by(
             "nombre", "nif"
         ),
-        "materiales": services.materiales_disponibles_para_asignacion(tenant),
-        "panel_materiales": services.calcular_sobrante(tenant, []),
+        "materiales": services.materiales_para_formulario(tenant, solicitud),
+        "panel_materiales": services.calcular_sobrante(
+            tenant, lineas_sobrante
+        ),
+        "solicitud": solicitud,
+        "datos_iniciales": datos_iniciales,
         "hoy": date.today(),
     }
 
@@ -122,6 +132,52 @@ def nueva_asignacion(request):
             contexto["error"] = str(exc)
             return render(request, "asignaciones/formulario.html", contexto, status=409)
 
+        return redirect("detalle_asignacion", solicitud_id=solicitud.pk)
+
+    return render(request, "asignaciones/formulario.html", contexto)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def editar_asignacion(request, solicitud_id):
+    tenant, error = _tenant_o_error(request)
+    if error is not None:
+        return error
+    try:
+        solicitud = services.obtener_detalle_solicitud(tenant, solicitud_id)
+    except services.SolicitudNoExiste as exc:
+        return _respuesta(str(exc), 404)
+
+    if solicitud.estado != EstadoSolicitud.BORRADOR:
+        return _respuesta(
+            "Solo se pueden editar solicitudes en borrador", 409
+        )
+
+    contexto = _contexto_formulario(tenant, solicitud)
+    if request.method == "POST":
+        fecha = request.POST.get("fecha") or date.today()
+        lineas = _lineas_de_post(request)
+        try:
+            services.actualizar_borrador_solicitud(
+                solicitud, fecha, lineas, request.usuario
+            )
+        except services.EstadoSolicitudInvalido as exc:
+            contexto["error"] = str(exc)
+            return render(
+                request,
+                "asignaciones/formulario.html",
+                contexto,
+                status=409,
+            )
+        except services.ValidacionAsignacion as exc:
+            contexto["error"] = str(exc)
+            return render(
+                request,
+                "asignaciones/formulario.html",
+                contexto,
+                status=400,
+            )
+        messages.success(request, "Borrador actualizado")
         return redirect("detalle_asignacion", solicitud_id=solicitud.pk)
 
     return render(request, "asignaciones/formulario.html", contexto)

@@ -268,8 +268,13 @@ def test_formulario_solo_muestra_materiales_con_existencias(
 
 @pytest.mark.django_db
 def test_formulario_tiene_bloques_y_ventana_de_series(
-    cliente_tenant, almacen
+    cliente_tenant, tenant, material_no_seriado, almacen
 ):
+    from stock.models import StockGeneral
+
+    StockGeneral.objects.create(
+        tenant=tenant, material=material_no_seriado, cantidad=2
+    )
     respuesta = cliente_tenant.get(reverse("nueva_asignacion"))
     contenido = respuesta.content.decode()
     assert 'id="panel-materiales"' in contenido
@@ -279,6 +284,9 @@ def test_formulario_tiene_bloques_y_ventana_de_series(
     assert 'id="dialogo-series"' in contenido
     assert 'id="plantilla-bloque"' in contenido
     assert 'id="plantilla-fila"' in contenido
+    assert 'data-disponible="2"' in contenido
+    assert 'data-etiqueta="' in contenido
+    assert 'class="aviso-cantidad"' in contenido
 
 
 @pytest.mark.django_db
@@ -307,3 +315,83 @@ def test_material_repetido_para_mismo_tecnico_devuelve_400(
     assert respuesta.status_code == 400
     assert "ya fue agregado para este técnico" in respuesta.content.decode()
     assert not SolicitudAsignacion.objects.exists()
+
+
+@pytest.mark.django_db
+def test_editar_borrador_http(
+    cliente_tenant,
+    cliente_otro_tenant,
+    usuario_tenant,
+    tenant,
+    tecnico,
+    material_no_seriado,
+    almacen,
+):
+    from stock.models import StockGeneral
+
+    StockGeneral.objects.create(
+        tenant=tenant, material=material_no_seriado, cantidad=10
+    )
+    respuesta = cliente_tenant.post(
+        reverse("nueva_asignacion"),
+        _post(
+            {"tecnico_id": tecnico.pk, "accion": "borrador"},
+            material_no_seriado,
+            cantidad="2",
+        ),
+    )
+    assert respuesta.status_code == 302
+    solicitud = SolicitudAsignacion.objects.get()
+    editar = reverse("editar_asignacion", args=[solicitud.pk])
+    respuesta = cliente_tenant.get(editar)
+    assert respuesta.status_code == 200
+    contenido = respuesta.content.decode()
+    assert material_no_seriado.codigo in contenido
+    assert '"cantidad": 2' in contenido
+    assert "datos-iniciales" in contenido
+
+    detalle = cliente_tenant.get(
+        reverse("detalle_asignacion", args=[solicitud.pk])
+    )
+    assert editar.encode() in detalle.content
+    listado = cliente_tenant.get(reverse("lista_asignaciones"))
+    assert editar.encode() in listado.content
+
+    respuesta = cliente_tenant.post(
+        editar,
+        _post(
+            {"tecnico_id": tecnico.pk, "accion": "borrador"},
+            material_no_seriado,
+            cantidad="3",
+        ),
+    )
+    assert respuesta.status_code == 302
+    solicitud.refresh_from_db()
+    assert solicitud.estado == EstadoSolicitud.BORRADOR
+    assert solicitud.lineas.get().cantidad == 3
+    assert solicitud.excel_ruta == ""
+
+    assert cliente_otro_tenant.get(editar).status_code == 404
+
+
+@pytest.mark.django_db
+def test_no_editar_solicitud_enviada_http(
+    cliente_tenant, tenant, tecnico, material_no_seriado, almacen
+):
+    from stock.models import StockGeneral
+
+    StockGeneral.objects.create(
+        tenant=tenant, material=material_no_seriado, cantidad=10
+    )
+    cliente_tenant.post(
+        reverse("nueva_asignacion"),
+        _post(
+            {"tecnico_id": tecnico.pk, "accion": "enviar"},
+            material_no_seriado,
+            cantidad="2",
+        ),
+    )
+    solicitud = SolicitudAsignacion.objects.get()
+    editar = reverse("editar_asignacion", args=[solicitud.pk])
+    assert cliente_tenant.get(editar).status_code == 409
+    assert cliente_tenant.post(editar, {}).status_code == 409

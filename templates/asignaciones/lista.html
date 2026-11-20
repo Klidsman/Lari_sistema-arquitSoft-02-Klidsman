@@ -33,7 +33,12 @@
           <td>{{ solicitud.nifs_tecnicos }}</td>
           <td>{{ solicitud.get_estado_display }}</td>
           <td>{{ solicitud.lineas.count }}</td>
-          <td><a href="{% url 'detalle_asignacion' solicitud.pk %}">Ver</a></td>
+          <td>
+            <a href="{% url 'detalle_asignacion' solicitud.pk %}">Ver</a>
+            {% if solicitud.estado == "BORRADOR" %}
+              · <a href="{% url 'editar_asignacion' solicitud.pk %}">Editar</a>
+            {% endif %}
+          </td>
         </tr>
       {% empty %}
         <tr><td colspan="6">No hay solicitudes.</td></tr>

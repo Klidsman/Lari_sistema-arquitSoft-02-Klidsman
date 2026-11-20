@@ -206,8 +206,11 @@ def calcular_disponible(tenant, material):
 
 
 def validar_cantidad_disponible(tenant, material, cantidad):
-    if cantidad > calcular_disponible(tenant, material):
-        raise CantidadExcedeDisponible("La cantidad supera el stock disponible")
+    disponible = calcular_disponible(tenant, material)
+    if cantidad > disponible:
+        raise CantidadExcedeDisponible(
+            f"La cantidad supera el stock disponible; solo quedan {disponible}"
+        )
 
 
 def materiales_disponibles_para_asignacion(tenant):
@@ -244,6 +247,95 @@ def materiales_disponibles_para_asignacion(tenant):
                 )
             )
     return disponibles
+
+
+def materiales_para_formulario(tenant, solicitud=None):
+    """Materiales disponibles más los ya usados por el borrador que se edita."""
+    disponibles = materiales_disponibles_para_asignacion(tenant)
+    por_id = {fila.material.pk: fila for fila in disponibles}
+    if solicitud is not None:
+        for linea in solicitud.lineas.select_related("material"):
+            if linea.material_id in por_id:
+                continue
+            material = linea.material
+            if material.es_seriado:
+                cantidad = Serie.objects.filter(
+                    tenant=tenant,
+                    material=material,
+                    estado=EstadoSerie.DISPONIBLE,
+                ).count()
+            else:
+                cantidad = calcular_disponible(tenant, material)
+            por_id[material.pk] = MaterialDisponible(
+                material=material,
+                disponible=max(0, cantidad),
+                seriado=material.es_seriado,
+            )
+    return sorted(por_id.values(), key=lambda fila: fila.material.codigo)
+
+
+def datos_iniciales_solicitud(solicitud):
+    """Bloques y filas para precargar el formulario de edición."""
+    bloques = []
+    indices_tecnico = {}
+    for linea in solicitud.lineas.select_related(
+        "tecnico", "material", "serie"
+    ).order_by("id"):
+        if linea.tecnico_id not in indices_tecnico:
+            indices_tecnico[linea.tecnico_id] = len(bloques)
+            bloques.append(
+                {
+                    "tecnico": linea.tecnico_id,
+                    "titulo": f"{linea.tecnico.nif} - {linea.tecnico.nombre}",
+                    "filas": [],
+                }
+            )
+        bloque = bloques[indices_tecnico[linea.tecnico_id]]
+        fila = next(
+            (
+                item
+                for item in bloque["filas"]
+                if item["material"] == linea.material_id
+            ),
+            None,
+        )
+        if fila is None:
+            fila = {
+                "material": linea.material_id,
+                "seriado": linea.material.es_seriado,
+                "cantidad": 0,
+                "series": [],
+            }
+            bloque["filas"].append(fila)
+        if linea.serie_id:
+            fila["series"].append(linea.serie_id)
+        else:
+            fila["cantidad"] += linea.cantidad
+    for bloque in bloques:
+        for fila in bloque["filas"]:
+            if fila["seriado"]:
+                fila["cantidad"] = 1
+    return bloques
+
+
+def lineas_para_sobrante(solicitud):
+    lineas = []
+    for linea in solicitud.lineas.all():
+        if linea.serie_id:
+            lineas.append(
+                {
+                    "material_id": linea.material_id,
+                    "serie_ids": [linea.serie_id],
+                }
+            )
+        else:
+            lineas.append(
+                {
+                    "material_id": linea.material_id,
+                    "cantidad": linea.cantidad,
+                }
+            )
+    return lineas
 
 
 def validar_series_disponibles(tenant, material, series):
@@ -402,6 +494,105 @@ def crear_borrador_solicitud(tenant, fecha, lineas, actor):
         _auditar_alta_solicitud(solicitud, actor)
 
     return solicitud
+
+
+def _describir_linea(linea):
+    serie = linea.serie.numero if linea.serie_id else ""
+    return (
+        f"{linea.material.codigo}; tecnico={linea.tecnico.nif}; "
+        f"lote={linea.lote}; serie={serie}; cantidad={linea.cantidad}"
+    )
+
+
+def actualizar_borrador_solicitud(solicitud, fecha, lineas, actor):
+    """Reemplaza las líneas de un borrador sin enviarlo ni reservar stock."""
+    tenant = validar_cuenta_tenant(actor)
+    if solicitud.tenant_id != tenant.pk:
+        raise SolicitudNoExiste("La solicitud no existe")
+    if solicitud.estado != EstadoSolicitud.BORRADOR:
+        raise EstadoSolicitudInvalido(
+            "Solo se pueden editar solicitudes en borrador"
+        )
+    if isinstance(fecha, str):
+        fecha = parse_date(fecha)
+    if fecha is None:
+        raise ValidacionAsignacion("La fecha es obligatoria")
+    lineas_validadas = normalizar_lineas_solicitud(tenant, lineas)
+
+    with transaction.atomic():
+        bloqueada = SolicitudAsignacion.objects.select_for_update().get(
+            pk=solicitud.pk
+        )
+        if bloqueada.tenant_id != tenant.pk:
+            raise SolicitudNoExiste("La solicitud no existe")
+        if bloqueada.estado != EstadoSolicitud.BORRADOR:
+            raise EstadoSolicitudInvalido(
+                "Solo se pueden editar solicitudes en borrador"
+            )
+
+        anteriores = list(
+            bloqueada.lineas.select_related("material", "serie", "tecnico")
+        )
+        anterior_fecha = bloqueada.fecha
+        for linea in anteriores:
+            registrar_cambio(
+                "LineaAsignacion",
+                linea.pk,
+                "baja",
+                _describir_linea(linea),
+                "",
+                actor,
+                tenant=tenant,
+            )
+        bloqueada.lineas.all().delete()
+
+        for linea in sorted(
+            lineas_validadas, key=lambda item: item.fila_origen or 0
+        ):
+            nueva = LineaAsignacion.objects.create(
+                tenant=tenant,
+                solicitud=bloqueada,
+                tecnico=linea.tecnico,
+                material=linea.material,
+                lote=linea.lote,
+                serie=linea.serie,
+                cantidad=linea.cantidad,
+            )
+            registrar_cambio(
+                "LineaAsignacion",
+                nueva.pk,
+                "alta",
+                "",
+                _describir_linea(nueva),
+                actor,
+                tenant=tenant,
+            )
+
+        bloqueada.fecha = fecha
+        bloqueada.actualizado_por = actor
+        bloqueada.save(
+            update_fields=["fecha", "actualizado_por", "actualizado_en"]
+        )
+        if anterior_fecha != fecha:
+            registrar_cambio(
+                "SolicitudAsignacion",
+                bloqueada.pk,
+                "fecha",
+                anterior_fecha,
+                fecha,
+                actor,
+                tenant=tenant,
+            )
+        registrar_cambio(
+            "SolicitudAsignacion",
+            bloqueada.pk,
+            "actualizado",
+            "",
+            f"lineas={len(lineas_validadas)}",
+            actor,
+            tenant=tenant,
+        )
+    return bloqueada
 
 
 def _lineas_no_seriadas(solicitud):

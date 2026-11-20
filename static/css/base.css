@@ -177,6 +177,12 @@ button {
   color: #8a5a00;
 }
 
+.aviso-cantidad {
+  display: block;
+  color: var(--error);
+  font-size: 0.85rem;
+}
+
 .contenido-asignacion {
   flex: 1;
   min-width: 0;

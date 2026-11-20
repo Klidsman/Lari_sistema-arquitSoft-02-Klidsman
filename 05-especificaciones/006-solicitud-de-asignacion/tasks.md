@@ -83,6 +83,21 @@ confirmación del almacén.
 - Panel lateral implementado 2026-11-19: fijo a la izquierda, materiales con disponible y sobrante
   actualizados, selección múltiple con "Agregar seleccionados" al bloque activo, deshabilitado al
   llegar a 0, y series pendientes para los seriados agregados en lote.
+- Límite en vivo del sobrante implementado 2026-11-19: máximo por línea no seriada, aviso
+  "solo quedan N", ajuste al sobrante y refresco al quitar líneas. El servidor revalida el total
+  por material al enviar y responde con "solo quedan N" si se supera.
+- Pruebas del límite: `test_dos_unidades_solo_permiten_una_al_segundo_tecnico`,
+  `test_sobrante_refleja_el_exceso_entre_tecnicos` y las comprobaciones del formulario
+  (`data-disponible` y `aviso-cantidad`).
+- Etiqueta “disponible” del desplegable implementada 2026-11-19: cada opción muestra el sobrante
+  actualizado y se recalcula al cambiar cantidades, series, materiales o quitar líneas. Prueba de
+  contrato del formulario: `data-etiqueta` y `data-disponible`.
+- Edición de borrador implementada 2026-11-19: ruta `/asignaciones/<id>/editar/` GET/POST,
+  precarga de técnicos/fecha/líneas/series, reemplazo de líneas, auditoría, botón en listado y
+  detalle, y `409` para estados distintos de `BORRADOR`.
+- Pruebas de edición: `test_editar_borrador_actualiza_todo_y_audita`,
+  `test_datos_iniciales_precargan_series_agrupadas`, `test_no_editar_solicitud_enviada`,
+  `test_editar_borrador_revalida_stock` y `test_editar_borrador_http`.
 - Pruebas del panel: `test_formulario_tiene_bloques_y_ventana_de_series`,
   `test_formulario_solo_muestra_materiales_con_existencias`,
   `test_formulario_muestra_series_y_sobrante` y `test_sobrante_ignora_filas_incompletas`.
