@@ -145,6 +145,64 @@ jobs:
 `manage.py` usa `config.settings.dev` por defecto, pero respeta `DJANGO_SETTINGS_MODULE` si ya está
 definido. En CI siempre se define.
 
+## 4.1 Dependencias reproducibles
+
+Las dependencias directas viven en:
+
+```text
+requirements.in
+requirements-dev.in
+```
+
+Los archivos instalables son generados por `pip-tools` y contienen versiones exactas de todas las
+dependencias, incluidas las transitivas:
+
+```text
+requirements.txt
+requirements-dev.txt
+```
+
+No edites los archivos generados a mano. Para cambiar una dependencia, edita el `.in` y vuelve a
+compilar:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install "pip-tools>=7.4,<8.0"
+
+.\.venv\Scripts\pip-compile.exe --no-emit-index-url --no-emit-trusted-host `
+  --output-file=requirements.txt requirements.in
+
+.\.venv\Scripts\pip-compile.exe --no-emit-index-url --no-emit-trusted-host `
+  --output-file=requirements-dev.txt requirements-dev.in
+```
+
+Para actualizar una sola dependencia:
+
+```powershell
+.\.venv\Scripts\pip-compile.exe --upgrade-package pyotp `
+  --no-emit-index-url --no-emit-trusted-host `
+  --output-file=requirements.txt requirements.in
+```
+
+Para actualizar todas:
+
+```powershell
+.\.venv\Scripts\pip-compile.exe --upgrade `
+  --no-emit-index-url --no-emit-trusted-host `
+  --output-file=requirements.txt requirements.in
+```
+
+Después de regenerar:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+El CI instala `requirements-dev.txt`, por lo que usa exactamente las mismas versiones que el lock.
+Si quieres además fijar hashes, genera el lock en Ubuntu con `--generate-hashes`; no mezcles locks
+generados en Windows y Linux para paquetes con binarios.
+
 ## 5. Por qué PostgreSQL y Redis son servicios
 
 - **PostgreSQL**: las pruebas validan restricciones, `select_for_update`, RLS y transacciones. La
@@ -305,6 +363,18 @@ Ejecuta en local:
 ```
 
 Revisa la migración, pruébala y haz commit.
+
+### `Secrets must be at least 112 bits after decoding`
+
+No es un problema de `TOTP_ENCRYPTION_KEY`. Es `pyotp` 2.12 o superior validando el **secreto
+Base32 de las pruebas**. Un secreto de ejemplo como `JBSWY3DPEHPK3PXP` tiene 80 bits y ya no es
+aceptado. Usa al menos 32 caracteres Base32 (160 bits), por ejemplo:
+
+```text
+JBSWY3DPEHPK3PXPJBSWY3DPJBSWY3DP
+```
+
+Ese valor ya está aplicado en las pruebas de TOTP y 2FA.
 
 ### `InvalidToken` o error con `TOTP_ENCRYPTION_KEY`
 
