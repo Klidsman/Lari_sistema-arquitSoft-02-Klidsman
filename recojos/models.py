@@ -77,12 +77,12 @@ class LineaRecojo(models.Model):
         related_name="lineas_recojo",
     )
     lote = models.CharField(max_length=50, blank=True, default="")
-    serie = models.OneToOneField(
+    serie = models.ForeignKey(
         "series.Serie",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="linea_recojo",
+        related_name="lineas_recojo",
     )
     cantidad = models.IntegerField(default=0)
 
@@ -109,6 +109,10 @@ class LineaRecojo(models.Model):
             models.Index(
                 fields=["tenant", "material"],
                 name="linea_recojo_tenant_material",
+            ),
+            models.Index(
+                fields=["serie"],
+                name="linea_recojo_serie",
             ),
         ]
         ordering = ["material__codigo", "serie__numero"]

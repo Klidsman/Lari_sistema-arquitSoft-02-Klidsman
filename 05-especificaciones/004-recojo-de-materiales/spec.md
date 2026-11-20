@@ -6,6 +6,13 @@ Especificación técnica para el registro de recojos de materiales del almacén 
 
 Permitir que los tenants registren los materiales que retiran del almacén central de su región. Cada recojo incrementa el stock general del tenant con las series y cantidades recibidas.
 
+## Clarifications
+
+### Session 2026-11-19
+
+- Q: ¿Qué pasa con las series de un recojo anulado? → A: Se reactivan a `DISPONIBLE` si nunca se usaron y se pueden volver a registrar; no se borra ninguna fila.
+- Q: ¿Cómo se registra de nuevo la misma serie? → A: `LineaRecojo.serie` pasa de `OneToOne` a FK; se conserva la línea histórica del recojo anulado y se crea una nueva línea con la misma serie reactivada.
+
 ## 2. Alcance
 
 - Registro de recojos por formulario (no por Excel)
@@ -74,8 +81,10 @@ Permitir que los tenants registren los materiales que retiran del almacén centr
 - Solo la cuenta del tenant dueña del recojo puede anularlo.
 - La anulación se permite dentro de las **24 horas** siguientes a `creado_en`.
 - El motivo es obligatorio (1–500 caracteres).
-- Se revierte el stock general, las series quedan `INACTIVA` y el recojo pasa a `ANULADO`.
-- No se borra la fila, las líneas ni las series; el número de serie no se reutiliza.
+- Se revierte el stock general, el recojo pasa a `ANULADO` y las series creadas por ese recojo se reactivan a `DISPONIBLE` si nunca se usaron.
+- No se borra la fila, las líneas ni las series; se conserva la línea histórica del recojo anulado.
+- La misma serie reactivada se puede registrar en un recojo nuevo; se crea una nueva `LineaRecojo` con la misma serie, sin duplicar la serie.
+- Una serie que pertenece a un recojo `REGISTRADO` no se puede volver a registrar; solo se permite si su recojo anterior está `ANULADO`.
 - Se bloquea si alguna serie ya fue utilizada o si el stock ya no alcanza.
 - La anulación y su reversión quedan auditadas en la misma transacción.
 
@@ -155,12 +164,22 @@ Entonces el sistema guarda el recojo y la cantidad se suma al stock general del 
 ### CA-10: Anulación lógica dentro de 24 horas
 Dado un recojo registrado hace menos de 24 horas
 Cuando la cuenta del tenant lo anula con un motivo
-Entonces el recojo queda ANULADO, el stock se revierte, las series quedan INACTIVA y todo se audita
+Entonces el recojo queda ANULADO, el stock se revierte, las series se reactivan a DISPONIBLE si no se usaron y todo se audita
 
 ### CA-11: Anulación fuera de plazo o con series usadas
 Dado un recojo con más de 24 horas o con series ya utilizadas
 Cuando se intenta anular
 Entonces se rechaza sin modificar stock, series ni auditoría
+
+### CA-12: Volver a registrar una serie anulada
+Dado un recojo anulado con una serie reactivada
+Cuando el tenant registra la misma serie en un recojo nuevo
+Entonces se crea una nueva línea de recojo con esa serie, sin duplicar la serie ni borrar la línea histórica
+
+### CA-13: Serie de un recojo activo no se reutiliza
+Dada una serie perteneciente a un recojo REGISTRADO
+Cuando el tenant intenta registrarla en otro recojo
+Entonces se rechaza con “La serie ya está registrada en el sistema”
 
 ## 8. Datos de Entrada
 
@@ -198,7 +217,10 @@ Entonces se rechaza sin modificar stock, series ni auditoría
 3. El stock general sube con recojos registrados y solo baja por una anulación confirmada dentro de las 24 horas
 4. El recojo se registra por formulario, no por Excel
 5. Las series se normalizan (mayúsculas, sin espacios)
-6. Si alguna serie es inválida, duplicada o ya existe, no se guarda ningún recojo (todo o nada)
+6. Si alguna serie es inválida, duplicada o ya existe en un recojo activo, no se guarda ningún recojo (todo o nada)
+7. Al anular, las series del recojo se reactivan a `DISPONIBLE` si no se usaron; no se borra ninguna fila
+8. Una serie puede aparecer en varias líneas históricas, pero solo en una línea de un recojo `REGISTRADO`
+9. Volver a registrar una serie anulada crea una nueva línea de recojo; no crea una serie nueva
 
 ## 11. Consideraciones de Implementación
 

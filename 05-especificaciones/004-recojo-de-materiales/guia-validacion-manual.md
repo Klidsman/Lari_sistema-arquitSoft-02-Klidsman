@@ -222,7 +222,7 @@ Verificación:
 1. Abre un recojo registrado hace menos de 24 horas.
 2. **Esperado**: el detalle muestra el aviso de 24 horas y el formulario de anulación.
 3. Escribe un motivo y confirma.
-4. **Esperado**: estado **Anulado**, stock revertido, series **Inactiva**, auditoría de recojo/stock/series.
+4. **Esperado**: estado **Anulado**, stock revertido, series **Disponible** si no se usaron, auditoría de recojo/stock/series.
 5. Intenta anular otra vez.
 6. **Esperado**: no cambia nada ni duplica auditoría.
 7. Fuerza `creado_en` a más de 24 horas y recarga.

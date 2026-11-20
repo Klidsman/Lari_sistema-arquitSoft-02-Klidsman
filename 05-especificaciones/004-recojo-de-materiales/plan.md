@@ -249,12 +249,12 @@ class LineaRecojo(models.Model):
         related_name="lineas_recojo",
     )
     lote = models.CharField(max_length=50, blank=True, default="")
-    serie = models.OneToOneField(
+    serie = models.ForeignKey(
         "series.Serie",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="linea_recojo",
+        related_name="lineas_recojo",
     )
     cantidad = models.IntegerField(default=0)
 
@@ -276,6 +276,7 @@ class LineaRecojo(models.Model):
         indexes = [
             models.Index(fields=["recojo", "material"], name="linea_recojo_recojo_material"),
             models.Index(fields=["tenant", "material"], name="linea_recojo_tenant_material"),
+            models.Index(fields=["serie"], name="linea_recojo_serie"),
         ]
 
     def __str__(self):
@@ -552,7 +553,7 @@ Viven en `recojos/services.py` y `series/services.py`, no en las vistas.
   - `True` con el mensaje "Puedes anular este recojo dentro de las próximas 24 horas.".
 - `anular_recojo(recojo, motivo, actor)`:
   - Solo `USUARIO_TENANT` dueño; motivo obligatorio de 1–500 caracteres.
-  - En `transaction.atomic` con `select_for_update`: verifica plazo, series y stock; revierte stock vía 008, marca series `INACTIVA`, cambia el recojo a `ANULADO` y audita todo.
+  - En `transaction.atomic` con `select_for_update`: verifica plazo, series y stock; revierte stock vía 008, reactiva a `DISPONIBLE` las series no usadas, cambia el recojo a `ANULADO` y audita todo.
   - Idempotente: un recojo ya anulado no cambia ni audita de nuevo.
 
 ### Consultas

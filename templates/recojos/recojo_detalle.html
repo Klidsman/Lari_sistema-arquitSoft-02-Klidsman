@@ -75,7 +75,7 @@
     {% if puede_anular %}
       <form method="post"
             action="{% url 'anular_recojo' recojo.pk %}"
-            data-confirmar="¿Estás seguro de anular este recojo? Se revertirá el stock y las series quedarán inactivas.">
+            data-confirmar="¿Estás seguro de anular este recojo? Se revertirá el stock y las series no usadas volverán a estar disponibles para volver a registrarlas.">
         {% csrf_token %}
         <label>Motivo de anulación
           <textarea name="motivo" rows="3" maxlength="500" required></textarea>

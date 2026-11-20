@@ -243,11 +243,15 @@ unicidad global, concurrencia real y transacciones anidadas con el servicio de s
 1. Abrir un recojo registrado hace menos de 24 horas.
 2. **Esperado**: el detalle muestra “Puedes anular este recojo dentro de las próximas 24 horas.” y el formulario de anulación.
 3. Escribir un motivo y confirmar.
-4. **Esperado**: el recojo queda **Anulado**, el stock se revierte, las series quedan **INACTIVA** y la auditoría registra recojo, stock y series.
+4. **Esperado**: el recojo queda **Anulado**, el stock se revierte, las series se reactivan a **DISPONIBLE** si no se usaron y la auditoría registra recojo, stock y series.
 5. Intentar anular de nuevo.
 6. **Esperado**: no cambia nada ni se duplica auditoría.
 7. Abrir un recojo con más de 24 horas.
 8. **Esperado**: “El plazo de 24 horas para anular este recojo venció.” y no se permite anular.
+9. Crear un recojo nuevo y registrar una de las series reactivadas.
+10. **Esperado**: se crea una línea nueva, la serie no se duplica, el stock general vuelve a subir y la línea del recojo anulado se conserva.
+11. Intentar registrar esa misma serie otra vez mientras el recojo nuevo está `REGISTRADO`.
+12. **Esperado**: “La serie ya está registrada en el sistema”.
 
 ### 15.2 Rendimiento y ausencia de N+1
 
@@ -266,7 +270,7 @@ La funcionalidad se considera validada cuando:
 - [ ] Cada criterio de aceptación CA-01…CA-09 tiene al menos una prueba automatizada.
 - [ ] Los escenarios manuales 1–15 se completan con los resultados esperados.
 - [ ] Un recojo se guarda completo o no se guarda; no hay estados parciales.
-- [ ] Un recojo puede anularse con motivo dentro de 24 horas; la anulación revierte stock, deja series inactivas y se audita.
+- [ ] Un recojo puede anularse con motivo dentro de 24 horas; la anulación revierte stock, reactiva las series no usadas y se audita.
 - [ ] Fuera del plazo, con series usadas o stock insuficiente, la anulación se rechaza sin cambios.
 - [ ] Las series se normalizan y validan antes de escribir; la unicidad global se impone en la
       base.

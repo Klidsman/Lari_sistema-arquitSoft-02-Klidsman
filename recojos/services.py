@@ -106,6 +106,7 @@ class ResultadoValidacion:
     nombre: str | None = None
     lineas: list = field(default_factory=list)
     series_estados: list = field(default_factory=list)
+    series_reutilizables: dict = field(default_factory=dict)
     errores: list = field(default_factory=list)
 
 
@@ -174,6 +175,28 @@ def _formato_valido(numero):
         return True
     except SerieInvalida:
         return False
+
+
+def series_reutilizables(numeros) -> dict:
+    """Series existentes cuyo recojo anterior está ANULADO y pueden re-registrarse."""
+    numeros = [normalizar_numero(numero) for numero in numeros]
+    if not numeros:
+        return {}
+    series = Serie.objects.filter(numero__in=numeros).prefetch_related(
+        "lineas_recojo__recojo"
+    )
+    reutilizables = {}
+    for serie in series:
+        lineas = list(serie.lineas_recojo.all())
+        if not lineas:
+            continue
+        if serie.estado not in (EstadoSerie.DISPONIBLE, EstadoSerie.INACTIVA):
+            continue
+        if serie.tecnico_id:
+            continue
+        if all(linea.recojo.estado == EstadoRecojo.ANULADO for linea in lineas):
+            reutilizables[serie.numero] = serie
+    return reutilizables
 
 
 def normalizar_lineas(datos):
@@ -269,7 +292,9 @@ def validar_recojo_previo(tenant, datos) -> ResultadoValidacion:
             )
 
     existentes = series_existentes(numeros_globales) if numeros_globales else set()
-    estados = clasificar_series(numeros_globales, existentes)
+    reutilizables = series_reutilizables(numeros_globales)
+    no_reutilizables = existentes - set(reutilizables)
+    estados = clasificar_series(numeros_globales, no_reutilizables)
 
     if any(estado["estado"] == "invalida" for estado in estados):
         errores.append("La serie debe tener 12 caracteres alfanuméricos")
@@ -294,6 +319,7 @@ def validar_recojo_previo(tenant, datos) -> ResultadoValidacion:
         nombre=nombre or None,
         lineas=lineas,
         series_estados=estados,
+        series_reutilizables=reutilizables,
         errores=errores,
     )
 
@@ -332,6 +358,34 @@ def materiales_tiene_movimientos(material) -> bool:
     ).exists()
 
 
+def _reactivar_serie_recojo(serie, tenant, recojo, actor):
+    """Reutiliza una serie de un recojo anulado sin duplicar la fila."""
+    bloqueada = Serie.objects.select_for_update().get(pk=serie.pk)
+    if bloqueada.tenant_id != tenant.pk or bloqueada.tecnico_id:
+        raise SerieYaExiste("La serie ya está registrada en el sistema")
+    if LineaRecojo.objects.filter(
+        serie=bloqueada,
+        recojo__estado=EstadoRecojo.REGISTRADO,
+    ).exists():
+        raise SerieYaExiste("La serie ya está registrada en el sistema")
+    if bloqueada.estado == EstadoSerie.INACTIVA:
+        bloqueada.estado = EstadoSerie.DISPONIBLE
+        bloqueada.actualizado_por = actor
+        bloqueada.save(
+            update_fields=["estado", "actualizado_por", "actualizado_en"]
+        )
+        registrar_cambio(
+            "Serie",
+            bloqueada.pk,
+            "estado",
+            EstadoSerie.INACTIVA,
+            EstadoSerie.DISPONIBLE,
+            actor,
+            tenant=tenant,
+        )
+    return bloqueada
+
+
 def crear_recojo(datos, actor) -> Recojo:
     # 004 nunca escribe StockGeneral directamente: delega en el servicio de 008,
     # que es el responsable de bloquear/sumar con select_for_update o F().
@@ -361,15 +415,23 @@ def crear_recojo(datos, actor) -> Recojo:
             for linea in resultado.lineas:
                 material = linea["material"]
                 if linea["serie_numero"] is not None:
-                    serie = Serie.objects.create(
-                        numero=linea["serie_numero"],
-                        tenant=tenant,
-                        region=region,
-                        material=material,
-                        lote=material.lote,
-                        estado=EstadoSerie.DISPONIBLE,
-                        creado_por=actor,
+                    serie = resultado.series_reutilizables.get(
+                        linea["serie_numero"]
                     )
+                    if serie is not None:
+                        serie = _reactivar_serie_recojo(
+                            serie, tenant, recojo, actor
+                        )
+                    else:
+                        serie = Serie.objects.create(
+                            numero=linea["serie_numero"],
+                            tenant=tenant,
+                            region=region,
+                            material=material,
+                            lote=material.lote,
+                            estado=EstadoSerie.DISPONIBLE,
+                            creado_por=actor,
+                        )
                     LineaRecojo.objects.create(
                         tenant=tenant,
                         recojo=recojo,
@@ -527,17 +589,22 @@ def anular_recojo(recojo, motivo, actor) -> Recojo:
             ) from exc
 
         for serie in series:
-            serie.estado = EstadoSerie.INACTIVA
-            serie.actualizado_por = actor
-            serie.save(
-                update_fields=["estado", "actualizado_por", "actualizado_en"]
-            )
+            if serie.estado != EstadoSerie.DISPONIBLE:
+                serie.estado = EstadoSerie.DISPONIBLE
+                serie.actualizado_por = actor
+                serie.save(
+                    update_fields=[
+                        "estado",
+                        "actualizado_por",
+                        "actualizado_en",
+                    ]
+                )
             registrar_cambio(
                 "Serie",
                 serie.pk,
-                "estado",
-                EstadoSerie.DISPONIBLE,
-                EstadoSerie.INACTIVA,
+                "reactivada",
+                "",
+                f"recojo={bloqueado.pk}; estado={EstadoSerie.DISPONIBLE}",
                 actor,
                 tenant=tenant,
             )

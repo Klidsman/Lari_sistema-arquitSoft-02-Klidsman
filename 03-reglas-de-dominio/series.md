@@ -23,6 +23,10 @@ Una serie puede estar en uno de los siguientes estados:
 | **Reservada** | La serie está reservada en una asignación pendiente de confirmación por el almacén | → Disponible (si el almacén rechaza la asignación) → Asignada (si el almacén confirma la asignación) |
 | **Asignada** | La serie está en posesión de un técnico específico | → Disponible (cuando el técnico la devuelve/desasigna) |
 
+> Excepción de anulación de recojo (ADR-020): una serie creada por un recojo anulado y nunca usada
+> vuelve a `DISPONIBLE` para poder registrarse de nuevo en un recojo nuevo. No se crea una serie
+> nueva con el mismo número; se conserva la fila y la línea histórica.
+
 ## 4. Reglas de Unicidad y Existencia
 
 ### 4.1 Unicidad Global

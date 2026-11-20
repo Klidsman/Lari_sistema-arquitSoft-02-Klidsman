@@ -15,7 +15,7 @@ erDiagram
     USUARIO ||--o{ RECOJO : "crea"
     RECOJO ||--o{ LINEA_RECOJO : "contiene"
     MATERIAL ||--o{ LINEA_RECOJO : "recibido en"
-    SERIE ||--o| LINEA_RECOJO : "identifica una unidad"
+    SERIE ||--o{ LINEA_RECOJO : "identifica una unidad"
     TENANT ||--o{ SERIE : "posee"
     REGION ||--o{ SERIE : "ubica"
     MATERIAL ||--o{ SERIE : "pertenece a"
@@ -39,7 +39,7 @@ erDiagram
         bigint recojo_id FK
         bigint material_id FK
         varchar lote "0..50"
-        bigint serie_id FK "nullable, único"
+        bigint serie_id FK "nullable"
         integer cantidad ">= 0"
     }
     SERIE {
@@ -150,7 +150,7 @@ Unidad del recojo: una serie individual o una cantidad de material no seriado.
 | `recojo` | FK `Recojo` | No | `PROTECT`, `related_name="lineas"`; el recojo no se borra |
 | `material` | FK `materiales.Material` | No | `PROTECT`, `related_name="lineas_recojo"`; debe existir en el catálogo |
 | `lote` | `CharField(50)` | No | Opcional (cadena vacía permitida); copia del lote del material al momento del recojo |
-| `serie` | `OneToOneField(series.Serie)` | Sí | `PROTECT`, `related_name="linea_recojo"`; nulo para no seriados; único, una serie no puede estar en dos líneas |
+| `serie` | FK `series.Serie` | Sí | `PROTECT`, `related_name="lineas_recojo"`; nulo para no seriados; una serie puede aparecer en varias líneas históricas |
 | `cantidad` | `IntegerField` | No | `>= 0`; `1` cuando hay serie; `> 0` cuando no hay serie |
 
 **Restricciones**
@@ -158,7 +158,7 @@ Unidad del recojo: una serie individual o una cantidad de material no seriado.
 - `linea_recojo_serie_o_cantidad`: `serie IS NOT NULL OR cantidad > 0`.
 - `linea_recojo_serie_cantidad_uno`: `serie IS NULL OR cantidad = 1`.
 - `linea_recojo_cantidad_no_negativa`: `cantidad >= 0`.
-- `OneToOneField(serie)` crea un índice único: una `Serie` pertenece a una sola línea de recojo.
+- `serie` es FK, no `OneToOneField`: una serie puede tener una línea en un recojo anulado y otra en un recojo nuevo. El servicio impide más de una línea en recojos `REGISTRADO` para la misma serie.
 - La coherencia `material.es_seriado` con la presencia de `serie` no se puede expresar como
   `CheckConstraint` de Django porque cruza tablas; la valida el servicio.
 
@@ -166,7 +166,7 @@ Unidad del recojo: una serie individual o una cantidad de material no seriado.
 
 - `Index(recojo, material)` para el detalle y los totales.
 - `Index(tenant, material)` para la verificación de movimientos y RLS.
-- Índice único implícito de `serie`.
+- `Index(serie)` para buscar las líneas históricas de una serie.
 
 **Relaciones**
 
@@ -180,6 +180,8 @@ Unidad del recojo: una serie individual o una cantidad de material no seriado.
 - `lote` es una instantánea informativa; no separa el stock ni cambia la clave de stock.
 - `tenant` debe ser igual a `recojo.tenant`.
 - No se edita ni se borra; es parte del documento histórico.
+- Una serie puede tener varias líneas históricas; solo una puede pertenecer a un recojo `REGISTRADO`.
+- Al re-registrar una serie de un recojo `ANULADO`, se crea una línea nueva y no una serie nueva.
 
 ### Serie (`series.Serie`)
 
@@ -337,7 +339,7 @@ cambio.
 | Anulación de recojo | `Recojo` | `estado` | `REGISTRADO` | `ANULADO` |
 | Motivo de anulación | `Recojo` | `motivo_anulacion` | vacío | motivo |
 | Reversión de stock | `StockGeneral` | `cantidad` | cantidad anterior | cantidad nueva (la escribe 008) |
-| Serie inactivada | `Serie` | `estado` | `DISPONIBLE` | `INACTIVA` |
+| Serie reactivada | `Serie` | `reactivada` | vacío | `recojo=<id>; estado=DISPONIBLE` |
 
 - Un registro por alta de recojo y uno por cada material incrementado; no uno por serie.
 - Los valores se guardan como texto legible; fechas en ISO 8601.
@@ -352,7 +354,7 @@ cambio.
 
 ```text
 (no existe) ── crear_recojo ──▶ REGISTRADO
-REGISTRADO ── anular_recojo (≤ 24 h, motivo) ──▶ ANULADO (stock revertido, series INACTIVA)
+REGISTRADO ── anular_recojo (≤ 24 h, motivo) ──▶ ANULADO (stock revertido, series DISPONIBLE si no se usaron)
 registrado ── consulta ──▶ registrado
 registrado ── (no existe edición) ──▶ registrado
 registrado ── (no existe borrado) ──▶ registrado
@@ -371,7 +373,7 @@ registrado ── (no existe borrado) ──▶ registrado
 | CA-02: series válidas suman al stock | `Serie` `DISPONIBLE` + `incrementar_stock_general` |
 | CA-03: normalización a mayúsculas | `normalizar_numero` + `CheckConstraint(serie_formato)` |
 | CA-04: formato de 12 caracteres | `CheckConstraint(serie_formato)` + servicio |
-| CA-05: duplicado en el mismo recojo | Validación en memoria + `OneToOneField(serie)` |
+| CA-05: duplicado en el mismo recojo | Validación en memoria (`clasificar_series`); `LineaRecojo.serie` es FK |
 | CA-06: serie existente en el sistema | `unique(numero)` + consulta global uniforme |
 | CA-07: todo o nada | `transaction.atomic` + `RecojoInvalido` |
 | CA-08: vista previa en tiempo real | `previsualizar_series` + fragmento HTMX |

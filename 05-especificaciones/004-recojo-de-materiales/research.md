@@ -35,8 +35,9 @@ trazabilidad de la decisión, no como deuda pendiente.
 ## 2. Registro central de series y unicidad global
 
 **Decision**: `series.Serie.numero` es `CharField(max_length=12, unique=True)`. La unicidad global
-se impone con la restricción `unique` de PostgreSQL. `LineaRecojo.serie` es un `OneToOneField` a
-`Serie`, nulo para materiales no seriados.
+se impone con la restricción `unique` de PostgreSQL. `LineaRecojo.serie` es una FK a `Serie`
+(nula para materiales no seriados): una serie puede tener líneas históricas en varios recojos,
+pero solo una línea en un recojo `REGISTRADO`.
 
 **Rationale**: la spec exige que una serie exista una sola vez en todo el sistema, en cualquier
 tenant, y la constitución exige que esa unicidad se imponga en la base de datos. Una columna

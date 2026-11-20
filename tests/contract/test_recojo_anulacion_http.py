@@ -52,12 +52,12 @@ def test_anular_recojo(
     assert StockGeneral.objects.get(
         tenant=tenant, material=material_seriado
     ).cantidad == 0
-    assert Serie.objects.get().estado == EstadoSerie.INACTIVA
+    assert Serie.objects.get().estado == EstadoSerie.DISPONIBLE
     assert RegistroCambio.objects.filter(
         entidad="Recojo", entidad_id=recojo.pk, campo="estado"
     ).exists()
     assert RegistroCambio.objects.filter(
-        entidad="Serie", campo="estado"
+        entidad="Serie", campo="reactivada"
     ).exists()
 
 

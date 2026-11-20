@@ -50,13 +50,13 @@ def test_anulacion_revierte_stock_y_audita(
         == 0
     )
     serie = Serie.objects.get()
-    assert serie.estado == EstadoSerie.INACTIVA
+    assert serie.estado == EstadoSerie.DISPONIBLE
 
     assert RegistroCambio.objects.filter(
         entidad="Recojo", entidad_id=recojo.pk, campo="motivo_anulacion"
     ).exists()
     assert RegistroCambio.objects.filter(
-        entidad="Serie", entidad_id=serie.pk, campo="estado"
+        entidad="Serie", entidad_id=serie.pk, campo="reactivada"
     ).exists()
 
 
