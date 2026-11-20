@@ -11,7 +11,7 @@ from acceso.totp import cifrar_secreto
 
 @pytest.fixture
 def admin_2fa(db, usuario_admin):
-    secreto = "JBSWY3DPEHPK3PXP"
+    secreto = "JBSWY3DPEHPK3PXPJBSWY3DPJBSWY3DP"
     usuario_admin.secreto_totp = cifrar_secreto(secreto)
     usuario_admin.segundo_factor_habilitado = True
     usuario_admin.save(update_fields=["secreto_totp", "segundo_factor_habilitado"])

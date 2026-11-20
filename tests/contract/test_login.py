@@ -11,7 +11,7 @@ from tenants.models import Region, Tenant
 
 @pytest.fixture
 def admin_con_2fa(db, usuario_admin):
-    usuario_admin.secreto_totp = cifrar_secreto("JBSWY3DPEHPK3PXP")
+    usuario_admin.secreto_totp = cifrar_secreto("JBSWY3DPEHPK3PXPJBSWY3DPJBSWY3DP")
     usuario_admin.segundo_factor_habilitado = True
     usuario_admin.save(update_fields=["secreto_totp", "segundo_factor_habilitado"])
     return usuario_admin

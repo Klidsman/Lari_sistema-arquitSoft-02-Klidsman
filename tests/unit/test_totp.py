@@ -14,7 +14,7 @@ from acceso.totp import (
 
 @pytest.mark.django_db
 def test_cifrado_y_descifrado(usuario_admin):
-    secreto = "JBSWY3DPEHPK3PXP"
+    secreto = "JBSWY3DPEHPK3PXPJBSWY3DPJBSWY3DP"
     token = cifrar_secreto(secreto)
 
     assert token != secreto
@@ -29,7 +29,7 @@ def test_secreto_corrupto(usuario_admin):
 
 @pytest.mark.django_db
 def test_codigo_totp_valido_e_invalido(usuario_admin):
-    secreto = "JBSWY3DPEHPK3PXP"
+    secreto = "JBSWY3DPEHPK3PXPJBSWY3DPJBSWY3DP"
     usuario_admin.secreto_totp = cifrar_secreto(secreto)
     usuario_admin.save(update_fields=["secreto_totp"])
 

@@ -10,7 +10,7 @@ from acceso.totp import cifrar_secreto
 
 @pytest.mark.django_db
 def test_sesion_pendiente_solo_accede_a_2fa(client, usuario_admin):
-    usuario_admin.secreto_totp = cifrar_secreto("JBSWY3DPEHPK3PXP")
+    usuario_admin.secreto_totp = cifrar_secreto("JBSWY3DPEHPK3PXPJBSWY3DPJBSWY3DP")
     usuario_admin.segundo_factor_habilitado = True
     usuario_admin.save(update_fields=["secreto_totp", "segundo_factor_habilitado"])
 
