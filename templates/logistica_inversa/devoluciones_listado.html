@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Devoluciones · Lari{% endblock %}
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <h1>Devoluciones</h1>
+    <a class="boton" href="{% url 'nueva_devolucion' %}">Registrar devolución</a>
+  </div>
+  <form method="get">
+    <label>Desde <input type="date" name="desde" value="{{ desde }}"></label>
+    <label>Hasta <input type="date" name="hasta" value="{{ hasta }}"></label>
+    <button type="submit">Filtrar</button>
+  </form>
+  <table class="tabla">
+    <thead><tr><th>ID</th><th>Fecha</th><th>Técnico</th><th>Acta</th><th></th></tr></thead>
+    <tbody>
+      {% for devolucion in devoluciones %}
+        <tr>
+          <td>{{ devolucion.pk }}</td>
+          <td>{{ devolucion.fecha|date:"Y-m-d" }}</td>
+          <td>{{ devolucion.tecnico.nif }}</td>
+          <td>{% if devolucion.acta_ruta %}Generada{% else %}—{% endif %}</td>
+          <td><a href="{% url 'detalle_devolucion' devolucion.pk %}">Ver</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">No hay devoluciones.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

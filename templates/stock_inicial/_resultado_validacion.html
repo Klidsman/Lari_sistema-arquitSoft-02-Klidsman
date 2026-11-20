@@ -1,0 +1,45 @@
+{% if error %}
+  <p class="mensaje mensaje-error" data-fila="0" data-campo="archivo" data-mensaje="{{ error }}">
+    {{ error }}
+  </p>
+{% else %}
+  <div data-valido="{{ resultado.valido|yesno:'true,false' }}"
+       data-filas-validas="{{ resultado.total_series|add:resultado.total_cantidad }}"
+       data-filas-error="{{ resultado.errores|length }}"
+       data-total-tecnicos="{{ resultado.total_tecnicos }}"
+       data-total-series="{{ resultado.total_series }}"
+       data-total-cantidad="{{ resultado.total_cantidad }}">
+    {% if resultado.errores %}
+      <table class="tabla">
+        <thead><tr><th>Fila</th><th>Campo</th><th>Mensaje</th></tr></thead>
+        <tbody>
+          {% for error in resultado.errores %}
+            <tr data-fila="{{ error.fila }}" data-campo="{{ error.campo }}" data-mensaje="{{ error.mensaje }}">
+              <td>{{ error.fila }}</td>
+              <td>{{ error.campo }}</td>
+              <td>{{ error.mensaje }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+
+    {% if resultado.lineas %}
+      <h3>Resumen de líneas válidas</h3>
+      <table class="tabla">
+        <thead><tr><th>Técnico</th><th>Material</th><th>Lote</th><th>Serie</th><th>Cantidad</th></tr></thead>
+        <tbody>
+          {% for linea in resultado.lineas %}
+            <tr>
+              <td>{{ linea.tecnico.nif }}</td>
+              <td>{{ linea.material.codigo }}</td>
+              <td>{{ linea.lote }}</td>
+              <td>{{ linea.serie|default:"—" }}</td>
+              <td>{{ linea.cantidad }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </div>
+{% endif %}

@@ -1,0 +1,13 @@
+{% for tecnico in tecnicos %}
+  <li class="resultado-tecnico"
+      role="option"
+      data-nif="{{ tecnico.nif }}"
+      data-nombre="{{ tecnico.nombre }}"
+      data-activo="{{ tecnico.activo|yesno:"true,false" }}">
+    <span class="nif">{{ tecnico.nif }}</span>
+    <span class="nombre">{{ tecnico.nombre }}</span>
+    <span class="estado">{{ tecnico.activo|yesno:"Activo,Desactivado" }}</span>
+  </li>
+{% empty %}
+  <li class="sin-resultados">No se encontraron técnicos</li>
+{% endfor %}

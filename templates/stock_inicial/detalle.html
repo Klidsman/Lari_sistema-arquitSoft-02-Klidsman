@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle stock inicial · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Stock inicial</h1>
+
+  <dl class="detalle">
+    <dt>Fecha</dt><dd>{{ carga.fecha|date:"Y-m-d H:i:s" }}</dd>
+    <dt>Método</dt><dd>{{ carga.get_metodo_display }}</dd>
+    <dt>Región</dt><dd>{{ carga.region.codigo }} - {{ carga.region.nombre }}</dd>
+    {% if carga.archivo_nombre %}
+      <dt>Archivo</dt><dd>{{ carga.archivo_nombre }}</dd>
+      <dt>Hash</dt><dd>{{ carga.archivo_hash }}</dd>
+    {% endif %}
+    <dt>Total técnicos</dt><dd>{{ totales.total_tecnicos }}</dd>
+    <dt>Total líneas</dt><dd>{{ totales.total_lineas }}</dd>
+    <dt>Total series</dt><dd>{{ totales.total_series }}</dd>
+    <dt>Total cantidad</dt><dd>{{ totales.total_cantidad }}</dd>
+  </dl>
+
+  {% for tecnico, lineas in grupos.items %}
+    <h2>{{ tecnico.nif }} - {{ tecnico.nombre }}</h2>
+    <table class="tabla">
+      <thead><tr><th>Material</th><th>Descripción</th><th>Lote</th><th>Serie</th><th>Cantidad</th></tr></thead>
+      <tbody>
+        {% for linea in lineas %}
+          <tr>
+            <td>{{ linea.material.codigo }}</td>
+            <td>{{ linea.material.descripcion }}</td>
+            <td>{{ linea.lote }}</td>
+            <td>{{ linea.serie.numero|default:"—" }}</td>
+            <td>{{ linea.cantidad }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endfor %}
+
+  <p>
+    <a href="{% url 'editar_stock_inicial' carga.pk %}">Editar stock inicial</a>
+    <a href="{% url 'estado_stock_inicial' %}">Volver</a>
+  </p>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Devolución {{ devolucion.pk }} · Lari{% endblock %}
+{% block contenido %}
+  <h1>Devolución {{ devolucion.pk }}</h1>
+  <dl class="detalle">
+    <dt>Técnico</dt><dd>{{ devolucion.tecnico.nif }} - {{ devolucion.tecnico.nombre }}</dd>
+    <dt>Fecha</dt><dd>{{ devolucion.fecha|date:"Y-m-d" }}</dd>
+    <dt>Observaciones</dt><dd>{{ devolucion.observaciones|default:"—" }}</dd>
+    <dt>Acta</dt><dd>{{ devolucion.acta_hash }}</dd>
+  </dl>
+  <table class="tabla">
+    <thead><tr><th>Serie</th><th>Material</th><th>Descripción</th><th>Lote</th></tr></thead>
+    <tbody>
+      {% for linea in lineas %}
+        <tr><td>{{ linea.serie.numero }}</td><td>{{ linea.material.codigo }}</td><td>{{ linea.descripcion }}</td><td>{{ linea.lote }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if devolucion.acta_ruta %}
+    <p><a class="boton" href="{% url 'acta_devolucion' devolucion.pk %}">Descargar acta</a></p>
+  {% endif %}
+{% endblock %}

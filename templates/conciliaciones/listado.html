@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Conciliaciones · Lari{% endblock %}
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <h1>Conciliaciones de stock</h1>
+    <a class="boton" href="{% url 'cargar_conciliacion' %}">Cargar reporte</a>
+  </div>
+  <table class="tabla">
+    <thead>
+      <tr><th>ID</th><th>Fecha de carga</th><th>Archivo</th><th>Estado</th><th>Revisión</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for conciliacion in conciliaciones %}
+        <tr>
+          <td>{{ conciliacion.pk }}</td>
+          <td>{{ conciliacion.fecha_carga|date:"Y-m-d H:i" }}</td>
+          <td>{{ conciliacion.archivo_nombre }}</td>
+          <td>{{ conciliacion.get_estado_display }}</td>
+          <td>{% if conciliacion.requiere_revision %}Requiere revisión{% else %}—{% endif %}</td>
+          <td><a href="{% url 'detalle_conciliacion' conciliacion.pk %}">Ver</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">No hay conciliaciones.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

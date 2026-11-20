@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Tenant {{ tenant.codigo }} · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Tenant {{ tenant.codigo }}</h1>
+
+  <dl class="detalle">
+    <dt>Código</dt>
+    <dd>{{ tenant.codigo }}</dd>
+    <dt>Nombre</dt>
+    <dd>{{ tenant.nombre }}</dd>
+    <dt>Región</dt>
+    <dd>{{ tenant.region.codigo }} - {{ tenant.region.nombre }}</dd>
+    <dt>Estado</dt>
+    <dd>{{ tenant.get_estado_display }}</dd>
+  </dl>
+
+  <h2>Cuenta única</h2>
+  {% if cuenta %}
+    <dl class="detalle">
+      <dt>Correo</dt>
+      <dd>{{ cuenta.email }}</dd>
+      <dt>Rol</dt>
+      <dd>{{ cuenta.get_rol_display }}</dd>
+      <dt>Estado</dt>
+      <dd>{{ cuenta.is_active|yesno:"Activa,Inactiva" }}</dd>
+    </dl>
+  {% else %}
+    <p>El tenant todavía no tiene cuenta.</p>
+    <p>
+      <a class="boton" href="{% url 'crear_cuenta_tenant' tenant.pk %}">
+        Crear cuenta del tenant
+      </a>
+    </p>
+  {% endif %}
+
+  <h2>Acciones</h2>
+  {% if tenant.estado == "ACTIVO" %}
+    <form method="post"
+          action="{% url 'suspender_tenant' tenant.pk %}"
+          data-confirmar="¿Estás seguro de suspender este tenant? Su cuenta dejará de operar.">
+      {% csrf_token %}
+      <button type="submit">Suspender tenant</button>
+    </form>
+  {% else %}
+    <form method="post"
+          action="{% url 'activar_tenant' tenant.pk %}"
+          data-confirmar="¿Estás seguro de activar este tenant?">
+      {% csrf_token %}
+      <button type="submit">Activar tenant</button>
+    </form>
+  {% endif %}
+
+  <p><a href="{% url 'listar_tenants' %}">Volver al listado</a></p>
+{% endblock %}

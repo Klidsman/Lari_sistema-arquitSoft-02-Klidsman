@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Regiones · Lari{% endblock %}
+
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <h1>Regiones</h1>
+    <a class="boton" href="{% url 'crear_region' %}">Nueva región</a>
+  </div>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <div id="tabla-regiones"
+       hx-get="{% url 'listar_regiones' %}"
+       hx-trigger="every 60s"
+       hx-target="#tabla-regiones"
+       hx-swap="innerHTML">
+    {% include "tenants/_tabla_regiones.html" %}
+  </div>
+{% endblock %}

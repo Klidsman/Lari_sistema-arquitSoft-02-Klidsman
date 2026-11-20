@@ -1,0 +1,1 @@
+"""Catálogo compartido de materiales."""

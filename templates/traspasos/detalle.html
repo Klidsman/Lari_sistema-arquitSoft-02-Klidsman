@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Traspaso {{ traspaso.pk }} · Lari{% endblock %}
+{% block contenido %}
+  <h1>Traspaso {{ traspaso.pk }}</h1>
+  <dl class="detalle">
+    <dt>Origen</dt><dd>{{ traspaso.tecnico_origen.nif }}</dd>
+    <dt>Destino</dt><dd>{{ traspaso.tecnico_destino.nif }}</dd>
+    <dt>Fecha</dt><dd>{{ traspaso.fecha|date:"Y-m-d" }}</dd>
+    <dt>Estado</dt><dd>{{ traspaso.get_estado_display }}</dd>
+    <dt>Hash</dt><dd>{{ traspaso.excel_hash }}</dd>
+  </dl>
+  <table class="tabla">
+    <thead><tr><th>Material</th><th>Lote</th><th>Serie</th><th>Cantidad</th></tr></thead>
+    <tbody>
+      {% for linea in traspaso.lineas.all %}
+        <tr><td>{{ linea.material.codigo }}</td><td>{{ linea.lote }}</td><td>{{ linea.serie.numero|default:"—" }}</td><td>{{ linea.cantidad }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if puede_enviar %}
+    <form method="post" action="{% url 'enviar_traspaso' traspaso.pk %}">{% csrf_token %}<button>Enviar</button></form>
+    <form method="post" action="{% url 'cancelar_traspaso' traspaso.pk %}">{% csrf_token %}<button>Cancelar</button></form>
+  {% endif %}
+  {% if traspaso.excel_ruta %}<p><a href="{% url 'excel_traspaso' traspaso.pk %}">Descargar Excel</a></p>{% endif %}
+{% endblock %}

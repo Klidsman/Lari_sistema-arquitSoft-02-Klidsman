@@ -1,0 +1,67 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Lari · Control de materiales{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/base.css' %}?v=3">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <header class="cabecera">
+    <a class="marca" href="/">Lari</a>
+    {% block navegacion %}
+      {% if request.user.is_authenticated %}
+        <nav class="navegacion">
+          <a href="{% url 'listar_materiales' %}">Materiales</a>
+          {% if request.rol == "USUARIO_TENANT" %}
+            <a href="{% url 'listar_tecnicos' %}">Técnicos</a>
+            <a href="{% url 'lista_recojos' %}">Recojos</a>
+            <a href="{% url 'estado_stock_inicial' %}">Stock inicial</a>
+            <a href="{% url 'lista_asignaciones' %}">Asignaciones</a>
+            <a href="{% url 'lista_traspasos' %}">Traspasos</a>
+            <a href="{% url 'lista_conciliaciones' %}">Conciliaciones</a>
+            <a href="{% url 'lista_devoluciones' %}">Devoluciones</a>
+            <a href="{% url 'lista_bajas' %}">Bajas</a>
+            <a href="{% url 'menu_registro_materiales' %}">Registro de materiales</a>
+            <a href="{% url 'lista_cortes' %}">Reportes</a>
+          {% endif %}
+          {% if request.rol == "RESPONSABLE_ALMACEN" %}
+            <a href="{% url 'bandeja_almacen' %}">Bandeja de despachos</a>
+            <a href="{% url 'bandeja_traspasos' %}">Traspasos del almacén</a>
+          {% endif %}
+          {% if request.rol == "ADMIN_PLATAFORMA" %}
+            <a href="{% url 'listar_regiones' %}">Regiones</a>
+            <a href="{% url 'listar_tenants' %}">Tenants</a>
+            <a href="{% url 'listar_cuentas' %}">Administración de cuentas</a>
+            <a href="{% url 'auditoria_acceso' %}">Auditoría</a>
+            <a href="{% url 'lista_cortes' %}">Reportes</a>
+          {% endif %}
+          <a href="{% url 'perfil' %}">Mi perfil</a>
+          <form method="post" action="{% url 'logout' %}" class="en-linea">
+            {% csrf_token %}
+            <button type="submit">Cerrar sesión</button>
+          </form>
+        </nav>
+      {% endif %}
+    {% endblock %}
+  </header>
+
+  <main class="contenido">
+    {% include "parciales/mensajes.html" %}
+    {% block contenido %}{% endblock %}
+  </main>
+
+  <script>
+    document.addEventListener("submit", function (evento) {
+      const formulario = evento.target;
+      const mensaje = formulario.dataset.confirmar;
+      if (mensaje && !window.confirm(mensaje)) {
+        evento.preventDefault();
+      }
+    });
+  </script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

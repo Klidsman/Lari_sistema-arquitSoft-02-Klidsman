@@ -1,0 +1,1 @@
+"""Stock inicial de técnicos."""

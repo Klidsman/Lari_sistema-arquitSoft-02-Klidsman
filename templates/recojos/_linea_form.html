@@ -1,0 +1,46 @@
+{% with index=forloop.counter0 %}
+  <fieldset class="linea-recojo">
+    <legend>Línea {{ forloop.counter }}</legend>
+
+    <label>Material
+      <select name="lineas-{{ index }}-material_id"
+              hx-post="{% url 'validar_series' %}"
+              hx-trigger="change"
+              hx-target="#series-lateral"
+              hx-swap="innerHTML"
+              hx-vals='js:{material_id: document.querySelector("select[name=lineas-{{ index }}-material_id]").value, series: document.querySelector("textarea[name=lineas-{{ index }}-series]").value}'>
+        <option value="">Selecciona un material</option>
+        {% for material in materiales %}
+          <option value="{{ material.pk }}"
+                  data-codigo="{{ material.codigo }}"
+                  data-descripcion="{{ material.descripcion }}"
+                  data-lote="{{ material.lote }}"
+                  data-tipo="{{ material.tipo }}"
+                  {% if linea.material_id.value|stringformat:"s" == material.pk|stringformat:"s" %}selected{% endif %}>
+            {{ material.codigo }} - {{ material.descripcion }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <p class="material-seleccionado"></p>
+
+    <label>Series (solo seriados)
+      <textarea name="lineas-{{ index }}-series"
+                rows="3"
+                hx-post="{% url 'validar_series' %}"
+                hx-trigger="change, keyup changed delay:600ms"
+                hx-target="#series-lateral"
+                hx-swap="innerHTML"
+                hx-vals='js:{material_id: document.querySelector("select[name=lineas-{{ index }}-material_id]").value, series: this.value}'>{{ linea.series.value|default:"" }}</textarea>
+    </label>
+
+    <label>Cantidad (solo no seriados)
+      <input type="number" min="1"
+             name="lineas-{{ index }}-cantidad"
+             value="{{ linea.cantidad.value|default:"" }}">
+    </label>
+
+    <button type="button" class="quitar-linea">Quitar línea</button>
+  </fieldset>
+{% endwith %}

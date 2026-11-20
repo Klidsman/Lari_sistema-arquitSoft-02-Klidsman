@@ -1,7 +1,10 @@
 <!--
 Sync Impact Report
 ==================
-Change type: materialización del scaffold de Spec Kit con la constitución vigente del proyecto.
+Change type: enmienda 1.3.0 → 1.4.0 (MINOR): la sección «Formularios» permite una solicitud de
+  asignación con varios técnicos del mismo tenant, cada uno con su NIF en el Excel. Los
+  traspasos siguen con un origen y un destino. Aprobada por el responsable del proyecto el
+  2026-11-19.
 Version change: scaffold sin versión (marcadores sin completar) → 1.3.0
   (continúa la serie 1.x de `00-constitucion.md` v1.2; incremento MINOR por estructura
   ampliada y principios consolidados)
@@ -159,9 +162,11 @@ implementación sin spec son los principales riesgos de entrega.
   sesión activa. El Administrador de plataforma y el Responsable de almacén requieren
   segundo factor. Cada tenant tiene exactamente una cuenta y no crea subcuentas. El tenant y
   la región se obtienen de la sesión autenticada, nunca de un parámetro del cliente.
-- **Formularios**: cada formulario de asignación o traspaso pertenece a un solo técnico (en
-  el traspaso, un origen y un destino). El NIF se completa desde la lista de técnicos del
-  tenant y no se escribe. Las series se eligen del inventario general del tenant (solo
+- **Formularios**: cada formulario de asignación pertenece a una solicitud que puede incluir
+  uno o más técnicos del mismo tenant; cada línea indica su técnico, y cada técnico tiene su
+  propio NIF en el Excel, completado desde la lista de técnicos y no escrito. Cada formulario
+  de traspaso pertenece a un solo técnico de origen y un solo técnico de destino.
+  Las series se eligen del inventario general del tenant (solo
   Disponibles). Descripción y lote se completan desde el catálogo al elegir el material.
   Movimiento, Centro y Almacén son fijos y se autorrellenan: Z31 para asignación, Z32 para
   desasignación; Centro y Almacén son parámetros de la región. El recojo se registra por
@@ -235,4 +240,4 @@ este documento y se corrige el artefacto afectado.
 - La guía operativa de detalle vive en `03-reglas-de-dominio/`, `04-contratos/` y las ADR;
   este documento fija los límites que esas fuentes no pueden contradecir.
 
-**Version**: 1.3.0 | **Ratified**: TODO(RATIFICATION_DATE) | **Last Amended**: 2026-11-11
+**Version**: 1.4.0 | **Ratified**: TODO(RATIFICATION_DATE) | **Last Amended**: 2026-11-19

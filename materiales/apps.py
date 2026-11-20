@@ -1,0 +1,9 @@
+"""App de catálogo compartido de materiales."""
+
+from django.apps import AppConfig
+
+
+class MaterialesConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "materiales"
+    verbose_name = "Materiales"

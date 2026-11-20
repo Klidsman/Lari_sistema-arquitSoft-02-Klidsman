@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if tecnico %}Editar técnico · Lari{% else %}Nuevo técnico · Lari{% endif %}
+{% endblock %}
+
+{% block contenido %}
+  <h1>{% if tecnico %}Editar técnico{% else %}Nuevo técnico{% endif %}</h1>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  {% if tecnico %}
+    <dl class="detalle">
+      <dt>NIF</dt>
+      <dd>{{ tecnico.nif }}</dd>
+      <dt>Tenant</dt>
+      <dd>{{ tecnico.tenant.codigo }} - {{ tecnico.tenant.nombre }}</dd>
+      <dt>Estado</dt>
+      <dd>{{ tecnico.activo|yesno:"Activo,Desactivado" }}</dd>
+    </dl>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" hx-disabled-elt="this">Guardar</button>
+    <a href="{% if tecnico %}{% url 'detalle_tecnico' tecnico.pk %}{% else %}{% url 'listar_tecnicos' %}{% endif %}">Cancelar</a>
+  </form>
+{% endblock %}

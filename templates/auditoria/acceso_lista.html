@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Auditoría de acceso · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Auditoría de acceso</h1>
+
+  <form hx-get="{% url 'auditoria_acceso' %}"
+        hx-target="#tabla-auditoria"
+        hx-swap="innerHTML"
+        method="get">
+    <label>Entidad
+      <input type="text" name="entidad" value="{{ filtros.entidad|default:'' }}">
+    </label>
+    <label>ID entidad
+      <input type="number" name="entidad_id" value="{{ filtros.entidad_id|default:'' }}">
+    </label>
+    <label>Usuario
+      <input type="text" name="usuario" value="{{ filtros.usuario|default:'' }}">
+    </label>
+    <label>Desde
+      <input type="date" name="desde" value="{{ filtros.desde|default:'' }}">
+    </label>
+    <label>Hasta
+      <input type="date" name="hasta" value="{{ filtros.hasta|default:'' }}">
+    </label>
+    <button type="submit">Filtrar</button>
+  </form>
+
+  <div id="tabla-auditoria">
+    {% include "auditoria/_tabla_auditoria.html" %}
+  </div>
+{% endblock %}

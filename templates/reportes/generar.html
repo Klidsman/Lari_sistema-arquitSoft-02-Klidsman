@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Generar corte · Lari{% endblock %}
+{% block contenido %}
+  <h1>Generar corte mensual</h1>
+  <form method="post">
+    {% csrf_token %}
+    <label>Mes <input type="number" name="mes" min="1" max="12" required></label>
+    <label>Año <input type="number" name="anio" min="2000" max="2100" required></label>
+    {% if es_admin %}
+      <label>Tenant
+        <select name="tenant">
+          <option value="">Global</option>
+          {% for tenant in tenants %}<option value="{{ tenant.pk }}">{{ tenant.codigo }}</option>{% endfor %}
+        </select>
+      </label>
+    {% endif %}
+    <button type="submit">Generar</button>
+  </form>
+{% endblock %}

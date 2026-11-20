@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Nueva devolución · Lari{% endblock %}
+{% block contenido %}
+  <h1>Registrar devolución</h1>
+  <form method="post">
+    {% csrf_token %}
+    {{ formulario.as_p }}
+    <button type="submit">Registrar y generar acta</button>
+  </form>
+{% endblock %}

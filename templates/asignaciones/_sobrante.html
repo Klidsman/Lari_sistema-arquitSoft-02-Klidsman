@@ -1,0 +1,24 @@
+{% if resumen %}
+  <div class="lista-materiales-panel">
+    {% for fila in resumen %}
+      <label class="material-opcion"
+             data-material="{{ fila.material.pk }}"
+             {% if fila.sobrante <= 0 %}aria-disabled="true"{% endif %}>
+        <input type="checkbox"
+               class="material-panel-check"
+               value="{{ fila.material.pk }}"
+               data-seriado="{% if fila.seriado %}1{% else %}0{% endif %}"
+               data-codigo="{{ fila.material.codigo }}"
+               {% if fila.sobrante <= 0 %}data-sin-sobrante="1" disabled{% endif %}>
+        <span class="material-nombre">{{ fila.material.codigo }} - {{ fila.material.descripcion }}</span>
+        <span class="material-cantidades">
+          Disponible: {{ fila.disponible }} · Sobrante: {{ fila.sobrante }}
+          {% if fila.seriado %}(series){% else %}(cantidad){% endif %}
+          {% if fila.sobrante < 0 %}· supera el disponible{% endif %}
+        </span>
+      </label>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="ayuda">No hay materiales con existencias. Registra un recojo primero.</p>
+{% endif %}

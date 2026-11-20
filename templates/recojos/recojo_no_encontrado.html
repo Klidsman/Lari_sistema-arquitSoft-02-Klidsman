@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Recojo no encontrado · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Recojo no encontrado</h1>
+  <p>{{ error }}</p>
+  <p><a href="{% url 'lista_recojos' %}">Volver al listado</a></p>
+{% endblock %}

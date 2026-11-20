@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if region %}Editar región · Lari{% else %}Nueva región · Lari{% endif %}
+{% endblock %}
+
+{% block contenido %}
+  <h1>{% if region %}Editar región {{ region.codigo }}{% else %}Nueva región{% endif %}</h1>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <form method="post"
+        action="{% if region %}{% url 'editar_region' region.pk %}{% else %}{% url 'crear_region' %}{% endif %}">
+    {% csrf_token %}
+
+    <fieldset>
+      <legend>Región</legend>
+      {{ form_region.as_p }}
+    </fieldset>
+
+    <fieldset>
+      <legend>Almacén central</legend>
+      {{ form_almacen.as_p }}
+    </fieldset>
+
+    <button type="submit">Guardar</button>
+    <a href="{% url 'listar_regiones' %}">Cancelar</a>
+  </form>
+{% endblock %}

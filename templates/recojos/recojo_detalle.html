@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Recojo {{ recojo.pk }} · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Recojo {{ recojo.pk }}</h1>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <dl class="detalle">
+    <dt>Nombre</dt>
+    <dd>{{ recojo.nombre }}</dd>
+    <dt>Estado</dt>
+    <dd>
+      {% if recojo.estado == "ANULADO" %}
+        <span class="etiqueta etiqueta-anulado">Anulado</span>
+      {% else %}
+        <span class="etiqueta">Registrado</span>
+      {% endif %}
+    </dd>
+    <dt>Fecha</dt>
+    <dd>{{ recojo.fecha|date:"Y-m-d" }}</dd>
+    <dt>Tenant</dt>
+    <dd>{{ recojo.tenant.codigo }} - {{ recojo.tenant.nombre }}</dd>
+    <dt>Región</dt>
+    <dd>{{ recojo.region.codigo }} - {{ recojo.region.nombre }}</dd>
+    <dt>Total de series</dt>
+    <dd>{{ totales.total_series }}</dd>
+    <dt>Total de cantidad</dt>
+    <dd>{{ totales.total_cantidad }}</dd>
+  </dl>
+
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Material</th>
+        <th>Descripción</th>
+        <th>Lote</th>
+        <th>Serie</th>
+        <th>Cantidad</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for linea in recojo.lineas.all %}
+        <tr>
+          <td>{{ linea.material.codigo }}</td>
+          <td>{{ linea.material.descripcion }}</td>
+          <td>{{ linea.lote }}</td>
+          <td>{{ linea.serie.numero|default:"—" }}</td>
+          <td>{{ linea.cantidad }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5">El recojo no tiene líneas.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Anulación</h2>
+  {% if recojo.estado == "ANULADO" %}
+    <dl class="detalle">
+      <dt>Motivo</dt>
+      <dd>{{ recojo.motivo_anulacion }}</dd>
+      <dt>Anulado por</dt>
+      <dd>{{ recojo.anulado_por.email }}</dd>
+      <dt>Anulado en</dt>
+      <dd>{{ recojo.anulado_en|date:"Y-m-d H:i:s" }}</dd>
+    </dl>
+  {% else %}
+    <p class="mensaje">{{ mensaje_anulacion }}</p>
+
+    {% if puede_anular %}
+      <form method="post"
+            action="{% url 'anular_recojo' recojo.pk %}"
+            data-confirmar="¿Estás seguro de anular este recojo? Se revertirá el stock y las series quedarán inactivas.">
+        {% csrf_token %}
+        <label>Motivo de anulación
+          <textarea name="motivo" rows="3" maxlength="500" required></textarea>
+        </label>
+        <button type="submit">Anular recojo</button>
+      </form>
+    {% endif %}
+  {% endif %}
+
+  <p><a href="{% url 'lista_recojos' %}">Volver al listado</a></p>
+{% endblock %}

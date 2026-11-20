@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Cuentas · Lari{% endblock %}
+
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <h1>Cuentas</h1>
+    <a class="boton" href="{% url 'crear_cuenta_almacen' %}">Nueva cuenta de almacén</a>
+  </div>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Correo</th>
+        <th>Rol</th>
+        <th>Alcance</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cuenta in cuentas %}
+        <tr>
+          <td>{{ cuenta.email }}</td>
+          <td>{{ cuenta.rol }}</td>
+          <td>
+            {% if cuenta.tenant %}
+              Tenant {{ cuenta.tenant.codigo }}
+            {% elif cuenta.region %}
+              Región {{ cuenta.region.codigo }}
+            {% else %}
+              Plataforma
+            {% endif %}
+          </td>
+          <td>{{ cuenta.is_active|yesno:"Activa,Inactiva" }}</td>
+          <td class="acciones">
+            {% if cuenta.is_active %}
+              <form method="post"
+                    action="{% url 'desactivar_cuenta' cuenta.pk %}"
+                    data-confirmar="¿Estás seguro de desactivar esta cuenta? La sesión abierta se cerrará.">
+                {% csrf_token %}
+                <button type="submit">Desactivar</button>
+              </form>
+            {% else %}
+              <form method="post"
+                    action="{% url 'reactivar_cuenta' cuenta.pk %}"
+                    data-confirmar="¿Estás seguro de reactivar esta cuenta?">
+                {% csrf_token %}
+                <button type="submit">Reactivar</button>
+              </form>
+            {% endif %}
+
+            {% if cuenta.rol != "USUARIO_TENANT" %}
+              <form method="post" action="{% url 'cambiar_rol' cuenta.pk %}">
+                {% csrf_token %}
+                <select name="rol">
+                  <option value="ADMIN_PLATAFORMA" {% if cuenta.rol == "ADMIN_PLATAFORMA" %}selected{% endif %}>
+                    Administrador de plataforma
+                  </option>
+                  <option value="RESPONSABLE_ALMACEN" {% if cuenta.rol == "RESPONSABLE_ALMACEN" %}selected{% endif %}>
+                    Responsable de almacén
+                  </option>
+                </select>
+                <button type="submit">Cambiar rol</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5">No hay cuentas registradas.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if pagina.paginator.num_pages > 1 %}
+    <nav class="paginacion">
+      {% if pagina.has_previous %}
+        <a href="?page={{ pagina.previous_page_number }}">Anterior</a>
+      {% endif %}
+      <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+      {% if pagina.has_next %}
+        <a href="?page={{ pagina.next_page_number }}">Siguiente</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% endblock %}

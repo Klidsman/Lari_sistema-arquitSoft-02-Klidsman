@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitud {{ solicitud.pk }} · Almacén{% endblock %}
+
+{% block contenido %}
+  <h1>Solicitud {{ solicitud.pk }}</h1>
+
+  {% if envio_fallido %}
+    <p class="mensaje mensaje-error">El envío del correo al almacén falló definitivamente.</p>
+  {% endif %}
+
+  <dl class="detalle">
+    <dt>Tenant</dt><dd>{{ solicitud.tenant.codigo }}</dd>
+    <dt>Técnicos</dt><dd>{{ solicitud.nifs_tecnicos }}</dd>
+    <dt>Fecha</dt><dd>{{ solicitud.fecha|date:"Y-m-d" }}</dd>
+    <dt>Estado</dt><dd>{{ solicitud.get_estado_display }}</dd>
+    <dt>Total series</dt><dd>{{ totales.total_series }}</dd>
+    <dt>Total cantidad</dt><dd>{{ totales.total_cantidad }}</dd>
+    <dt>Hash Excel</dt><dd>{{ solicitud.excel_hash }}</dd>
+    {% if solicitud.confirmada_en %}<dt>Confirmada en</dt><dd>{{ solicitud.confirmada_en|date:"Y-m-d H:i" }}</dd>{% endif %}
+    {% if solicitud.rechazada_en %}
+      <dt>Rechazada en</dt><dd>{{ solicitud.rechazada_en|date:"Y-m-d H:i" }}</dd>
+      <dt>Motivo</dt><dd>{{ solicitud.motivo_rechazo }}</dd>
+    {% endif %}
+  </dl>
+
+  <table class="tabla">
+    <thead><tr><th>Técnico</th><th>Material</th><th>Descripción</th><th>Lote</th><th>Serie</th><th>Cantidad</th></tr></thead>
+    <tbody>
+      {% for linea in solicitud.lineas.all %}
+        <tr>
+          <td>{{ linea.tecnico.nif }}</td>
+          <td>{{ linea.material.codigo }}</td>
+          <td>{{ linea.material.descripcion }}</td>
+          <td>{{ linea.lote }}</td>
+          <td>{{ linea.serie.numero|default:"—" }}</td>
+          <td>{{ linea.cantidad }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p><a href="{% url 'descargar_excel_almacen' solicitud.pk %}">Descargar Excel</a></p>
+
+  {% if solicitud.estado == "ENVIADA" %}
+    <form method="post" action="{% url 'confirmar_almacen' solicitud.pk %}"
+          data-confirmar="¿Confirmar esta solicitud y mover el stock?">
+      {% csrf_token %}
+      <button type="submit">Confirmar</button>
+    </form>
+    <form method="post" action="{% url 'rechazar_almacen' solicitud.pk %}"
+          data-confirmar="¿Rechazar esta solicitud?">
+      {% csrf_token %}
+      <label>Motivo <textarea name="motivo" rows="3" required maxlength="1000"></textarea></label>
+      <button type="submit">Rechazar</button>
+    </form>
+  {% endif %}
+
+  <p><a href="{% url 'bandeja_almacen' %}">Volver a la bandeja</a></p>
+{% endblock %}

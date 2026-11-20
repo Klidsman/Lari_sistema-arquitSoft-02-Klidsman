@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Traspaso {{ traspaso.pk }} · Almacén{% endblock %}
+{% block contenido %}
+  <h1>Traspaso {{ traspaso.pk }}</h1>
+  <p>{{ traspaso.tecnico_origen.nif }} → {{ traspaso.tecnico_destino.nif }} · {{ traspaso.get_estado_display }}</p>
+  <table class="tabla">
+    <thead><tr><th>Material</th><th>Lote</th><th>Serie</th><th>Cantidad</th></tr></thead>
+    <tbody>
+      {% for linea in traspaso.lineas.all %}
+        <tr><td>{{ linea.material.codigo }}</td><td>{{ linea.lote }}</td><td>{{ linea.serie.numero|default:"—" }}</td><td>{{ linea.cantidad }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if traspaso.estado == "ENVIADA" %}
+    <form method="post" action="{% url 'confirmar_traspaso_almacen' traspaso.pk %}">{% csrf_token %}<button>Confirmar</button></form>
+    <form method="post" action="{% url 'rechazar_traspaso_almacen' traspaso.pk %}">{% csrf_token %}<label>Motivo <textarea name="motivo" required></textarea></label><button>Rechazar</button></form>
+  {% endif %}
+  {% if traspaso.excel_ruta %}<p><a href="{% url 'excel_traspaso_almacen' traspaso.pk %}">Descargar Excel</a></p>{% endif %}
+{% endblock %}

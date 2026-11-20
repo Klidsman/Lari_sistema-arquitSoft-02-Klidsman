@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Corte {{ corte.anio }}-{{ corte.mes }} · Lari{% endblock %}
+{% block contenido %}
+  <h1>Corte {{ corte.anio }}-{{ corte.mes|stringformat:"02d" }} · {{ detalle.alcance }}</h1>
+  <dl class="detalle">
+    <dt>Versión</dt><dd>{{ corte.version }}</dd>
+    <dt>Generado</dt><dd>{{ corte.generado_en|date:"Y-m-d H:i" }}</dd>
+    <dt>Regenerado</dt><dd>{{ corte.regenerado_en|date:"Y-m-d H:i"|default:"—" }}</dd>
+    <dt>Solicitados</dt><dd>{{ corte.solicitados }}</dd>
+    <dt>Asignados</dt><dd>{{ corte.asignados }}</dd>
+    <dt>Liquidados/instalados</dt><dd>{{ corte.liquidados_instalados }}</dd>
+    <dt>Devueltos</dt><dd>{{ corte.devueltos }}</dd>
+    <dt>No justificado</dt><dd>{{ corte.no_justificado }}</dd>
+    <dt>% Merma</dt><dd>{{ corte.porcentaje_merma }}%</dd>
+  </dl>
+  <form method="post" action="{% url 'regenerar_corte' corte.pk %}">
+    {% csrf_token %}<button type="submit">Regenerar</button>
+  </form>
+  <p>
+    <a class="boton" href="{% url 'exportar_auditoria' corte.pk %}">Exportar auditoría</a>
+    <a class="boton" href="{% url 'exportar_conciliacion' corte.pk %}">Exportar conciliación</a>
+  </p>
+{% endblock %}

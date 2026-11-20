@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Cortes mensuales · Lari{% endblock %}
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <h1>Cortes mensuales</h1>
+    <a class="boton" href="{% url 'generar_corte' %}">Generar corte</a>
+  </div>
+  <form method="get">
+    <label>Año <input type="number" name="anio" min="2000" max="2100" value="{{ anio }}"></label>
+    <button type="submit">Filtrar</button>
+  </form>
+  <table class="tabla">
+    <thead><tr><th>Periodo</th><th>Alcance</th><th>Solicitados</th><th>Asignados</th><th>Merma</th><th></th></tr></thead>
+    <tbody>
+      {% for corte in cortes %}
+        <tr>
+          <td>{{ corte.anio }}-{{ corte.mes|stringformat:"02d" }}</td>
+          <td>{% if corte.tenant %}{{ corte.tenant.codigo }}{% else %}Global{% endif %}</td>
+          <td>{{ corte.solicitados }}</td>
+          <td>{{ corte.asignados }}</td>
+          <td>{{ corte.porcentaje_merma }}%</td>
+          <td><a href="{% url 'detalle_corte' corte.pk %}">Ver</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">No hay cortes.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

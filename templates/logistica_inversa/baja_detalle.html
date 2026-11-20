@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Baja {{ baja.pk }} · Lari{% endblock %}
+{% block contenido %}
+  <h1>Baja {{ baja.pk }}</h1>
+  <dl class="detalle">
+    <dt>Serie</dt><dd>{{ baja.serie.numero }}</dd>
+    <dt>Material</dt><dd>{{ baja.material.codigo }} - {{ baja.material.descripcion }}</dd>
+    <dt>Causa</dt><dd>{{ baja.get_causa_display }}</dd>
+    <dt>Observaciones</dt><dd>{{ baja.observaciones|default:"—" }}</dd>
+    <dt>Registrada</dt><dd>{{ baja.creado_en|date:"Y-m-d H:i" }}</dd>
+  </dl>
+{% endblock %}

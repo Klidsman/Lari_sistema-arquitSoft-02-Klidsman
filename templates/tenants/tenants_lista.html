@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Tenants · Lari{% endblock %}
+
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <h1>Tenants</h1>
+    <a class="boton" href="{% url 'crear_tenant' %}">Nuevo tenant</a>
+  </div>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <div id="tabla-tenants"
+       hx-get="{% url 'listar_tenants' %}"
+       hx-trigger="every 60s"
+       hx-target="#tabla-tenants"
+       hx-swap="innerHTML">
+    {% include "tenants/_tabla_tenants.html" %}
+  </div>
+{% endblock %}

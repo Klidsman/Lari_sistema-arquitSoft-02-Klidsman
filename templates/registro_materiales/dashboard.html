@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Dashboard mensual · Lari{% endblock %}
+{% block contenido %}
+  <h1>Dashboard {{ datos.periodo }}</h1>
+  <p>Órdenes: {{ datos.ordenes }} · Técnicos con uso: {{ datos.tecnicos }}</p>
+  <table class="tabla">
+    <thead><tr><th>Material</th><th>Inicial</th><th>Despachos</th><th>Usado</th><th>Final</th></tr></thead>
+    <tbody>
+      {% for fila in datos.filas %}
+        <tr class="{% if fila.alerta %}fila-alerta{% endif %}">
+          <td>{{ fila.material.codigo }} - {{ fila.material.descripcion }}</td>
+          <td>{{ fila.inicial }}</td>
+          <td>{{ fila.despachos }}</td>
+          <td>{{ fila.usado }}</td>
+          <td>{{ fila.final }}{% if fila.alerta %} (negativo){% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">Sin datos del periodo.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <h2>Detalle por técnico</h2>
+  <table class="tabla">
+    <thead><tr><th>Técnico</th><th>Material</th><th>Cantidad</th></tr></thead>
+    <tbody>
+      {% for fila in datos.detalle %}
+        <tr><td>{{ fila.tecnico.nif }}</td><td>{{ fila.material.codigo }}</td><td>{{ fila.cantidad }}</td></tr>
+      {% empty %}
+        <tr><td colspan="3">Sin usos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

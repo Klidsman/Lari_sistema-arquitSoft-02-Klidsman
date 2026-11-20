@@ -1,0 +1,1 @@
+"""Recojos de materiales."""

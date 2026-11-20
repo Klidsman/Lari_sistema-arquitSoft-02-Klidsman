@@ -1,0 +1,5 @@
+{% for serie in series %}
+  <label><input type="checkbox" name="lineas-{{ indice }}-serie_ids" value="{{ serie.pk }}"> {{ serie.numero }}</label>
+{% empty %}
+  <p class="ayuda">No hay series disponibles.</p>
+{% endfor %}

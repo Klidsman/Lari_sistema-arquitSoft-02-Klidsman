@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Cierre mensual · Lari{% endblock %}
+{% block contenido %}
+  <h1>Cierre mensual · {{ periodo }}</h1>
+  <p>Estado: {% if estado %}{{ estado.get_estado_display }} (versión {{ estado.version }}){% else %}Abierto{% endif %}</p>
+  {% if estado and estado.estado == "CERRADO" %}
+    <form method="post" action="{% url 'reabrir_mes' %}">
+      {% csrf_token %}
+      <input type="hidden" name="cierre" value="{{ estado.pk }}">
+      <label>Motivo de reapertura <textarea name="motivo" required></textarea></label>
+      <button type="submit">Reabrir mes</button>
+    </form>
+  {% endif %}
+  <h2>Lista de chequeo</h2>
+  <table class="tabla">
+    <thead><tr><th>Tipo</th><th>Referencia</th><th>Descripción</th><th>Justificar</th></tr></thead>
+    <tbody>
+      {% for pendiente in pendientes %}
+        <tr>
+          <td>{{ pendiente.tipo }}</td>
+          <td>{{ pendiente.referencia }}</td>
+          <td>{{ pendiente.descripcion }}</td>
+          <td>
+            <form method="post" action="{% url 'justificar_pendiente' %}">
+              {% csrf_token %}
+              <input type="hidden" name="periodo" value="{{ periodo }}">
+              <input type="hidden" name="tipo" value="{{ pendiente.tipo }}">
+              <input type="hidden" name="referencia" value="{{ pendiente.referencia }}">
+              <input type="text" name="motivo" required>
+              <button type="submit">Justificar</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">Sin pendientes.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form method="post" action="{% url 'cerrar_mes' %}">
+    {% csrf_token %}
+    <input type="hidden" name="periodo" value="{{ periodo }}">
+    <label>Referencia del respaldo <input type="text" name="backup_ref" placeholder="backups/..." required></label>
+    <button type="submit">Cerrar mes</button>
+  </form>
+{% endblock %}

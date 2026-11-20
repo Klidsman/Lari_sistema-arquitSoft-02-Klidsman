@@ -1,0 +1,1 @@
+"""Técnicos del tenant."""

@@ -1,0 +1,15 @@
+{% for material in materiales %}
+  <li class="resultado-material"
+      role="option"
+      data-codigo="{{ material.codigo }}"
+      data-descripcion="{{ material.descripcion }}"
+      data-lote="{{ material.lote }}"
+      data-tipo="{{ material.tipo }}">
+    <span class="codigo">{{ material.codigo }}</span>
+    <span class="descripcion">{{ material.descripcion }}</span>
+    <span class="lote">{{ material.lote }}</span>
+    <span class="tipo">{{ material.tipo }}</span>
+  </li>
+{% empty %}
+  <li class="sin-resultados">No se encontraron materiales</li>
+{% endfor %}

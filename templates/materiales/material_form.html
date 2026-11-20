@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if material %}Editar material · Lari{% else %}Nuevo material · Lari{% endif %}
+{% endblock %}
+
+{% block contenido %}
+  <h1>{% if material %}Editar material{% else %}Nuevo material{% endif %}</h1>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  {% if material %}
+    <dl class="detalle">
+      <dt>Código</dt>
+      <dd>{{ material.codigo }}</dd>
+      <dt>Creado por</dt>
+      <dd>{{ material.creado_por.email }}</dd>
+      <dt>Creado en</dt>
+      <dd>{{ material.creado_en|date:"Y-m-d H:i:s" }}</dd>
+      <dt>Tipo actual</dt>
+      <dd>{{ material.tipo }}</dd>
+    </dl>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    {% if material and not permitir_tipo %}
+      <p class="mensaje">
+        El tipo no se puede cambiar porque el material tiene stock o movimientos.
+      </p>
+    {% endif %}
+
+    <button type="submit" hx-disabled-elt="this">Guardar</button>
+    <a href="{% url 'listar_materiales' %}">Cancelar</a>
+  </form>
+{% endblock %}

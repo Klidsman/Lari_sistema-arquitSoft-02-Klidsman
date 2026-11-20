@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Segundo factor · Lari{% endblock %}
+
+{% block contenido %}
+  <h1>Segundo factor</h1>
+
+  {% if error %}
+    <p class="mensaje mensaje-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  {% if configurando %}
+    <p>Configura tu aplicación autenticadora con este URI:</p>
+    <p><code>{{ uri }}</code></p>
+  {% endif %}
+
+  <form method="post" action="{% url 'login_2fa' %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Verificar</button>
+  </form>
+
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Cancelar</button>
+  </form>
+{% endblock %}
