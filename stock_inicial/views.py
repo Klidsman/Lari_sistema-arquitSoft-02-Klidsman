@@ -116,10 +116,45 @@ def cargar_excel(request):
             status=400,
         )
 
+    archivo = formulario.cleaned_data["archivo"]
+    try:
+        resultado, nombre, hash_archivo = services.validar_excel_stock_inicial(
+            tenant,
+            archivo,
+        )
+    except FormatoExcelInvalido as exc:
+        return render(
+            request,
+            "stock_inicial/estado.html",
+            {
+                "estado": services.estado_stock_inicial(tenant),
+                "form": CargaExcelForm(),
+                "error": str(exc),
+            },
+            status=400,
+        )
+
+    if not resultado.valido:
+        return render(
+            request,
+            "stock_inicial/estado.html",
+            {
+                "estado": services.estado_stock_inicial(tenant),
+                "form": CargaExcelForm(),
+                "resultado": resultado,
+                "archivo_nombre": nombre,
+                "archivo_hash": hash_archivo,
+            },
+            status=400,
+        )
+
+    # La carga revalida el archivo; hay que devolver el puntero al inicio.
+    archivo.seek(0)
+
     try:
         carga = services.cargar_desde_excel(
             tenant,
-            formulario.cleaned_data["archivo"],
+            archivo,
             request.usuario,
         )
     except (services.StockInicialYaCargado, services.SerieYaExiste) as exc:

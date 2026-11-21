@@ -39,14 +39,60 @@
               hx-target="#resultado-validacion"
               hx-swap="innerHTML"
               hx-encoding="multipart/form-data"
-              hx-include="closest form">Validar archivo</button>
-      <button type="submit">Cargar stock inicial</button>
+              hx-include="closest form"
+              hx-indicator="#indicador-validacion"
+              hx-disabled-elt="this">Validar archivo</button>
+      <span id="indicador-validacion" class="htmx-indicator" role="status">Validando…</span>
+      <button type="submit" id="boton-cargar-stock" disabled>Cargar stock inicial</button>
     </form>
 
-    <div id="resultado-validacion"></div>
+    <div id="resultado-validacion">
+      {% if resultado %}
+        {% include "stock_inicial/_resultado_validacion.html" %}
+      {% endif %}
+    </div>
 
     <p>
       <a href="{% url 'formulario_stock_inicial' %}">Cargar por formulario</a>
     </p>
   {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+  <script>
+    (function () {
+      const boton = document.getElementById("boton-cargar-stock");
+      const archivo = document.getElementById("id_archivo");
+      const resultado = document.getElementById("resultado-validacion");
+      if (!boton || !resultado) return;
+
+      function actualizarBoton() {
+        const bloque = resultado.querySelector("[data-valido]");
+        boton.disabled = !(bloque && bloque.dataset.valido === "true");
+      }
+
+      document.body.addEventListener("htmx:beforeSwap", function (evento) {
+        if (
+          evento.detail.target === resultado &&
+          [400, 409].includes(evento.detail.xhr.status)
+        ) {
+          evento.detail.shouldSwap = true;
+          evento.detail.isError = false;
+        }
+      });
+
+      document.body.addEventListener("htmx:afterSwap", function (evento) {
+        if (evento.detail.target === resultado) actualizarBoton();
+      });
+
+      if (archivo) {
+        archivo.addEventListener("change", function () {
+          boton.disabled = true;
+          resultado.innerHTML = "";
+        });
+      }
+
+      actualizarBoton();
+    })();
+  </script>
 {% endblock %}
