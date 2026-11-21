@@ -429,8 +429,14 @@ def normalizar_lineas_solicitud(tenant, lineas):
                 raise ValidacionAsignacion(
                     "El material no es seriado y no admite series"
                 )
+            valor_cantidad = linea.get("cantidad")
+            if isinstance(valor_cantidad, bool) or (
+                isinstance(valor_cantidad, float)
+                and not valor_cantidad.is_integer()
+            ):
+                raise CantidadInvalida("La cantidad debe ser un número entero")
             try:
-                cantidad = int(linea.get("cantidad"))
+                cantidad = int(valor_cantidad)
             except (TypeError, ValueError) as exc:
                 raise CantidadInvalida("La cantidad debe ser un número entero") from exc
             if cantidad <= 0:
