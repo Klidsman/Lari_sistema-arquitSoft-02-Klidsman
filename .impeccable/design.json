@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-20T00:00:00.000Z",
+  "title": "Design System: Lari · Control de materiales",
+  "extensions": {
+    "colorMeta": {
+      "sello": {
+        "role": "primary",
+        "displayName": "Azul sello",
+        "canonical": "#1f5f8b",
+        "tonalRamp": ["#0b2334", "#10364e", "#164968", "#1f5f8b", "#38789f", "#5f93b4", "#93b7cd", "#cfe0e9"]
+      },
+      "sello-hundido": {
+        "role": "primary",
+        "displayName": "Azul sello hundido",
+        "canonical": "#18496b",
+        "tonalRamp": ["#0a1f2e", "#0d2a3e", "#123855", "#18496b", "#2c6385", "#4d82a2", "#8aafc3", "#cfdfe8"]
+      },
+      "grafito": {
+        "role": "neutral",
+        "displayName": "Grafito",
+        "canonical": "#1f2933",
+        "tonalRamp": ["#0a0e12", "#12181e", "#1a232b", "#1f2933", "#3a464f", "#5b6873", "#94a0a9", "#d5dbe0"]
+      },
+      "tapa": {
+        "role": "neutral",
+        "displayName": "Tapa",
+        "canonical": "#0f1c26",
+        "tonalRamp": ["#050a0e", "#0a1319", "#0f1c26", "#1b2f3d", "#2d4658", "#476275", "#7c93a2", "#c6d2da"]
+      },
+      "papel": {
+        "role": "neutral",
+        "displayName": "Papel",
+        "canonical": "#f6f7f9",
+        "tonalRamp": ["#1a1b1d", "#2e3033", "#464a4f", "#6b7077", "#9aa0a6", "#c3c7cc", "#e2e5e8", "#f6f7f9"]
+      },
+      "correccion": {
+        "role": "tertiary",
+        "displayName": "Rojo corrección",
+        "canonical": "#a4262c",
+        "tonalRamp": ["#2e0a0c", "#4d1114", "#71181d", "#a4262c", "#c53f45", "#d9777b", "#ecb4b6", "#fbe4e5"]
+      },
+      "conformidad": {
+        "role": "tertiary",
+        "displayName": "Verde conformidad",
+        "canonical": "#256b3b",
+        "tonalRamp": ["#081f10", "#0d351a", "#154a26", "#256b3b", "#3a8c53", "#63ad78", "#a4cfb1", "#e0f0e5"]
+      },
+      "nota": {
+        "role": "tertiary",
+        "displayName": "Ámbar de nota",
+        "canonical": "#8a5a00",
+        "tonalRamp": ["#2b1c00", "#4a3000", "#694400", "#8a5a00", "#b07914", "#cf9c42", "#e5c68a", "#f8eed6"]
+      }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Título de la tarjeta de acceso y de la configuración 2FA. Techo real del sistema." },
+      "title": { "displayName": "Title", "purpose": "Solo la marca «Lari» y su enlace de cabecera; el interletraje es la identidad." },
+      "body": { "displayName": "Body", "purpose": "Todo el contenido; la prosa instructiva se limita a 62ch." },
+      "label": { "displayName": "Label", "purpose": "Etiquetas de formulario, legend de bloque y encabezados de columna." },
+      "small": { "displayName": "Small", "purpose": "Metadatos, cantidades, notas y mensajes auxiliares." },
+      "mono": { "displayName": "Mono", "purpose": "Series, códigos, secretos TOTP y URIs. Siempre con interletraje." }
+    },
+    "shadows": [
+      { "name": "tarjeta-acceso", "value": "0 1.5rem 3.5rem rgba(15, 28, 38, 0.10)", "purpose": "Única sombra difusa: eleva la tarjeta de entrada sobre el papel." },
+      { "name": "halo-activo", "value": "0 0 0 2px rgba(31, 95, 139, 0.15)", "purpose": "Señala el bloque de técnico en edición. Es un halo, no elevación." },
+      { "name": "anillo-error", "value": "0 0 0 1px #a4262c", "purpose": "Refuerza el borde de un campo inválido." }
+    ],
+    "motion": [],
+    "breakpoints": [
+      { "name": "sm", "value": "480px" },
+      { "name": "md", "value": "700px" },
+      { "name": "lg", "value": "900px" },
+      { "name": "xl", "value": "1100px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal del shell: guardar, confirmar, enviar.",
+      "html": "<button class=\"ds-btn-primary\" type=\"submit\">Guardar recojo</button>",
+      "css": ".ds-btn-primary { font: inherit; font-weight: 600; padding: 0.6rem 1.1rem; border: 1px solid #1f5f8b; border-radius: 6px; background: #1f5f8b; color: #fff; cursor: pointer; } .ds-btn-primary:hover { background: #18496b; border-color: #18496b; } .ds-btn-primary:focus-visible { outline: 3px solid #1f5f8b; outline-offset: 2px; }"
+    },
+    {
+      "name": "Botón primario de acceso",
+      "kind": "button",
+      "refersTo": "button-auth",
+      "description": "Ancho completo, 44px de alto mínimo. Una sola acción principal por pantalla de acceso.",
+      "html": "<button class=\"ds-btn-auth\" type=\"submit\">Entrar</button>",
+      "css": ".ds-btn-auth { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 2.75rem; padding: 0.65rem 1rem; border: 1px solid #1f5f8b; border-radius: 8px; background: #1f5f8b; color: #fff; font: inherit; font-size: 1rem; font-weight: 600; cursor: pointer; } .ds-btn-auth:hover { background: #18496b; border-color: #18496b; } .ds-btn-auth:active { transform: translateY(1px); } .ds-btn-auth:focus-visible { outline: 3px solid #1f5f8b; outline-offset: 2px; }"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "button-secundario",
+      "description": "Acción de apoyo junto a un dato: copiar la clave TOTP. Blanco con filete, texto en Azul sello.",
+      "html": "<div class=\"ds-clave-bloque\"><code class=\"ds-clave\">JBSW Y3DP EHPK 3PXP</code><button class=\"ds-btn-sec\" type=\"button\">Copiar clave</button></div>",
+      "css": ".ds-clave-bloque { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.9rem 1rem; border: 1px solid #d9dee5; border-radius: 8px; background: #fff; } .ds-clave { flex: 1 1 12rem; min-width: 0; font-family: ui-monospace, \"Cascadia Mono\", Consolas, monospace; font-size: 1rem; font-weight: 600; letter-spacing: 0.08em; word-spacing: 0.3em; color: #1f2933; overflow-wrap: anywhere; user-select: all; } .ds-btn-sec { margin-left: auto; padding: 0.4rem 0.85rem; border: 1px solid #d9dee5; border-radius: 6px; background: #fff; color: #1f5f8b; font: inherit; font-size: 0.9375rem; font-weight: 600; cursor: pointer; } .ds-btn-sec:hover { border-color: #1f5f8b; } .ds-btn-sec:focus-visible { outline: 3px solid #1f5f8b; outline-offset: 2px; }"
+    },
+    {
+      "name": "Botón fantasma",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Se lee como enlace, nunca como acción principal. Es el tratamiento de «Cancelar».",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">Cancelar</button>",
+      "css": ".ds-btn-ghost { padding: 0; border: 0; background: none; color: #1f5f8b; font: inherit; text-decoration: underline; cursor: pointer; } .ds-btn-ghost:focus-visible { outline: 3px solid #1f5f8b; outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "campo-texto",
+      "description": "Campo de la superficie de acceso: etiqueta de 0.875rem sobre un input de 44px.",
+      "html": "<div class=\"ds-campo\"><label class=\"ds-campo__label\" for=\"ds-correo\">Correo:</label><input class=\"ds-campo__input\" id=\"ds-correo\" type=\"email\" autocomplete=\"username\" placeholder=\"nombre@empresa.com\"></div>",
+      "css": ".ds-campo { display: block; } .ds-campo__label { display: block; margin-bottom: 0.4rem; color: #1f2933; font-size: 0.875rem; font-weight: 600; } .ds-campo__input { width: 100%; min-height: 2.75rem; padding: 0.6rem 0.75rem; border: 1px solid #d9dee5; border-radius: 8px; background: #fff; color: #1f2933; font: inherit; font-size: 1rem; } .ds-campo__input:focus-visible { outline: 3px solid #1f5f8b; outline-offset: 2px; } .ds-campo__input[aria-invalid=\"true\"] { border-color: #a4262c; box-shadow: 0 0 0 1px #a4262c; }"
+    },
+    {
+      "name": "Campo de código TOTP",
+      "kind": "input",
+      "refersTo": "campo-codigo",
+      "description": "Seis dígitos, monoespaciados y centrados. El interletraje amplio evita transponer cifras.",
+      "html": "<div class=\"ds-codigo\"><label class=\"ds-codigo__label\" for=\"ds-totp\">Código de verificación:</label><input class=\"ds-codigo__input\" id=\"ds-totp\" type=\"text\" inputmode=\"numeric\" maxlength=\"6\" placeholder=\"000000\" autocomplete=\"one-time-code\"></div>",
+      "css": ".ds-codigo { max-width: 16rem; } .ds-codigo__label { display: block; margin-bottom: 0.35rem; font-weight: 600; } .ds-codigo__input { width: 100%; padding: 0.55rem 0.7rem; border: 1px solid #d9dee5; border-radius: 6px; background: #fff; color: #1f2933; font-family: ui-monospace, \"Cascadia Mono\", Consolas, monospace; font-size: 1.15rem; letter-spacing: 0.3em; text-align: center; } .ds-codigo__input:focus-visible { outline: 3px solid #1f5f8b; outline-offset: 2px; }"
+    },
+    {
+      "name": "Tabla de datos",
+      "kind": "custom",
+      "refersTo": "tabla",
+      "description": "El componente más usado: hoja blanca, filas de 1px, sin cebra ni bordes verticales.",
+      "html": "<table class=\"ds-tabla\"><thead><tr><th>Serie</th><th>Material</th><th>Estado</th></tr></thead><tbody><tr><td>LA-004821</td><td>ONT Huawei EG8145</td><td>Disponible</td></tr><tr><td>LA-004822</td><td>ONT Huawei EG8145</td><td>Asignado</td></tr><tr><td>LA-004823</td><td>Router TP-Link AX3000</td><td>En tránsito</td></tr></tbody></table>",
+      "css": ".ds-tabla { width: 100%; border-collapse: collapse; background: #fff; color: #1f2933; font-size: 0.95rem; } .ds-tabla th { padding: 0.55rem 0.65rem; border-bottom: 1px solid #d9dee5; text-align: left; font-weight: 600; } .ds-tabla td { padding: 0.55rem 0.65rem; border-bottom: 1px solid #d9dee5; text-align: left; } .ds-tabla tbody tr:hover { background: #f6f7f9; }"
+    },
+    {
+      "name": "Raíl de contexto",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "Firma de las pantallas de trabajo: columna pegajosa con el estado vivo de lo que se captura.",
+      "html": "<aside class=\"ds-rail\"><h2 class=\"ds-rail__titulo\">Series del recojo</h2><ul class=\"ds-rail__lista\"><li><span class=\"ds-rail__serie\">LA-004821</span><span class=\"ds-rail__estado\">Disponible</span></li><li><span class=\"ds-rail__serie\">LA-004822</span><span class=\"ds-rail__estado\">Ya asignado</span></li></ul><p class=\"ds-rail__ayuda\">Selecciona un material y pega o escanea las series para ver su estado aquí.</p></aside>",
+      "css": ".ds-rail { width: 100%; max-width: 20rem; padding: 0.75rem; border: 1px solid #d9dee5; border-radius: 8px; background: #fff; color: #1f2933; } .ds-rail__titulo { margin: 0 0 0.5rem; font-size: 1.1rem; font-weight: 600; } .ds-rail__lista { margin: 0; padding: 0; list-style: none; } .ds-rail__lista li { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0; border-bottom: 1px solid #eef1f4; font-size: 0.85rem; } .ds-rail__lista li:last-child { border-bottom: 0; } .ds-rail__serie { font-family: ui-monospace, \"Cascadia Mono\", Consolas, monospace; letter-spacing: 0.04em; } .ds-rail__estado { color: #52606d; } .ds-rail__ayuda { margin: 0.5rem 0 0; color: #52606d; font-size: 0.85rem; }"
+    },
+    {
+      "name": "Banner de estado",
+      "kind": "custom",
+      "description": "Error y conformidad comparten forma; solo cambia la pareja de color. Sin icono decorativo.",
+      "html": "<div class=\"ds-banner ds-banner--error\" role=\"alert\">El correo o la contraseña no coinciden.</div><div class=\"ds-banner ds-banner--ok\" role=\"status\">Cambios guardados.</div>",
+      "css": ".ds-banner { margin: 0 0 0.5rem; padding: 0.75rem 1rem; border: 1px solid #d9dee5; border-radius: 8px; background: #fff; font-size: 0.9375rem; } .ds-banner--error { border-color: #e3b6b9; border-left: 3px solid #a4262c; background: #fdf3f3; color: #a4262c; } .ds-banner--ok { border-color: #bcd9c6; background: #f2f8f4; color: #256b3b; }"
+    },
+    {
+      "name": "Tarjeta de acceso partida",
+      "kind": "card",
+      "description": "Firma de la entrada: tapa oscura con la marca y hechos, hoja blanca con el formulario. Colapsa a una columna en móvil.",
+      "html": "<div class=\"ds-auth\"><div class=\"ds-auth__tapa\"><div><p class=\"ds-auth__logo\">Lari</p><p class=\"ds-auth__desc\">Control de materiales</p></div><ul class=\"ds-auth__hechos\"><li>Una cuenta por tenant</li><li>Trazabilidad por serie</li><li>Conciliación sin descuadres</li></ul><p class=\"ds-auth__pie\">Uso interno · Operación diaria</p></div><div class=\"ds-auth__panel\"><h1 class=\"ds-auth__h1\">Iniciar sesión</h1><p class=\"ds-auth__sub\">Accede con la cuenta de tu tenant.</p><div class=\"ds-auth__campo\"><label for=\"ds-a\">Correo:</label><input id=\"ds-a\" type=\"email\"></div><div class=\"ds-auth__campo\"><label for=\"ds-b\">Contraseña:</label><input id=\"ds-b\" type=\"password\"></div><button class=\"ds-auth__btn\" type=\"button\">Entrar</button></div></div>",
+      "css": ".ds-auth { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); width: 100%; overflow: hidden; border: 1px solid #d9dee5; border-radius: 1rem; background: #fff; box-shadow: 0 1.5rem 3.5rem rgba(15, 28, 38, 0.10); } .ds-auth__tapa { display: flex; flex-direction: column; justify-content: space-between; gap: 2rem; padding: clamp(1.5rem, 4vw, 2.5rem); background: #0f1c26; color: #fff; } .ds-auth__logo { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.06em; } .ds-auth__desc { margin: 0.4rem 0 0; color: #aab7c4; font-size: 0.9375rem; } .ds-auth__hechos { display: grid; gap: 0.9rem; margin: 2rem 0 0; padding: 0; list-style: none; } .ds-auth__hechos li { position: relative; padding-left: 1.15rem; color: #c9d4de; font-size: 0.9375rem; } .ds-auth__hechos li::before { content: \"\"; position: absolute; top: 0.5em; left: 0; width: 0.4rem; height: 0.4rem; border: 1px solid #6f8ba3; border-radius: 50%; } .ds-auth__pie { margin: 0; color: #7f93a5; font-size: 0.8125rem; letter-spacing: 0.02em; } .ds-auth__panel { display: flex; flex-direction: column; justify-content: center; padding: clamp(1.5rem, 5vw, 3rem); background: #fff; } .ds-auth__h1 { margin: 0; color: #1f2933; font-size: 1.75rem; line-height: 1.15; letter-spacing: -0.02em; } .ds-auth__sub { max-width: 36ch; margin: 0.6rem 0 1.75rem; color: #5b6875; font-size: 0.9375rem; } .ds-auth__campo { margin-bottom: 1.15rem; } .ds-auth__campo label { display: block; margin-bottom: 0.4rem; font-size: 0.875rem; font-weight: 600; color: #1f2933; } .ds-auth__campo input { width: 100%; min-height: 2.75rem; padding: 0.6rem 0.75rem; border: 1px solid #d9dee5; border-radius: 0.5rem; background: #fff; color: #1f2933; font: inherit; font-size: 1rem; } .ds-auth__campo input:focus-visible, .ds-auth__btn:focus-visible { outline: 3px solid #1f5f8b; outline-offset: 2px; } .ds-auth__btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 2.75rem; padding: 0.65rem 1rem; border: 1px solid #1f5f8b; border-radius: 0.5rem; background: #1f5f8b; color: #fff; font: inherit; font-weight: 600; cursor: pointer; } .ds-auth__btn:hover { background: #18496b; border-color: #174a6d; } .ds-auth__btn:active { transform: translateY(1px); } @media (max-width: 640px) { .ds-auth { grid-template-columns: 1fr; } .ds-auth__hechos, .ds-auth__pie { display: none; } .ds-auth__tapa { gap: 0; padding: 1.25rem 1.5rem; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El libro de inventario",
+    "overview": "Lari se lee como un libro de inventario abierto sobre una mesa: una hoja blanca sobre papel gris, renglones finos en lugar de recuadros, series y códigos en monoespaciada como si estuvieran sellados, y una sola tinta azul reservada para lo que exige una acción o marca el foco. No hay ornamentación: la jerarquía la hacen el peso tipográfico, el filete de 1 px y el espacio en blanco. Esa austeridad no es frialdad, es la forma que toma la trazabilidad cuando la interfaz tiene que ser creíble ante una auditoría.\n\nEl sistema nace de una aplicación operativa real: sesión única por tenant, series que se rastrean una por una, conciliaciones que se aprueban o rechazan completas, y un registro inmutable detrás de cada movimiento. La pantalla no persuade a nadie; permite que una persona con prisa haga un trabajo exacto y a prueba de error. Por eso la densidad es media-alta, la tabla es el ciudadano de primera y cada estado tiene color propio en lugar de un icono decorativo.\n\nEstado de este documento: PRODUCT.md es explícito en que no hay logo, manual de marca ni paleta corporativa, y que la apariencia actual es un punto de partida. Los tokens son normativos; el carácter y el mundo visual son provisionales hasta que exista una dirección de marca confirmada.",
+    "keyCharacteristics": [
+      "Hoja blanca sobre papel gris; el fondo nunca compite con el contenido.",
+      "Separación por filete de 1 px, no por sombra ni por relleno de color.",
+      "Un único acento, el Azul sello, solo en acción, enlace, foco y estado activo.",
+      "Monoespaciada para todo identificador: series, códigos, TOTP, URIs.",
+      "Densidad de mesa de trabajo, sin aire decorativo.",
+      "Semántica de color explícita: corrección, conformidad y nota."
+    ],
+    "rules": [
+      { "name": "La regla del sello", "body": "El Azul sello ocupa menos del 10 % de cualquier pantalla y solo en cuatro papeles: acción, enlace, foco y estado activo. Su escasez es lo que lo vuelve legible como orden.", "section": "colors" },
+      { "name": "La regla del filete", "body": "La separación se hace con una línea de 1 px o, dentro de un panel, con el filete tenue. Nunca con una sombra, un fondo gris alterno ni un borde de 2 px.", "section": "colors" },
+      { "name": "La regla del papel", "body": "El gris es la mesa y nunca contiene texto de lectura; el blanco es la página y todo contenido vive encima. No inviertas los papeles.", "section": "colors" },
+      { "name": "La regla de la serie en mono", "body": "Todo lo que un humano podría confundir al dictar —serie, código de material, secreto TOTP, URI— va en monoespaciada con interletraje y overflow-wrap: anywhere.", "section": "typography" },
+      { "name": "La regla de los 62ch", "body": "La prosa instructiva no pasa de 62ch. Aplícala a cualquier ayuda o introducción nueva.", "section": "typography" },
+      { "name": "La regla de la hoja apoyada", "body": "Una superficie nueva no flota. Si necesita destacar, se apoya en el papel con un filete y, como mucho, con el halo de estado activo.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do construir sobre la hoja blanca: contenido en --hoja con filete de 1 px sobre el papel --fondo.",
+      "Do usar --acento solo en acción, enlace, foco y estado activo, por debajo del 10 % de la pantalla.",
+      "Do mantener el foco visible de 3 px con offset 2 px en todo control interactivo.",
+      "Do poner en monoespaciada, con overflow-wrap: anywhere, toda serie, código, secreto TOTP y URI.",
+      "Do limitar la prosa instructiva a 62ch en Grafito medio.",
+      "Do usar los tres estados con su pareja pálido/filete existente en lugar de un cuarto color.",
+      "Do conservar la densidad de tabla (0.55rem 0.65rem).",
+      "Do tratar el raíl de contexto como parte del patrón de pantalla de trabajo: fijo, pegajoso, apilado solo en móvil."
+    ],
+    "donts": [
+      "Don't inventar un sistema de botones, campos, chips o paginación y presentarlo como existente: .boton, .etiqueta, .estado, .paginacion y .buscador no tienen CSS.",
+      "Don't añadir sombras difusas a paneles, tarjetas repetidas o menús; la única sombra difusa es la tarjeta de acceso.",
+      "Don't usar relleno de color de marca para separar secciones, ni cebra en tablas, ni cabeceras oscuras.",
+      "Don't introducir una segunda tipografía, una fuente de display descargada ni roles más allá de los seis documentados.",
+      "Don't dar el mismo peso visual a una acción primaria y a «Cancelar».",
+      "Don't repetir valores literales (#fff, #eef1f4, rgba(...)) en reglas nuevas: usa los tokens de :root.",
+      "Don't copiar los style=\"...\" en línea de templates/recojos/recojo_form.html.",
+      "Don't tratar el carácter visual como identidad confirmada: PRODUCT.md dice que no hay marca."
+    ]
+  }
+}
