@@ -467,3 +467,230 @@ code {
     margin-left: 0;
   }
 }
+
+/* Traspaso 1→N: técnico que entrega, materiales en mano y técnicos que reciben. */
+.traspaso-flujo {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.8fr) minmax(19rem, 1.5fr) minmax(15rem, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.traspaso-columna {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+}
+
+.traspaso-columna h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.traspaso-columna h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.lista-tecnicos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tecnico-opcion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.4rem;
+  background: var(--superficie);
+  color: var(--texto);
+  text-align: left;
+}
+
+.tecnico-opcion:hover {
+  border-color: var(--acento);
+}
+
+.tecnico-opcion.activo {
+  border-color: var(--acento);
+  background: var(--superficie-alt);
+  box-shadow: 0 0 0 2px rgba(31, 95, 139, 0.15);
+}
+
+.tecnico-opcion.activo .tecnico-nif {
+  color: var(--acento);
+}
+
+.tecnico-nif {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.tecnico-nombre {
+  font-size: 0.82rem;
+  color: var(--texto-tenue);
+}
+
+.tecnico-recibe {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.4rem;
+  background: var(--superficie);
+}
+
+.tecnico-recibe:hover {
+  border-color: var(--acento);
+}
+
+.tecnico-recibe:has(input:checked) {
+  border-color: var(--acento);
+  background: var(--superficie-alt);
+}
+
+.tecnico-recibe input:disabled {
+  cursor: wait;
+}
+
+.tecnico-recibe .tecnico-nombre {
+  margin-left: auto;
+}
+
+.materiales-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 65vh;
+  padding-right: 0.25rem;
+  overflow: auto;
+}
+
+.material-traspaso {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--filete-tenue);
+  border-radius: 0.4rem;
+}
+
+.material-traspaso__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.material-traspaso__nombre {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.material-traspaso__nombre .material-descripcion {
+  font-size: 0.82rem;
+  color: var(--texto-tenue);
+}
+
+.material-stock {
+  flex: none;
+  font-size: 0.78rem;
+  color: var(--texto-tenue);
+  white-space: nowrap;
+}
+
+.material-traspaso__accion {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.material-traspaso__accion label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.material-traspaso__accion input {
+  width: 100%;
+}
+
+.series-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+}
+
+.serie-opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--filete-tenue);
+  border-radius: 0.35rem;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+.resumen-recibiran {
+  min-height: 3rem;
+  margin: 0.5rem 0 1rem;
+  padding: 0.65rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.4rem;
+  background: var(--superficie-alt);
+}
+
+.resumen-recibiran p {
+  margin: 0;
+}
+
+.lista-resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resumen-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.resumen-item__texto {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.acciones-traspaso {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 1000px) {
+  .traspaso-flujo {
+    grid-template-columns: 1fr;
+  }
+
+  .materiales-panel {
+    max-height: none;
+  }
+}

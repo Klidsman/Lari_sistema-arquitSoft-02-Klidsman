@@ -22,7 +22,7 @@ puntos del contrato general:
 
 ### Hoja 1: `Desasignación` (Z32)
 
-Metadatos:
+Se escribe un bloque por cada técnico origen distinto. Metadatos del bloque:
 
 | Campo | Valor |
 |---|---|
@@ -34,6 +34,8 @@ Metadatos:
 | Tenant | `solicitud.tenant.codigo` |
 | Región | `solicitud.region.codigo` |
 | ID de solicitud | `solicitud.id` |
+
+Después del bloque, las líneas de ese técnico origen:
 
 Tabla de seriales:
 
@@ -56,9 +58,9 @@ Tabla de material menor:
 
 ### Hoja 2: `Asignación` (Z31)
 
-- Misma estructura y mismas líneas que la hoja 1.
+- Misma estructura, agrupada por `tecnico_destino`.
 - Movimiento `Z31`.
-- NIF del `tecnico_destino`.
+- NIF del técnico destino de cada grupo.
 - El resto de metadatos es idéntico.
 
 ## Cuadre

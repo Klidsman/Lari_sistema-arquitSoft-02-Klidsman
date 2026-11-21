@@ -17,6 +17,8 @@ acepta `tenant_id`, `region_id`, NIF, tipo de material, lote ni estado desde el 
 | `/traspasos/<id>/cancelar/` | `POST` | `USUARIO_TENANT` | `302` al detalle; `409` si no es `BORRADOR` |
 | `/traspasos/<id>/excel/` | `GET` | `USUARIO_TENANT` | `200` con `.xlsx`; `404` si no existe; `409` si el hash no coincide |
 | `/traspasos/series-tecnico/` | `GET` | `USUARIO_TENANT` | `200` fragmento HTML de series del origen |
+| `/traspasos/stock-tecnico/` | `GET` | `USUARIO_TENANT` | `200` fragmento HTML con el stock actual del técnico |
+| `/traspasos/materiales-tecnico/` | `GET` | `USUARIO_TENANT` | `200` fragmento HTML con los materiales en mano y sus series |
 | `/traspasos/validar-disponibilidad/` | `POST` | `USUARIO_TENANT` | `200` JSON con disponible, reservado y errores |
 
 ## Rutas del almacén
@@ -40,18 +42,27 @@ acepta `tenant_id`, `region_id`, NIF, tipo de material, lote ni estado desde el 
 
 | Campo | Tipo | Obligatorio | Regla |
 |---|---|---|---|
-| `tecnico_origen` | select | Sí | Técnico del tenant; puede estar inactivo si tiene stock |
-| `tecnico_destino` | select | Sí | Técnico activo del tenant y distinto del origen |
+| `forma` | select | Sí | `1→N` o `N→1`; informativa y validada por el servicio |
 | `fecha` | date | Sí | Por defecto hoy |
 | `lineas` | formset | Sí | Al menos una línea |
+| `lineas[].tecnico_origen` | select | Sí | Técnico del tenant; puede estar inactivo si tiene stock |
+| `lineas[].tecnico_destino` | select | Sí | Técnico activo del tenant y distinto del origen de la línea |
 | `lineas[].material` | select | Sí | Material del catálogo |
 | `lineas[].series` | multi-select | Condicional | Solo para seriados; series del origen no reservadas |
 | `lineas[].cantidad` | number | Condicional | Solo para no seriados; entero `> 0` |
 
+- El formulario implementa el flujo 1→N en tres columnas: técnico que entrega, materiales en mano
+  (cantidad o series) y técnicos que reciben.
+- Cada material agregado se replica como una línea por cada técnico receptor seleccionado; la
+  cantidad indicada es por receptor.
+- Las series solo se pueden entregar a un único receptor.
+- El conjunto de líneas debe implicar al menos dos técnicos distintos.
+- La estructura debe ser 1→N o N→1; no se admite N→N.
 - Tipo de material y lote son de solo lectura y se completan desde el catálogo.
 - No se envía `tenant`, `region`, `estado`, `excel_ruta`, `excel_hash` ni `creado_por`.
 - El formulario no permite escribir números de serie manualmente.
 - El selector de series se carga con `/traspasos/series-tecnico/?tecnico=<id>&material=<id>&q=`.
+- El panel de stock se carga con `/traspasos/stock-tecnico/?tecnico=<id>` y es solo lectura.
 - La validación en tiempo real devuelve JSON y no escribe en base.
 
 ### Respuesta de validación
@@ -78,7 +89,8 @@ acepta `tenant_id`, `region_id`, NIF, tipo de material, lote ni estado desde el 
 | Rol incorrecto | `403` | “No tienes permiso para crear traspasos” / “No tienes permiso para gestionar traspasos” |
 | Traspaso ajeno o inexistente | `404` | “El traspaso no existe” |
 | Técnicos de otro tenant | `400` | “Los técnicos deben ser del mismo tenant” |
-| Origen igual a destino | `400` | “El técnico origen y destino no pueden ser el mismo” |
+| Origen igual a destino de una línea | `400` | “El técnico origen y destino no pueden ser el mismo” |
+| Estructura distinta de 1→N o N→1 | `400` | “El traspaso debe ser de un técnico a varios o de varios técnicos a uno, con al menos dos técnicos distintos” |
 | Destino inactivo | `400` | “El técnico destino no está activo” |
 | Serie no asignada al origen | `409` | “La serie no está asignada al técnico origen” |
 | Serie reservada | `409` | “La serie está reservada en otro traspaso” |

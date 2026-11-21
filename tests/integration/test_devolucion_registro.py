@@ -218,8 +218,6 @@ def test_serie_reservada_en_traspaso_no_se_devuelve(
     solicitud = SolicitudTraspaso.objects.create(
         tenant=tenant,
         region=tenant.region,
-        tecnico_origen=tecnico,
-        tecnico_destino=destino,
         fecha=date.today(),
         estado=EstadoTraspaso.ENVIADA,
         creado_por=usuario_tenant,
@@ -227,6 +225,8 @@ def test_serie_reservada_en_traspaso_no_se_devuelve(
     LineaTraspaso.objects.create(
         tenant=tenant,
         solicitud=solicitud,
+        tecnico_origen=tecnico,
+        tecnico_destino=destino,
         material=material_seriado,
         serie=serie,
         cantidad=1,

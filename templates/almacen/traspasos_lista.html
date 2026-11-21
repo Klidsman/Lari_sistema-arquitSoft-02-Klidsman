@@ -3,12 +3,28 @@
 {% block contenido %}
   <h1>Traspasos del almacén</h1>
   <table class="tabla">
-    <thead><tr><th>ID</th><th>Origen</th><th>Destino</th><th>Estado</th><th></th></tr></thead>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Forma</th>
+        <th>Orígenes</th>
+        <th>Destinos</th>
+        <th>Estado</th>
+        <th></th>
+      </tr>
+    </thead>
     <tbody>
       {% for traspaso in traspasos %}
-        <tr><td>{{ traspaso.pk }}</td><td>{{ traspaso.tecnico_origen.nif }}</td><td>{{ traspaso.tecnico_destino.nif }}</td><td>{{ traspaso.get_estado_display }}</td><td><a href="{% url 'detalle_traspaso_almacen' traspaso.pk %}">Revisar</a></td></tr>
+        <tr>
+          <td>{{ traspaso.pk }}</td>
+          <td>{{ traspaso.forma }}</td>
+          <td>{% for tecnico in traspaso.origenes %}{{ tecnico.nif }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+          <td>{% for tecnico in traspaso.destinos %}{{ tecnico.nif }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+          <td>{{ traspaso.get_estado_display }}</td>
+          <td><a href="{% url 'detalle_traspaso_almacen' traspaso.pk %}">Revisar</a></td>
+        </tr>
       {% empty %}
-        <tr><td colspan="5">No hay traspasos.</td></tr>
+        <tr><td colspan="6">No hay traspasos.</td></tr>
       {% endfor %}
     </tbody>
   </table>

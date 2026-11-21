@@ -1,0 +1,52 @@
+{% if materiales %}
+  <div class="materiales-tecnico">
+    {% for item in materiales %}
+      <article class="material-traspaso"
+               data-material-id="{{ item.material.pk }}"
+               data-codigo="{{ item.material.codigo }}"
+               data-descripcion="{{ item.material.descripcion }}"
+               data-stock="{{ item.cantidad }}"
+               data-seriado="{% if item.material.es_seriado %}1{% else %}0{% endif %}">
+        <div class="material-traspaso__cabecera">
+          <div class="material-traspaso__nombre">
+            <span class="material-nombre">{{ item.material.codigo }}</span>
+            <span class="material-descripcion">{{ item.material.descripcion }}</span>
+          </div>
+          <span class="material-stock">{{ item.cantidad }} en mano</span>
+        </div>
+
+        {% if item.material.es_seriado %}
+          <div class="material-traspaso__series">
+            <p class="ayuda">Series disponibles: {{ item.series|length }}</p>
+            {% if item.series %}
+              <div class="series-lista">
+                {% for serie in item.series %}
+                  <label class="serie-opcion">
+                    <input type="checkbox" value="{{ serie.pk }}" data-numero="{{ serie.numero }}">
+                    <span>{{ serie.numero }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+              <button type="button" class="boton boton-secundario" data-agregar-series>
+                Agregar series marcadas
+              </button>
+            {% else %}
+              <p class="ayuda">No hay series disponibles para este material.</p>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="material-traspaso__accion">
+            <label>Cantidad por técnico
+              <input type="number" min="1" max="{{ item.cantidad }}" value="1" data-cantidad-input>
+            </label>
+            <button type="button" class="boton boton-secundario" data-agregar-cantidad>
+              Agregar
+            </button>
+          </div>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="ayuda">Este técnico no tiene stock registrado.</p>
+{% endif %}

@@ -1,14 +1,27 @@
-"""Excel de traspaso entre técnicos."""
+"""Excel de traspaso entre técnicos (agrupado por técnico)."""
 
 import hashlib
 import uuid
+from collections import OrderedDict
 from pathlib import Path
 
 import openpyxl
 from django.conf import settings
 
 
-def _escribir_hoja(hoja, movimiento, tecnico, solicitud):
+def _lineas_por_tecnico(solicitud, campo):
+    grupos = OrderedDict()
+    lineas = solicitud.lineas.select_related(
+        "material", "serie", "tecnico_origen", "tecnico_destino"
+    ).order_by("id")
+    for linea in lineas:
+        tecnico = getattr(linea, campo)
+        grupos.setdefault(tecnico.pk, {"tecnico": tecnico, "lineas": []})
+        grupos[tecnico.pk]["lineas"].append(linea)
+    return list(grupos.values())
+
+
+def _escribir_bloque(hoja, movimiento, tecnico, solicitud, lineas):
     hoja.append(["Movimiento", movimiento])
     hoja.append(["Centro", solicitud.region.almacen.centro])
     hoja.append(["Almacén", solicitud.region.almacen.codigo_almacen])
@@ -18,8 +31,6 @@ def _escribir_hoja(hoja, movimiento, tecnico, solicitud):
     hoja.append(["Región", solicitud.region.codigo])
     hoja.append(["ID de traspaso", solicitud.pk])
     hoja.append([])
-
-    lineas = list(solicitud.lineas.select_related("material", "serie"))
 
     hoja.append(["Seriales"])
     hoja.append(["Código", "Descripción", "Lote", "Serie", "Cantidad"])
@@ -54,7 +65,26 @@ def _escribir_hoja(hoja, movimiento, tecnico, solicitud):
         totales[clave]["cantidad"] += linea.cantidad
     for datos in totales.values():
         hoja.append(
-            [datos["codigo"], datos["descripcion"], datos["lote"], datos["cantidad"]]
+            [
+                datos["codigo"],
+                datos["descripcion"],
+                datos["lote"],
+                datos["cantidad"],
+            ]
+        )
+
+
+def _escribir_hoja(hoja, movimiento, campo, solicitud):
+    for indice, grupo in enumerate(_lineas_por_tecnico(solicitud, campo)):
+        if indice:
+            hoja.append([])
+            hoja.append([])
+        _escribir_bloque(
+            hoja,
+            movimiento,
+            grupo["tecnico"],
+            solicitud,
+            grupo["lineas"],
         )
 
 
@@ -64,8 +94,8 @@ def generar_excel_traspaso(solicitud):
     desasignacion.title = "Desasignación"
     asignacion = libro.create_sheet("Asignación")
 
-    _escribir_hoja(desasignacion, "Z32", solicitud.tecnico_origen, solicitud)
-    _escribir_hoja(asignacion, "Z31", solicitud.tecnico_destino, solicitud)
+    _escribir_hoja(desasignacion, "Z32", "tecnico_origen", solicitud)
+    _escribir_hoja(asignacion, "Z31", "tecnico_destino", solicitud)
 
     nombre = f"{uuid.uuid4().hex}.xlsx"
     relativa = (

@@ -362,6 +362,16 @@ El patrón que define las pantallas de trabajo. Una columna fija a la derecha (`
 
 **Variante de alta del segundo factor.** Cuando el contenido es una guía de tres pasos, la misma tarjeta pasa a una sola columna: la tapa se reduce a franja superior y el cuerpo reparte la guía en dos columnas, pasos 1 y 3 a la izquierda y el bloque de clave del paso 2 a la derecha (`19rem`), con una sola columna por debajo de `900px`. El orden del DOM sigue siendo 1 → 2 → 3; la rejilla solo mueve el paso 2 a la derecha para que la clave y el formulario de confirmación quepan en el primer viewport.
 
+## Flujo de traspaso en tres columnas
+
+La pantalla `templates/traspasos/formulario.html` usa `.traspaso-flujo`, una rejilla de tres columnas
+(`12rem / 1.5fr / 15rem`) sobre hojas blancas con filete. Cada columna es un `.traspaso-columna`:
+técnico que entrega (`.tecnico-opcion`), materiales en mano (`.material-traspaso`,
+`.material-traspaso__accion`, `.series-lista`, `.serie-opcion`) y técnicos que reciben
+(`.tecnico-recibe`). El resumen usa `.resumen-recibiran` y `.lista-resumen`; el estado activo del
+técnico usa filete de acento y el halo documentado como «Bloque activo». Por debajo de `1000px` la
+rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
+
 ## Do's and Don'ts
 
 ### Do:
