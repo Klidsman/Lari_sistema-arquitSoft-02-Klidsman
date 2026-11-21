@@ -15,7 +15,7 @@ La auditoría es inmutable y compartida con el resto del sistema; 009 no crea un
 | Valor anterior | vacío |
 | Valor nuevo | `BORRADOR` |
 | Actor | `USUARIO_TENANT` de la sesión |
-| Extra | Tenant, región, técnico origen, técnico destino, fecha |
+| Extra | Tenant, región, técnicos origen y destino derivados de las líneas, fecha |
 
 ### Alta y baja de líneas
 
@@ -27,7 +27,7 @@ La auditoría es inmutable y compartida con el resto del sistema; 009 no crea un
 | Valor anterior | vacío o datos de la línea |
 | Valor nuevo | datos de la línea o vacío |
 | Actor | `USUARIO_TENANT` de la sesión |
-| Extra | Material, lote, serie o cantidad |
+| Extra | Material, lote, serie o cantidad, técnico origen y técnico destino de la línea |
 
 Se escribe un registro por línea creada o eliminada.
 
@@ -75,8 +75,8 @@ Por cada serie:
 | Entidad | `Serie` |
 | ID entidad | `serie.id` |
 | Campo | `tecnico` |
-| Valor anterior | `tecnico_origen.id` |
-| Valor nuevo | `tecnico_destino.id` |
+| Valor anterior | `tecnico_origen` de la línea |
+| Valor nuevo | `tecnico_destino` de la línea |
 | Actor | `RESPONSABLE_ALMACEN` de la sesión |
 
 Y por cada serie, para reiniciar días en mano:

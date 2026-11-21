@@ -84,6 +84,7 @@ Permitir que la cuenta única del tenant registre y mantenga los técnicos de su
 13. **NIF no reutilizable.** Como el técnico no se elimina, no se crea otro técnico con el NIF de uno desactivado. Se reactiva el registro existente.
 14. **Búsqueda limitada.** La búsqueda por NIF o nombre solo devuelve técnicos del tenant de la sesión.
 15. **Autocompletado.** En los formularios de asignación, traspaso, conciliación y registro de materiales, el NIF se completa desde el técnico elegido y no es editable.
+16. **Stock consultable.** El detalle del técnico muestra su stock actual por material (cantidad, lote y tipo), solo lectura y acotado al tenant de la sesión. No permite modificarlo desde 003.
 16. **Solo activos en operaciones nuevas.** Los selectores de nuevas operaciones muestran solo técnicos activos. Un formulario viejo con un técnico desactivado se rechaza en el servidor.
 17. **Auditoría.** Toda alta, cambio de nombre, desactivación y reactivación registra usuario, fecha, valor anterior y valor nuevo.
 18. **Permisos en backend.** Las reglas de rol, tenant y estado se validan en el servidor, no solo en la interfaz.

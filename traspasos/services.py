@@ -1,4 +1,4 @@
-"""Servicios de traspasos entre técnicos."""
+"""Servicios de traspasos entre técnicos (1→N / N→1)."""
 
 import hashlib
 from dataclasses import dataclass
@@ -6,7 +6,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
@@ -57,6 +57,10 @@ class SerieNoAsignada(ValidacionTraspaso):
     pass
 
 
+class EstructuraTecnicosInvalida(ValidacionTraspaso):
+    pass
+
+
 class CuadreIncorrecto(ValidacionTraspaso):
     def __init__(self, mensaje="Lo que sale debe cuadrar con lo que entra"):
         super().__init__(mensaje)
@@ -71,6 +75,8 @@ class ArchivoAlterado(ValidacionTraspaso):
 
 @dataclass
 class LineaValidada:
+    tecnico_origen: Tecnico
+    tecnico_destino: Tecnico
     material: Material
     serie: Serie | None
     cantidad: int
@@ -83,6 +89,8 @@ class MovimientoTraspaso:
     lote: str
     serie_id: int | None
     cantidad: int
+    tecnico_origen_id: int
+    tecnico_destino_id: int
 
 
 @dataclass(frozen=True)
@@ -99,6 +107,8 @@ def construir_movimientos(lineas):
             lote=linea.lote,
             serie_id=linea.serie.pk if linea.serie else None,
             cantidad=linea.cantidad,
+            tecnico_origen_id=linea.tecnico_origen.pk,
+            tecnico_destino_id=linea.tecnico_destino.pk,
         )
         for linea in lineas
     ]
@@ -108,7 +118,13 @@ def construir_movimientos(lineas):
 def _agrupar_movimientos(movimientos):
     totales = {}
     for movimiento in movimientos:
-        clave = (movimiento.material_id, movimiento.lote, movimiento.serie_id)
+        clave = (
+            movimiento.material_id,
+            movimiento.lote,
+            movimiento.serie_id,
+            movimiento.tecnico_origen_id,
+            movimiento.tecnico_destino_id,
+        )
         totales[clave] = totales.get(clave, 0) + movimiento.cantidad
     return totales
 
@@ -123,11 +139,18 @@ def validar_cuadre_traspaso(cuadre):
 def resumen_cuadre(lineas):
     resumen = {}
     for linea in lineas:
-        datos = resumen.setdefault(
+        clave = (
+            linea.tecnico_origen.pk,
+            linea.tecnico_destino.pk,
             linea.material.pk,
+        )
+        datos = resumen.setdefault(
+            clave,
             {
                 "material_id": linea.material.pk,
                 "codigo": linea.material.codigo,
+                "origen": linea.tecnico_origen.nif,
+                "destino": linea.tecnico_destino.nif,
                 "series": 0,
                 "cantidad": 0,
             },
@@ -150,18 +173,48 @@ def validar_cuenta_tenant(actor):
     return tenant
 
 
-def validar_tecnicos(tenant, origen_id, destino_id):
-    if origen_id == destino_id:
-        raise ValidacionTraspaso(
-            "El técnico origen y destino no pueden ser el mismo"
+def validar_estructura_tecnicos(lineas, tenant):
+    """Exige al menos dos técnicos y forma 1→N o N→1."""
+    origenes = {}
+    destinos = {}
+    for linea in lineas:
+        origen = linea.tecnico_origen
+        destino = linea.tecnico_destino
+        if origen.tenant_id != tenant.pk or destino.tenant_id != tenant.pk:
+            raise ValidacionTraspaso(
+                "Los técnicos deben ser del mismo tenant"
+            )
+        if origen.pk == destino.pk:
+            raise ValidacionTraspaso(
+                "El técnico origen y destino no pueden ser el mismo"
+            )
+        if not destino.activo:
+            raise ValidacionTraspaso("El técnico destino no está activo")
+        origenes[origen.pk] = origen
+        destinos[destino.pk] = destino
+
+    tecnicos = set(origenes) | set(destinos)
+    if len(tecnicos) < 2:
+        raise EstructuraTecnicosInvalida(
+            "El traspaso debe ser de un técnico a varios o de varios "
+            "técnicos a uno, con al menos dos técnicos distintos"
         )
-    origen = Tecnico.objects.filter(pk=origen_id, tenant=tenant).first()
-    destino = Tecnico.objects.filter(pk=destino_id, tenant=tenant).first()
-    if origen is None or destino is None:
-        raise ValidacionTraspaso("Los técnicos deben ser del mismo tenant")
-    if not destino.activo:
-        raise ValidacionTraspaso("El técnico destino no está activo")
-    return origen, destino
+    if not (
+        (len(origenes) == 1 and len(destinos) >= 1)
+        or (len(destinos) == 1 and len(origenes) >= 1)
+    ):
+        raise EstructuraTecnicosInvalida(
+            "El traspaso debe ser de un técnico a varios o de varios "
+            "técnicos a uno, con al menos dos técnicos distintos"
+        )
+
+
+def tecnicos_implicados(lineas):
+    tecnicos = {}
+    for linea in lineas:
+        tecnicos[linea.tecnico_origen.pk] = linea.tecnico_origen
+        tecnicos[linea.tecnico_destino.pk] = linea.tecnico_destino
+    return list(tecnicos.values())
 
 
 def obtener_traspaso(tenant, traspaso_id):
@@ -177,8 +230,13 @@ def obtener_detalle_traspaso(tenant, traspaso_id):
     solicitud = obtener_traspaso(tenant, traspaso_id)
     return (
         SolicitudTraspaso.objects.filter(pk=solicitud.pk)
-        .select_related("tenant", "region", "tecnico_origen", "tecnico_destino")
-        .prefetch_related("lineas__material", "lineas__serie")
+        .select_related("tenant", "region")
+        .prefetch_related(
+            "lineas__material",
+            "lineas__serie",
+            "lineas__tecnico_origen",
+            "lineas__tecnico_destino",
+        )
         .get()
     )
 
@@ -187,24 +245,25 @@ def listar_traspasos(tenant, estado=None):
     traspasos = SolicitudTraspaso.objects.filter(tenant=tenant)
     if estado:
         traspasos = traspasos.filter(estado=estado)
-    return traspasos.order_by("-fecha", "-id")
+    return traspasos.prefetch_related(
+        "lineas__tecnico_origen", "lineas__tecnico_destino"
+    ).order_by("-fecha", "-id")
 
 
 def calcular_reservado(tecnico, material):
-    from django.db.models import Q
-
     lineas = LineaTraspaso.objects.filter(
         tenant=tecnico.tenant,
         material=material,
+        tecnico_origen=tecnico,
         solicitud__estado=EstadoTraspaso.ENVIADA,
-        solicitud__tecnico_origen=tecnico,
-    ).filter(Q(serie__isnull=True) | Q(serie__tecnico=tecnico))
-    return (
+    )
+    no_seriadas = (
         lineas.filter(serie__isnull=True).aggregate(total=Sum("cantidad"))[
             "total"
         ]
         or 0
-    ) + lineas.filter(serie__isnull=False).count()
+    )
+    return no_seriadas + lineas.filter(serie__isnull=False).count()
 
 
 def calcular_disponible(tecnico, material):
@@ -215,18 +274,46 @@ def calcular_disponible(tecnico, material):
     )
 
 
-def normalizar_lineas(tenant, origen, lineas):
+def _resolver_tecnico(tenant, tecnico_id, cache):
+    if tecnico_id in (None, ""):
+        raise ValidacionTraspaso("Debe indicar el técnico de la línea")
+    try:
+        clave = int(tecnico_id)
+    except (TypeError, ValueError) as exc:
+        raise ValidacionTraspaso("El técnico no existe") from exc
+    if clave not in cache:
+        tecnico = Tecnico.objects.filter(pk=clave, tenant=tenant).first()
+        if tecnico is None:
+            raise ValidacionTraspaso(
+                "Los técnicos deben ser del mismo tenant"
+            )
+        cache[clave] = tecnico
+    return cache[clave]
+
+
+def normalizar_lineas(tenant, lineas):
     if not lineas:
         raise ValidacionTraspaso("El traspaso debe tener al menos una línea")
 
     resultado = []
     no_seriadas = {}
     series_vistas = set()
+    cache_tecnicos = {}
 
     for linea in lineas:
         material = Material.objects.filter(pk=linea.get("material_id")).first()
         if material is None:
             raise ValidacionTraspaso("El material no existe en el catálogo")
+        origen = _resolver_tecnico(
+            tenant, linea.get("tecnico_origen_id"), cache_tecnicos
+        )
+        destino = _resolver_tecnico(
+            tenant, linea.get("tecnico_destino_id"), cache_tecnicos
+        )
+        if origen.pk == destino.pk:
+            raise ValidacionTraspaso(
+                "El técnico origen y destino no pueden ser el mismo"
+            )
         if material.es_seriado:
             serie_ids = linea.get("serie_ids") or []
             if not serie_ids:
@@ -259,6 +346,8 @@ def normalizar_lineas(tenant, origen, lineas):
                     )
                 resultado.append(
                     LineaValidada(
+                        tecnico_origen=origen,
+                        tecnico_destino=destino,
                         material=material,
                         serie=serie,
                         cantidad=1,
@@ -278,14 +367,13 @@ def normalizar_lineas(tenant, origen, lineas):
                 ) from exc
             if cantidad <= 0:
                 raise ValidacionTraspaso("La cantidad debe ser mayor a 0")
-            if cantidad > calcular_disponible(origen, material):
-                raise ValidacionTraspaso(
-                    "La cantidad supera el stock del técnico"
-                )
-            if material.pk in no_seriadas:
-                no_seriadas[material.pk].cantidad += cantidad
+            clave = (origen.pk, destino.pk, material.pk)
+            if clave in no_seriadas:
+                no_seriadas[clave].cantidad += cantidad
             else:
-                no_seriadas[material.pk] = LineaValidada(
+                no_seriadas[clave] = LineaValidada(
+                    tecnico_origen=origen,
+                    tecnico_destino=destino,
                     material=material,
                     serie=None,
                     cantidad=cantidad,
@@ -293,56 +381,125 @@ def normalizar_lineas(tenant, origen, lineas):
                 )
 
     resultado.extend(no_seriadas.values())
+
+    validar_estructura_tecnicos(resultado, tenant)
+
+    # Disponibilidad agregada por técnico origen y material.
+    totales_por_origen = {}
+    for linea in resultado:
+        if linea.serie:
+            continue
+        clave = (linea.tecnico_origen.pk, linea.material.pk)
+        totales_por_origen[clave] = (
+            totales_por_origen.get(clave, 0) + linea.cantidad
+        )
+    for (origen_id, material_id), cantidad in totales_por_origen.items():
+        origen = cache_tecnicos.get(origen_id)
+        if origen is None:
+            origen = Tecnico.objects.get(pk=origen_id)
+        material = Material.objects.get(pk=material_id)
+        if cantidad > calcular_disponible(origen, material):
+            raise ValidacionTraspaso(
+                "La cantidad supera el stock del técnico"
+            )
+
     return resultado
 
 
-def _auditar_alta(solicitud, actor):
+def _inyectar_tecnicos(lineas, origen_id, destino_id):
+    resultado = []
+    for linea in lineas:
+        copia = dict(linea)
+        if origen_id is not None and not copia.get("tecnico_origen_id"):
+            copia["tecnico_origen_id"] = origen_id
+        if destino_id is not None and not copia.get("tecnico_destino_id"):
+            copia["tecnico_destino_id"] = destino_id
+        resultado.append(copia)
+    return resultado
+
+
+def _auditar_alta(solicitud, lineas, actor):
+    nifs = ", ".join(
+        f"{linea.tecnico_origen.nif}->{linea.tecnico_destino.nif}"
+        for linea in lineas
+    )
     registrar_cambio(
         "SolicitudTraspaso",
         solicitud.pk,
         "alta",
         "",
-        f"origen={solicitud.tecnico_origen.nif}; destino={solicitud.tecnico_destino.nif}; "
-        f"estado={solicitud.estado}",
+        f"tecnicos={nifs}; estado={solicitud.estado}",
         actor,
         tenant=solicitud.tenant,
     )
+    for linea in lineas:
+        registrar_cambio(
+            "LineaTraspaso",
+            linea.pk,
+            "alta",
+            "",
+            f"origen={linea.tecnico_origen.nif}; "
+            f"destino={linea.tecnico_destino.nif}; "
+            f"material={linea.material.codigo}; "
+            f"cantidad={linea.cantidad}",
+            actor,
+            tenant=solicitud.tenant,
+        )
 
 
-def crear_borrador_traspaso(tenant, origen_id, destino_id, fecha, lineas, actor):
+def _crear_lineas(solicitud, lineas):
+    creadas = []
+    for linea in lineas:
+        creadas.append(
+            LineaTraspaso.objects.create(
+                tenant=solicitud.tenant,
+                solicitud=solicitud,
+                tecnico_origen=linea.tecnico_origen,
+                tecnico_destino=linea.tecnico_destino,
+                material=linea.material,
+                lote=linea.lote,
+                serie=linea.serie,
+                cantidad=linea.cantidad,
+            )
+        )
+    return creadas
+
+
+def crear_solicitud_traspaso(tenant, fecha, lineas, actor):
     tenant = validar_cuenta_tenant(actor)
-    origen, destino = validar_tecnicos(tenant, origen_id, destino_id)
     if isinstance(fecha, str):
         fecha = parse_date(fecha)
     if fecha is None:
         raise ValidacionTraspaso("La fecha es obligatoria")
-    lineas_validadas = normalizar_lineas(tenant, origen, lineas)
+    lineas_validadas = normalizar_lineas(tenant, lineas)
     validar_cuadre_traspaso(construir_movimientos(lineas_validadas))
 
     with transaction.atomic():
         solicitud = SolicitudTraspaso.objects.create(
             tenant=tenant,
             region=tenant.region,
-            tecnico_origen=origen,
-            tecnico_destino=destino,
             fecha=fecha,
             estado=EstadoTraspaso.BORRADOR,
             creado_por=actor,
         )
-        for linea in lineas_validadas:
-            LineaTraspaso.objects.create(
-                tenant=tenant,
-                solicitud=solicitud,
-                material=linea.material,
-                lote=linea.lote,
-                serie=linea.serie,
-                cantidad=linea.cantidad,
-            )
-        _auditar_alta(solicitud, actor)
+        creadas = _crear_lineas(solicitud, lineas_validadas)
+        _auditar_alta(solicitud, creadas, actor)
     return solicitud
 
 
-def actualizar_borrador_traspaso(solicitud, origen_id, destino_id, fecha, lineas, actor):
+def crear_borrador_traspaso(
+    tenant, origen_id, destino_id, fecha, lineas, actor
+):
+    """Compatibilidad: admite origen/destino comunes o por línea."""
+    return crear_solicitud_traspaso(
+        tenant,
+        fecha,
+        _inyectar_tecnicos(lineas, origen_id, destino_id),
+        actor,
+    )
+
+
+def actualizar_lineas_borrador(solicitud, fecha, lineas, actor):
     tenant = validar_cuenta_tenant(actor)
     if solicitud.tenant_id != tenant.pk:
         raise TraspasoNoExiste
@@ -350,46 +507,81 @@ def actualizar_borrador_traspaso(solicitud, origen_id, destino_id, fecha, lineas
         raise EstadoTraspasoInvalido(
             "Solo se pueden editar traspasos en borrador"
         )
-    origen, destino = validar_tecnicos(tenant, origen_id, destino_id)
     if isinstance(fecha, str):
         fecha = parse_date(fecha)
-    lineas_validadas = normalizar_lineas(tenant, origen, lineas)
+    if fecha is None:
+        raise ValidacionTraspaso("La fecha es obligatoria")
+    lineas_validadas = normalizar_lineas(tenant, lineas)
     validar_cuadre_traspaso(construir_movimientos(lineas_validadas))
     with transaction.atomic():
-        bloqueada = SolicitudTraspaso.objects.select_for_update().get(
-            pk=solicitud.pk
+        bloqueada = (
+            SolicitudTraspaso.objects.select_for_update()
+            .prefetch_related("lineas")
+            .get(pk=solicitud.pk)
         )
+        for anterior in bloqueada.lineas.all():
+            registrar_cambio(
+                "LineaTraspaso",
+                anterior.pk,
+                "baja",
+                f"origen={anterior.tecnico_origen.nif}; "
+                f"destino={anterior.tecnico_destino.nif}; "
+                f"material={anterior.material.codigo}",
+                "",
+                actor,
+                tenant=tenant,
+            )
         bloqueada.lineas.all().delete()
-        bloqueada.tecnico_origen = origen
-        bloqueada.tecnico_destino = destino
         bloqueada.fecha = fecha
         bloqueada.actualizado_por = actor
         bloqueada.save(
             update_fields=[
-                "tecnico_origen",
-                "tecnico_destino",
                 "fecha",
                 "actualizado_por",
                 "actualizado_en",
             ]
         )
-        for linea in lineas_validadas:
-            LineaTraspaso.objects.create(
+        creadas = _crear_lineas(bloqueada, lineas_validadas)
+        for linea in creadas:
+            registrar_cambio(
+                "LineaTraspaso",
+                linea.pk,
+                "alta",
+                "",
+                f"origen={linea.tecnico_origen.nif}; "
+                f"destino={linea.tecnico_destino.nif}; "
+                f"material={linea.material.codigo}; "
+                f"cantidad={linea.cantidad}",
+                actor,
                 tenant=tenant,
-                solicitud=bloqueada,
-                material=linea.material,
-                lote=linea.lote,
-                serie=linea.serie,
-                cantidad=linea.cantidad,
             )
     return bloqueada
 
 
-def enviar_traspaso(solicitud, actor):
+def actualizar_borrador_traspaso(
+    solicitud, origen_id, destino_id, fecha, lineas, actor
+):
+    """Compatibilidad: admite origen/destino comunes o por línea."""
+    return actualizar_lineas_borrador(
+        solicitud,
+        fecha,
+        _inyectar_tecnicos(lineas, origen_id, destino_id),
+        actor,
+    )
+
+
+def enviar_solicitud_traspaso(solicitud, actor):
     tenant = validar_cuenta_tenant(actor)
     with transaction.atomic():
-        bloqueada = SolicitudTraspaso.objects.select_for_update().get(
-            pk=solicitud.pk
+        bloqueada = (
+            SolicitudTraspaso.objects.select_for_update()
+            .prefetch_related(
+                "lineas__tecnico_origen",
+                "lineas__tecnico_destino",
+                "lineas__material",
+                "lineas__serie",
+            )
+            .get(pk=solicitud.pk)
         )
         if bloqueada.tenant_id != tenant.pk:
             raise TraspasoNoExiste
@@ -397,6 +589,8 @@ def enviar_traspaso(solicitud, actor):
             raise EstadoTraspasoInvalido(
                 "Solo se pueden enviar traspasos en borrador"
             )
+        lineas = list(bloqueada.lineas.all())
+        validar_estructura_tecnicos(lineas, tenant)
         ruta, hash_archivo = generar_excel_traspaso(bloqueada)
         bloqueada.excel_ruta = ruta
         bloqueada.excel_hash = hash_archivo
@@ -425,6 +619,9 @@ def enviar_traspaso(solicitud, actor):
     return bloqueada
 
 
+enviar_traspaso = enviar_solicitud_traspaso
+
+
 def confirmar_traspaso(solicitud, actor):
     from asignaciones.almacen_services import validar_cuenta_almacen
 
@@ -433,51 +630,52 @@ def confirmar_traspaso(solicitud, actor):
         raise TraspasoNoExiste
 
     with transaction.atomic():
-        bloqueada = SolicitudTraspaso.objects.select_for_update().get(
-            pk=solicitud.pk
+        bloqueada = (
+            SolicitudTraspaso.objects.select_for_update()
+            .prefetch_related(
+                "lineas__tecnico_origen",
+                "lineas__tecnico_destino",
+                "lineas__material",
+                "lineas__serie",
+            )
+            .get(pk=solicitud.pk)
         )
         if bloqueada.estado != EstadoTraspaso.ENVIADA:
             raise EstadoTraspasoInvalido(
                 "Solo se pueden confirmar traspasos enviados"
             )
-        lineas = list(bloqueada.lineas.select_related("material", "serie"))
-        series = [
-            linea.serie for linea in lineas if linea.serie_id
-        ]
-        for serie in series:
+        lineas = list(bloqueada.lineas.all())
+        validar_estructura_tecnicos(lineas, bloqueada.tenant)
+        for linea in lineas:
+            if not linea.serie_id:
+                continue
+            serie = linea.serie
             if (
                 serie.estado != EstadoSerie.ASIGNADA
-                or serie.tecnico_id != bloqueada.tecnico_origen_id
+                or serie.tecnico_id != linea.tecnico_origen_id
             ):
                 raise SerieNoAsignada(
                     "La serie no está asignada al técnico origen"
                 )
 
         validar_cuadre_traspaso(construir_movimientos(lineas))
+
         cantidades = {}
         for linea in lineas:
             cantidad = 1 if linea.serie_id else linea.cantidad
-            cantidades[linea.material_id] = (
-                cantidades.get(linea.material_id, 0) + cantidad
+            clave = (
+                linea.tecnico_origen_id,
+                linea.tecnico_destino_id,
+                linea.material_id,
             )
-
-        for material_id, cantidad in cantidades.items():
-            material = Material.objects.get(pk=material_id)
-            try:
-                decrementar_stock_tecnico(
-                    bloqueada.tecnico_origen, material, cantidad, actor
-                )
-            except StockInsuficiente as exc:
-                raise ValidacionTraspaso(
-                    "El técnico no tiene suficiente stock"
-                ) from exc
-            incrementar_stock_tecnico(
-                bloqueada.tecnico_destino, material, cantidad, actor
-            )
+            cantidades[clave] = cantidades.get(clave, 0) + cantidad
 
         ahora = timezone.now()
-        for serie in series:
-            serie.tecnico = bloqueada.tecnico_destino
+        for linea in lineas:
+            if not linea.serie_id:
+                continue
+            serie = linea.serie
+            serie.tecnico = linea.tecnico_destino
             serie.asignada_en = ahora
             serie.actualizado_por = actor
             serie.save(
@@ -492,11 +690,42 @@ def confirmar_traspaso(solicitud, actor):
                 "Serie",
                 serie.pk,
                 "tecnico",
-                bloqueada.tecnico_origen_id,
-                bloqueada.tecnico_destino_id,
+                linea.tecnico_origen_id,
+                linea.tecnico_destino_id,
                 actor,
                 tenant=bloqueada.tenant,
             )
+            registrar_cambio(
+                "Serie",
+                serie.pk,
+                "asignada_en",
+                "",
+                ahora.isoformat(),
+                actor,
+                tenant=bloqueada.tenant,
+            )
+
+        for (origen_id, destino_id, material_id), cantidad in cantidades.items():
+            origen = next(
+                linea.tecnico_origen
+                for linea in lineas
+                if linea.tecnico_origen_id == origen_id
+            )
+            destino = next(
+                linea.tecnico_destino
+                for linea in lineas
+                if linea.tecnico_destino_id == destino_id
+            )
+            material = Material.objects.get(pk=material_id)
+            try:
+                decrementar_stock_tecnico(
+                    origen, material, cantidad, actor
+                )
+            except StockInsuficiente as exc:
+                raise ValidacionTraspaso(
+                    "El técnico no tiene suficiente stock"
+                ) from exc
+            incrementar_stock_tecnico(destino, material, cantidad, actor)
 
         bloqueada.estado = EstadoTraspaso.CONFIRMADA
         bloqueada.confirmada_en = ahora
@@ -590,6 +819,15 @@ def cancelar_traspaso(solicitud, actor):
                 "actualizado_en",
             ]
         )
+        registrar_cambio(
+            "SolicitudTraspaso",
+            bloqueada.pk,
+            "estado",
+            EstadoTraspaso.BORRADOR,
+            EstadoTraspaso.CANCELADA,
+            actor,
+            tenant=bloqueada.tenant,
+        )
     return bloqueada
 
 
@@ -605,21 +843,9 @@ def verificar_excel(solicitud):
     return ruta
 
 
-# Alias con los nombres del contrato `contracts/servicios-traspaso.md`.
-# Conservan las firmas actuales (ids de técnico/material) para no romper
-# vistas ni pruebas; el código futuro puede usar estos nombres sin duplicar
-# lógica.
-crear_solicitud_traspaso = crear_borrador_traspaso
-actualizar_lineas_borrador = actualizar_borrador_traspaso
-enviar_solicitud_traspaso = enviar_traspaso
-
-
 def verificar_hash_excel(solicitud, contenido=None):
     if contenido is not None:
-        if (
-            hashlib.sha256(contenido).hexdigest()
-            != solicitud.excel_hash
-        ):
+        if hashlib.sha256(contenido).hexdigest() != solicitud.excel_hash:
             raise ArchivoAlterado
     return verificar_excel(solicitud)
 
@@ -638,14 +864,32 @@ def series_para_tecnico(tenant, tecnico, material=None, q=""):
     return series.order_by("numero")
 
 
+def stock_tecnico_para_traspaso(tenant, tecnico):
+    """Stock actual del técnico, solo lectura y filtrado por tenant."""
+    from stock.models import StockTecnico
+
+    return (
+        StockTecnico.objects.filter(
+            tenant=tenant, tecnico=tecnico, cantidad__gt=0
+        )
+        .select_related("material")
+        .order_by("material__codigo")
+    )
+
+
 def validar_disponibilidad(tecnico, material, cantidad=None, series=None):
     disponible = calcular_disponible(tecnico, material)
     reservado = calcular_reservado(tecnico, material)
     errores = []
     if material.es_seriado:
         for serie in series or []:
-            if serie.tecnico_id != tecnico.pk or serie.estado != EstadoSerie.ASIGNADA:
-                errores.append("La serie no está asignada al técnico origen")
+            if (
+                serie.tecnico_id != tecnico.pk
+                or serie.estado != EstadoSerie.ASIGNADA
+            ):
+                errores.append(
+                    "La serie no está asignada al técnico origen"
+                )
     elif cantidad is not None and int(cantidad) > disponible:
         errores.append("La cantidad supera el stock del técnico")
     return {
@@ -654,3 +898,9 @@ def validar_disponibilidad(tecnico, material, cantidad=None, series=None):
         "reservado": reservado,
         "errores": errores,
     }
+
+
+# Nombres canónicos del contrato.
+crear_solicitud_traspaso = crear_solicitud_traspaso
+actualizar_lineas_borrador = actualizar_lineas_borrador
+enviar_solicitud_traspaso = enviar_solicitud_traspaso

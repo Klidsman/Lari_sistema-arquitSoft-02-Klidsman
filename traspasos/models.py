@@ -24,16 +24,6 @@ class SolicitudTraspaso(models.Model):
         on_delete=models.PROTECT,
         related_name="solicitudes_traspaso",
     )
-    tecnico_origen = models.ForeignKey(
-        "tecnicos.Tecnico",
-        on_delete=models.PROTECT,
-        related_name="traspasos_origen",
-    )
-    tecnico_destino = models.ForeignKey(
-        "tecnicos.Tecnico",
-        on_delete=models.PROTECT,
-        related_name="traspasos_destino",
-    )
     fecha = models.DateField()
     estado = models.CharField(
         max_length=20,
@@ -65,10 +55,6 @@ class SolicitudTraspaso(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=~Q(tecnico_origen=F("tecnico_destino")),
-                name="solicitud_traspaso_origen_destino_distintos",
-            ),
-            models.CheckConstraint(
                 condition=Q(
                     estado__in=[
                         "BORRADOR",
@@ -94,19 +80,46 @@ class SolicitudTraspaso(models.Model):
                 fields=["tenant", "fecha"],
                 name="traspaso_tenant_fecha",
             ),
-            models.Index(
-                fields=["tecnico_origen", "fecha"],
-                name="traspaso_origen_fecha",
-            ),
-            models.Index(
-                fields=["tecnico_destino", "fecha"],
-                name="traspaso_destino_fecha",
-            ),
         ]
         ordering = ["-fecha", "-id"]
 
     def __str__(self) -> str:
         return f"Traspaso {self.pk}"
+
+    @property
+    def origenes(self):
+        return self._tecnicos("tecnico_origen")
+
+    @property
+    def destinos(self):
+        return self._tecnicos("tecnico_destino")
+
+    @property
+    def tecnicos(self):
+        vistos = {}
+        for tecnico in list(self.origenes) + list(self.destinos):
+            vistos[tecnico.pk] = tecnico
+        return list(vistos.values())
+
+    @property
+    def forma(self) -> str:
+        origenes = {linea.tecnico_origen_id for linea in self.lineas.all()}
+        destinos = {linea.tecnico_destino_id for linea in self.lineas.all()}
+        if len(origenes) == 1 and len(destinos) >= 1:
+            return "1→N"
+        if len(destinos) == 1 and len(origenes) >= 1:
+            return "N→1"
+        return "INVALIDA"
+
+    def _tecnicos(self, campo):
+        ids = (
+            self.lineas.values_list(f"{campo}_id", flat=True)
+            .distinct()
+            .order_by()
+        )
+        from tecnicos.models import Tecnico
+
+        return list(Tecnico.objects.filter(pk__in=ids).order_by("nif"))
 
 
 class LineaTraspaso(models.Model):
@@ -119,6 +132,16 @@ class LineaTraspaso(models.Model):
         SolicitudTraspaso,
         on_delete=models.CASCADE,
         related_name="lineas",
+    )
+    tecnico_origen = models.ForeignKey(
+        "tecnicos.Tecnico",
+        on_delete=models.PROTECT,
+        related_name="lineas_traspaso_origen",
+    )
+    tecnico_destino = models.ForeignKey(
+        "tecnicos.Tecnico",
+        on_delete=models.PROTECT,
+        related_name="lineas_traspaso_destino",
     )
     material = models.ForeignKey(
         "materiales.Material",
@@ -138,6 +161,10 @@ class LineaTraspaso(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
+                condition=~Q(tecnico_origen=F("tecnico_destino")),
+                name="linea_traspaso_origen_destino_distintos",
+            ),
+            models.CheckConstraint(
                 condition=Q(serie__isnull=False) | Q(cantidad__gt=0),
                 name="linea_traspaso_serie_o_cantidad",
             ),
@@ -155,7 +182,12 @@ class LineaTraspaso(models.Model):
                 name="linea_traspaso_serie_unica",
             ),
             models.UniqueConstraint(
-                fields=["solicitud", "material"],
+                fields=[
+                    "solicitud",
+                    "tecnico_origen",
+                    "tecnico_destino",
+                    "material",
+                ],
                 condition=Q(serie__isnull=True),
                 name="linea_traspaso_no_seriada_unica",
             ),
@@ -168,6 +200,14 @@ class LineaTraspaso(models.Model):
             models.Index(
                 fields=["tenant", "material"],
                 name="linea_traspaso_tenant_material",
+            ),
+            models.Index(
+                fields=["tecnico_origen", "material"],
+                name="linea_traspaso_origen_material",
+            ),
+            models.Index(
+                fields=["tecnico_destino", "material"],
+                name="linea_traspaso_destino_mat",
             ),
             models.Index(fields=["serie"], name="linea_traspaso_serie"),
         ]

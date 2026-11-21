@@ -1,39 +1,439 @@
 {% extends "base.html" %}
 {% block title %}Nuevo traspaso · Lari{% endblock %}
 {% block contenido %}
-  <h1>Nuevo traspaso</h1>
-  {% if error %}<p class="mensaje mensaje-error">{{ error }}</p>{% endif %}
-  <form method="post">
+  <div class="cabecera-seccion">
+    <h1>Nuevo traspaso</h1>
+    <a class="boton boton-secundario" href="{% url 'lista_traspasos' %}">Volver</a>
+  </div>
+
+  {% if error %}<p class="mensaje mensaje-error" role="alert">{{ error }}</p>{% endif %}
+  <div id="error-traspaso" class="mensaje mensaje-error" role="alert" hidden></div>
+
+  <p class="ayuda">
+    Elige al técnico que entrega, agrega materiales de su stock y marca uno o varios
+    técnicos que los reciban. Cada cantidad es por técnico que recibe.
+  </p>
+
+  <form method="post" id="form-traspaso" novalidate>
     {% csrf_token %}
-    <input type="hidden" name="lineas-TOTAL_FORMS" value="3">
+    <input type="hidden" name="fecha" value="{{ hoy|date:'Y-m-d' }}">
+    <input type="hidden" name="lineas-TOTAL_FORMS" id="lineas-total" value="0">
     <input type="hidden" name="lineas-INITIAL_FORMS" value="0">
     <input type="hidden" name="lineas-MIN_NUM_FORMS" value="0">
     <input type="hidden" name="lineas-MAX_NUM_FORMS" value="1000">
-    <label>Técnico origen
-      <select name="tecnico_origen">
-        {% for tecnico in tecnicos %}<option value="{{ tecnico.pk }}">{{ tecnico.nif }} - {{ tecnico.nombre }}</option>{% endfor %}
-      </select>
-    </label>
-    <label>Técnico destino
-      <select name="tecnico_destino">
-        {% for tecnico in tecnicos %}<option value="{{ tecnico.pk }}">{{ tecnico.nif }} - {{ tecnico.nombre }}</option>{% endfor %}
-      </select>
-    </label>
-    <label>Fecha <input type="date" name="fecha" value="{{ hoy|date:'Y-m-d' }}"></label>
-    {% for indice in lineas %}
-      <fieldset class="linea-recojo">
-        <legend>Línea {{ forloop.counter }}</legend>
-        <label>Material
-          <select name="lineas-{{ indice }}-material_id">
-            <option value="">Selecciona un material</option>
-            {% for material in materiales %}<option value="{{ material.pk }}">{{ material.codigo }} - {{ material.descripcion }}</option>{% endfor %}
-          </select>
-        </label>
-        <label>Series <textarea name="lineas-{{ indice }}-series" rows="2"></textarea></label>
-        <label>Cantidad no seriada <input type="number" min="1" name="lineas-{{ indice }}-cantidad"></label>
-      </fieldset>
-    {% endfor %}
-    <button type="submit" name="accion" value="borrador">Guardar borrador</button>
-    <button type="submit" name="accion" value="enviar">Enviar traspaso</button>
+
+    <div class="traspaso-flujo">
+      <section class="traspaso-columna" aria-labelledby="titulo-entrega">
+        <h2 id="titulo-entrega">Técnico que entrega</h2>
+        <div id="tecnicos-entrega" class="lista-tecnicos">
+          {% for tecnico in tecnicos %}
+            <button type="button"
+                    class="tecnico-opcion"
+                    data-tecnico-id="{{ tecnico.pk }}"
+                    data-nif="{{ tecnico.nif }}">
+              <span class="tecnico-nif">{{ tecnico.nif }}</span>
+              <span class="tecnico-nombre">{{ tecnico.nombre }}</span>
+            </button>
+          {% empty %}
+            <p class="ayuda">No hay técnicos registrados.</p>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="traspaso-columna traspaso-columna--materiales"
+               aria-labelledby="titulo-materiales">
+        <h2 id="titulo-materiales">Materiales en mano</h2>
+        <p id="materiales-ayuda" class="ayuda">
+          Elige primero al técnico que entrega para ver su stock actual.
+        </p>
+        <div id="materiales-panel" class="materiales-panel" aria-live="polite"></div>
+      </section>
+
+      <section class="traspaso-columna" aria-labelledby="titulo-reciben">
+        <h2 id="titulo-reciben">Técnicos que reciben</h2>
+        <div id="tecnicos-reciben" class="lista-tecnicos">
+          {% for tecnico in tecnicos %}
+            <label class="tecnico-recibe" data-tecnico-id="{{ tecnico.pk }}">
+              <input type="checkbox" value="{{ tecnico.pk }}" disabled>
+              <span class="tecnico-nif">{{ tecnico.nif }}</span>
+              <span class="tecnico-nombre">{{ tecnico.nombre }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        <p id="sin-destinos" class="ayuda" hidden>
+          No hay otros técnicos disponibles para recibir.
+        </p>
+
+        <h3>Recibirán</h3>
+        <div id="resumen-recibiran" class="resumen-recibiran" aria-live="polite">
+          <p class="ayuda">Todavía no hay materiales en el traspaso.</p>
+        </div>
+
+        <div class="acciones-traspaso">
+          <button type="submit" class="boton" name="accion" value="enviar">
+            Registrar traspaso
+          </button>
+          <button type="submit" class="boton boton-secundario" name="accion" value="borrador">
+            Guardar borrador
+          </button>
+        </div>
+      </section>
+    </div>
   </form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  "use strict";
+
+  var form = document.getElementById("form-traspaso");
+  if (!form) return;
+
+  var listaEntrega = document.getElementById("tecnicos-entrega");
+  var listaReciben = document.getElementById("tecnicos-reciben");
+  var panelMateriales = document.getElementById("materiales-panel");
+  var ayudaMateriales = document.getElementById("materiales-ayuda");
+  var resumen = document.getElementById("resumen-recibiran");
+  var cajaError = document.getElementById("error-traspaso");
+  var sinDestinos = document.getElementById("sin-destinos");
+  var totalFormularios = document.getElementById("lineas-total");
+  var urlMateriales = "{% url 'materiales_tecnico_traspaso' %}";
+
+  var origenId = null;
+  var carrito = [];
+  var destinos = {};
+
+  function mostrarError(mensaje) {
+    cajaError.textContent = mensaje;
+    cajaError.hidden = false;
+  }
+
+  function limpiarError() {
+    cajaError.textContent = "";
+    cajaError.hidden = true;
+  }
+
+  function marcarOrigen(boton) {
+    listaEntrega.querySelectorAll(".tecnico-opcion").forEach(function (opcion) {
+      var activo = opcion === boton;
+      opcion.classList.toggle("activo", activo);
+      opcion.setAttribute("aria-pressed", activo ? "true" : "false");
+    });
+  }
+
+  function limpiarCarrito() {
+    carrito = [];
+    destinos = {};
+    renderResumen();
+  }
+
+  function actualizarDestinos() {
+    var hayOrigen = Boolean(origenId);
+    var visibles = 0;
+    listaReciben.querySelectorAll(".tecnico-recibe").forEach(function (etiqueta) {
+      var id = etiqueta.dataset.tecnicoId;
+      var entrada = etiqueta.querySelector("input");
+      var esOrigen = hayOrigen && id === origenId;
+      etiqueta.hidden = esOrigen;
+      entrada.disabled = !hayOrigen || esOrigen;
+      entrada.checked = false;
+      if (!etiqueta.hidden) visibles += 1;
+    });
+    sinDestinos.hidden = visibles > 0;
+  }
+
+  function cargarMateriales() {
+    panelMateriales.innerHTML = '<p class="ayuda">Cargando stock…</p>';
+    ayudaMateriales.hidden = true;
+    fetch(urlMateriales + "?tecnico=" + encodeURIComponent(origenId), {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    })
+      .then(function (respuesta) {
+        if (!respuesta.ok) throw new Error("No se pudo cargar el stock");
+        return respuesta.text();
+      })
+      .then(function (html) {
+        panelMateriales.innerHTML = html;
+      })
+      .catch(function () {
+        panelMateriales.innerHTML =
+          '<p class="mensaje mensaje-error">No se pudo cargar el stock del técnico.</p>';
+      });
+  }
+
+  function seleccionarOrigen(boton) {
+    origenId = boton.dataset.tecnicoId;
+    marcarOrigen(boton);
+    limpiarError();
+    limpiarCarrito();
+    actualizarDestinos();
+    cargarMateriales();
+  }
+
+  listaEntrega.addEventListener("click", function (evento) {
+    var boton = evento.target.closest(".tecnico-opcion");
+    if (!boton || !listaEntrega.contains(boton)) return;
+    seleccionarOrigen(boton);
+  });
+
+  listaReciben.addEventListener("change", function (evento) {
+    var entrada = evento.target;
+    if (!entrada.matches('input[type="checkbox"]')) return;
+    if (entrada.checked) {
+      destinos[entrada.value] = true;
+    } else {
+      delete destinos[entrada.value];
+    }
+    renderResumen();
+  });
+
+  function agregarCantidad(fila) {
+    var materialId = fila.dataset.materialId;
+    var stock = parseInt(fila.dataset.stock, 10) || 0;
+    var entrada = fila.querySelector("[data-cantidad-input]");
+    var cantidad = parseInt(entrada.value, 10);
+    limpiarError();
+
+    if (!cantidad || cantidad < 1) {
+      mostrarError("La cantidad debe ser mayor a 0.");
+      entrada.focus();
+      return;
+    }
+    if (cantidad > stock) {
+      mostrarError("La cantidad supera el stock en mano (" + stock + ").");
+      entrada.focus();
+      return;
+    }
+
+    var existente = carrito.findIndex(function (item) {
+      return item.tipo === "cantidad" && item.materialId === materialId;
+    });
+    var item = {
+      tipo: "cantidad",
+      materialId: materialId,
+      codigo: fila.dataset.codigo,
+      descripcion: fila.dataset.descripcion,
+      cantidad: cantidad,
+      stock: stock,
+    };
+    if (existente >= 0) {
+      carrito[existente] = item;
+    } else {
+      carrito.push(item);
+    }
+    entrada.value = "1";
+    renderResumen();
+  }
+
+  function agregarSeries(fila) {
+    var marcadas = Array.from(
+      fila.querySelectorAll('input[type="checkbox"]:checked')
+    );
+    limpiarError();
+    if (!marcadas.length) {
+      mostrarError("Marca al menos una serie para agregar.");
+      return;
+    }
+    marcadas.forEach(function (casilla) {
+      var serieId = casilla.value;
+      var yaEsta = carrito.some(function (item) {
+        return item.tipo === "serie" && item.serieId === serieId;
+      });
+      if (!yaEsta) {
+        carrito.push({
+          tipo: "serie",
+          materialId: fila.dataset.materialId,
+          codigo: fila.dataset.codigo,
+          descripcion: fila.dataset.descripcion,
+          serieId: serieId,
+          numero: casilla.dataset.numero,
+          stock: parseInt(fila.dataset.stock, 10) || 0,
+        });
+      }
+      casilla.checked = false;
+    });
+    renderResumen();
+  }
+
+  panelMateriales.addEventListener("click", function (evento) {
+    var fila = evento.target.closest(".material-traspaso");
+    if (!fila) return;
+    if (evento.target.matches("[data-agregar-cantidad]")) {
+      agregarCantidad(fila);
+    } else if (evento.target.matches("[data-agregar-series]")) {
+      agregarSeries(fila);
+    }
+  });
+
+  panelMateriales.addEventListener("keydown", function (evento) {
+    if (evento.key !== "Enter") return;
+    if (!evento.target.matches("[data-cantidad-input]")) return;
+    evento.preventDefault();
+    var fila = evento.target.closest(".material-traspaso");
+    if (fila) agregarCantidad(fila);
+  });
+
+  resumen.addEventListener("click", function (evento) {
+    var boton = evento.target.closest("[data-quitar-item]");
+    if (!boton) return;
+    carrito.splice(parseInt(boton.dataset.quitarItem, 10), 1);
+    renderResumen();
+  });
+
+  function renderResumen() {
+    var cantidadDestinos = Object.keys(destinos).length;
+    if (!carrito.length) {
+      resumen.innerHTML =
+        '<p class="ayuda">Todavía no hay materiales en el traspaso.</p>';
+      return;
+    }
+
+    var lista = document.createElement("ul");
+    lista.className = "lista-resumen";
+
+    carrito.forEach(function (item, indice) {
+      var elemento = document.createElement("li");
+      elemento.className = "resumen-item";
+
+      var texto = document.createElement("span");
+      texto.className = "resumen-item__texto";
+      if (item.tipo === "serie") {
+        texto.textContent =
+          item.codigo + " · serie " + item.numero;
+      } else {
+        texto.textContent =
+          item.codigo +
+          " · " +
+          item.cantidad +
+          (item.cantidad === 1 ? " unidad" : " unidades") +
+          (cantidadDestinos > 1 ? " por técnico" : "");
+      }
+
+      var quitar = document.createElement("button");
+      quitar.type = "button";
+      quitar.className = "boton-enlace";
+      quitar.dataset.quitarItem = String(indice);
+      quitar.textContent = "Quitar";
+
+      elemento.appendChild(texto);
+      elemento.appendChild(quitar);
+      lista.appendChild(elemento);
+    });
+
+    resumen.innerHTML = "";
+    resumen.appendChild(lista);
+
+    if (cantidadDestinos === 0) {
+      var aviso = document.createElement("p");
+      aviso.className = "ayuda";
+      aviso.textContent = "Marca al menos un técnico que reciba.";
+      resumen.appendChild(aviso);
+    } else {
+      var nota = document.createElement("p");
+      nota.className = "ayuda";
+      nota.textContent =
+        "Se entregará a " +
+        cantidadDestinos +
+        (cantidadDestinos === 1 ? " técnico." : " técnicos.");
+      resumen.appendChild(nota);
+    }
+  }
+
+  function validarStock() {
+    var cantidadDestinos = Object.keys(destinos).length;
+    var totales = {};
+    carrito.forEach(function (item) {
+      if (!totales[item.materialId]) {
+        totales[item.materialId] = {
+          unidades: 0,
+          stock: item.stock,
+          codigo: item.codigo,
+        };
+      }
+      totales[item.materialId].unidades +=
+        item.tipo === "serie" ? 1 : item.cantidad;
+    });
+
+    var claves = Object.keys(totales);
+    for (var i = 0; i < claves.length; i += 1) {
+      var datos = totales[claves[i]];
+      if (datos.unidades * cantidadDestinos > datos.stock) {
+        return (
+          "El material " +
+          datos.codigo +
+          " supera el stock en mano al entregarlo a " +
+          cantidadDestinos +
+          " técnico(s)."
+        );
+      }
+    }
+    return "";
+  }
+
+  function agregarOculto(nombre, valor) {
+    var entrada = document.createElement("input");
+    entrada.type = "hidden";
+    entrada.name = nombre;
+    entrada.value = String(valor);
+    entrada.className = "linea-generada";
+    form.appendChild(entrada);
+  }
+
+  form.addEventListener("submit", function (evento) {
+    limpiarError();
+    if (!origenId) {
+      evento.preventDefault();
+      mostrarError("Elige al técnico que entrega.");
+      return;
+    }
+    if (!carrito.length) {
+      evento.preventDefault();
+      mostrarError("Agrega al menos un material o serie al traspaso.");
+      return;
+    }
+    if (!Object.keys(destinos).length) {
+      evento.preventDefault();
+      mostrarError("Marca al menos un técnico que reciba.");
+      return;
+    }
+    if (
+      Object.keys(destinos).length > 1 &&
+      carrito.some(function (item) { return item.tipo === "serie"; })
+    ) {
+      evento.preventDefault();
+      mostrarError(
+        "Las series solo pueden entregarse a un técnico. Deja un solo destinatario o quita las series."
+      );
+      return;
+    }
+    var errorStock = validarStock();
+    if (errorStock) {
+      evento.preventDefault();
+      mostrarError(errorStock);
+      return;
+    }
+
+    form.querySelectorAll(".linea-generada").forEach(function (entrada) {
+      entrada.remove();
+    });
+
+    var indice = 0;
+    carrito.forEach(function (item) {
+      Object.keys(destinos).forEach(function (destinoId) {
+        agregarOculto("lineas-" + indice + "-tecnico_origen_id", origenId);
+        agregarOculto("lineas-" + indice + "-tecnico_destino_id", destinoId);
+        agregarOculto("lineas-" + indice + "-material_id", item.materialId);
+        if (item.tipo === "serie") {
+          agregarOculto("lineas-" + indice + "-serie_ids", item.serieId);
+        } else {
+          agregarOculto("lineas-" + indice + "-cantidad", item.cantidad);
+        }
+        indice += 1;
+      });
+    });
+    totalFormularios.value = String(indice);
+  });
+})();
+</script>
 {% endblock %}

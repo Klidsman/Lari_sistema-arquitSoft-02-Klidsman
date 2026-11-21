@@ -1,0 +1,27 @@
+{% if stock %}
+  <p class="ayuda">Stock actual de {{ tecnico.nif }} - {{ tecnico.nombre }}</p>
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Material</th>
+        <th>Descripción</th>
+        <th>Lote</th>
+        <th>Tipo</th>
+        <th>Cantidad</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in stock %}
+        <tr>
+          <td>{{ fila.material.codigo }}</td>
+          <td>{{ fila.material.descripcion }}</td>
+          <td>{{ fila.material.lote|default:"—" }}</td>
+          <td>{{ fila.material.es_seriado|yesno:"Seriado,No seriado" }}</td>
+          <td>{{ fila.cantidad }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="ayuda">Este técnico no tiene stock registrado.</p>
+{% endif %}

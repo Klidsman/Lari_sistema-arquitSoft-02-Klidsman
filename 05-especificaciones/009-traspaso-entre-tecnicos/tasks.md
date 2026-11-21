@@ -375,6 +375,27 @@ T050 (confirmar) y T060–T061 (rechazar/cancelar) comparten services.py: secuen
 | CA-08 | US2 | T043, T054 |
 | CA-09 | US2 | T044, T054 |
 
+## Ampliación 2026-11-21: traspaso multi-técnico (1→N / N→1)
+
+**Objetivo**: que un traspaso use el stock actual de cada técnico y admita un origen a varios destinos
+o varios orígenes a un destino, con listas de stock visibles en la interfaz.
+
+- [X] T083 Actualizar `spec.md`, `plan.md`, `data-model.md` y `contracts/` al modelo multi-técnico y a los CA-10…CA-12
+- [X] T084 Mover `tecnico_origen`/`tecnico_destino` de `SolicitudTraspaso` a `LineaTraspaso` en `traspasos/models.py` con `CheckConstraint` origen ≠ destino y unicidad por origen/destino/material
+- [X] T085 Crear `traspasos/migrations/0003_linea_tecnico_origen_destino.py`: añadir los campos, rellenarlos desde la solicitud, quitarlos de la solicitud y ajustar restricciones e índices
+- [X] T086 Implementar `validar_estructura_tecnicos`, `tecnicos_implicados` y la disponibilidad por origen en `traspasos/services.py`
+- [X] T087 Implementar creación, edición, envío y confirmación por línea en `traspasos/services.py`; confirmar mueve el stock de cada par origen/destino
+- [X] T088 Agrupar el Excel por técnico en `traspasos/excel.py` (bloques Z32 por origen y Z31 por destino)
+- [X] T089 Añadir la ruta y el fragmento `stock-tecnico` en `traspasos/views.py`, `traspasos/urls.py` y `templates/traspasos/_stock_tecnico.html`
+- [X] T090 Rehacer `templates/traspasos/formulario.html` con origen/destino por línea y paneles de stock actual de origen y destino
+- [X] T091 Actualizar `templates/traspasos/detalle.html` y `templates/almacen/traspaso_detalle.html` para mostrar el origen y destino de cada línea
+- [X] T092 Añadir pruebas de estructura 1→N / N→1, stock por origen, confirmación por línea, Excel agrupado y stock visible; actualizar las pruebas existentes
+- [X] T093 Ejecutar `pytest -k traspaso` y la suite completa; corregir hasta que todo esté en verde
+- [X] T094 Añadir la ruta `/traspasos/materiales-tecnico/` y el fragmento `_materiales_tecnico.html` con cantidades y series del técnico elegido
+- [X] T095 Rehacer `templates/traspasos/formulario.html` con el flujo de tres columnas: técnico que entrega, materiales en mano y técnicos que reciben
+- [X] T096 Implementar el carrito en JavaScript que replica cada material por cada receptor y genera las líneas del formulario
+- [X] T097 Añadir estilos del flujo de traspaso en `static/css/base.css` y cubrir con pruebas el formulario y el fragmento de materiales
+
 ## Notas
 
 - [P] significa archivos distintos y sin dependencia de una tarea incompleta.

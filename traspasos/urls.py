@@ -11,6 +11,16 @@ urlpatterns = [
         name="series_tecnico",
     ),
     path(
+        "stock-tecnico/",
+        views.stock_tecnico,
+        name="stock_tecnico_traspaso",
+    ),
+    path(
+        "materiales-tecnico/",
+        views.materiales_tecnico,
+        name="materiales_tecnico_traspaso",
+    ),
+    path(
         "validar-disponibilidad/",
         views.validar_disponibilidad,
         name="validar_disponibilidad_traspaso",

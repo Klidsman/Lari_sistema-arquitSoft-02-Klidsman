@@ -86,7 +86,7 @@ Proyecto Django único en la raíz: la app nueva es `tecnicos/`; las plantillas 
 - [X] T020 [US1] Implementar las vistas `listar_tecnicos` (50 por página), `detalle_tecnico` y `crear_tecnico` (`GET/POST`) en `tecnicos/views.py` con `@login_required`, validación de rol/tenant, `404`/`403`/`400`/`405` y los mensajes del contrato
 - [X] T021 [US1] Crear `tecnicos/urls.py` con `GET /tecnicos/`, `GET/POST /tecnicos/nuevo/` y `GET /tecnicos/<int:id>/`, sin rutas de borrado
 - [X] T022 [US1] Crear `templates/tecnicos/tecnicos_lista.html` (tabla con NIF, nombre, estado y acciones; paginación) y `templates/tecnicos/tecnico_form.html` (alta con `hx-disabled-elt` en Guardar), mostrando los errores con los textos exactos
-- [X] T023 [US1] Crear `templates/tecnicos/tecnico_detalle.html` con NIF, nombre, estado, creador/fecha y última actualización, sin datos de stock ni de otros tenants
+- [X] T023 [US1] Crear `templates/tecnicos/tecnico_detalle.html` con NIF, nombre, estado, creador/fecha, última actualización y stock actual por material (solo lectura y filtrado por tenant); sin datos de otros tenants ni edición de stock
 
 **Checkpoint**: US1 funcional e independiente; el técnico puede crearse y consultarse, con auditoría.
 

@@ -16,14 +16,14 @@ from traspasos.services import crear_borrador_traspaso, enviar_traspaso
 
 def _datos(tecnico, destino, material, cantidad):
     return {
-        "tecnico_origen": tecnico.pk,
-        "tecnico_destino": destino.pk,
         "fecha": date.today().isoformat(),
         "accion": "enviar",
         "lineas-TOTAL_FORMS": "1",
         "lineas-INITIAL_FORMS": "0",
         "lineas-MIN_NUM_FORMS": "0",
         "lineas-MAX_NUM_FORMS": "1000",
+        "lineas-0-tecnico_origen_id": tecnico.pk,
+        "lineas-0-tecnico_destino_id": destino.pk,
         "lineas-0-material_id": material.pk,
         "lineas-0-cantidad": cantidad,
     }

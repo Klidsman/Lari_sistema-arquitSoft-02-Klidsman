@@ -161,7 +161,10 @@ def detalle_tecnico(request, tecnico_id):
     return render(
         request,
         "tecnicos/tecnico_detalle.html",
-        {"tecnico": tecnico},
+        {
+            "tecnico": tecnico,
+            "stock": services.stock_actual_tecnico(tecnico),
+        },
     )
 
 

@@ -3,18 +3,20 @@
 from traspasos import services
 
 
-def test_alias_de_servicios_coinciden_con_el_contrato():
-    assert (
-        services.crear_solicitud_traspaso
-        is services.crear_borrador_traspaso
-    )
-    assert (
-        services.actualizar_lineas_borrador
-        is services.actualizar_borrador_traspaso
-    )
-    assert (
-        services.enviar_solicitud_traspaso is services.enviar_traspaso
-    )
+def test_servicios_del_contrato_existen():
+    for nombre in (
+        "crear_solicitud_traspaso",
+        "actualizar_lineas_borrador",
+        "enviar_solicitud_traspaso",
+        "confirmar_traspaso",
+        "rechazar_traspaso",
+        "cancelar_traspaso",
+        "validar_estructura_tecnicos",
+        "tecnicos_implicados",
+        "stock_tecnico_para_traspaso",
+        "verificar_hash_excel",
+    ):
+        assert callable(getattr(services, nombre))
 
 
 def test_verificar_hash_excel_acepta_contenido():

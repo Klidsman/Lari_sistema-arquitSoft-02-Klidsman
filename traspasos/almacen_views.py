@@ -39,7 +39,9 @@ def bandeja(request):
             EstadoTraspaso.CONFIRMADA,
             EstadoTraspaso.RECHAZADA,
         ],
-    ).select_related("tenant", "tecnico_origen", "tecnico_destino")
+    ).select_related("tenant").prefetch_related(
+        "lineas__tecnico_origen", "lineas__tecnico_destino"
+    )
     pagina = Paginator(solicitudes.order_by("-enviada_en", "-id"), 50).get_page(
         request.GET.get("page")
     )
@@ -66,8 +68,13 @@ def detalle(request, traspaso_id):
                 EstadoTraspaso.RECHAZADA,
             ],
         )
-        .select_related("tenant", "tecnico_origen", "tecnico_destino")
-        .prefetch_related("lineas__material", "lineas__serie")
+        .select_related("tenant")
+        .prefetch_related(
+            "lineas__material",
+            "lineas__serie",
+            "lineas__tecnico_origen",
+            "lineas__tecnico_destino",
+        )
         .first()
     )
     if traspaso is None:

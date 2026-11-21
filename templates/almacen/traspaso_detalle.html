@@ -2,12 +2,34 @@
 {% block title %}Traspaso {{ traspaso.pk }} · Almacén{% endblock %}
 {% block contenido %}
   <h1>Traspaso {{ traspaso.pk }}</h1>
-  <p>{{ traspaso.tecnico_origen.nif }} → {{ traspaso.tecnico_destino.nif }} · {{ traspaso.get_estado_display }}</p>
+  <p>
+    {{ traspaso.forma }} ·
+    {% for tecnico in traspaso.origenes %}{{ tecnico.nif }}{% if not forloop.last %}, {% endif %}{% endfor %}
+    →
+    {% for tecnico in traspaso.destinos %}{{ tecnico.nif }}{% if not forloop.last %}, {% endif %}{% endfor %}
+    · {{ traspaso.get_estado_display }}
+  </p>
   <table class="tabla">
-    <thead><tr><th>Material</th><th>Lote</th><th>Serie</th><th>Cantidad</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Origen</th>
+        <th>Destino</th>
+        <th>Material</th>
+        <th>Lote</th>
+        <th>Serie</th>
+        <th>Cantidad</th>
+      </tr>
+    </thead>
     <tbody>
       {% for linea in traspaso.lineas.all %}
-        <tr><td>{{ linea.material.codigo }}</td><td>{{ linea.lote }}</td><td>{{ linea.serie.numero|default:"—" }}</td><td>{{ linea.cantidad }}</td></tr>
+        <tr>
+          <td>{{ linea.tecnico_origen.nif }}</td>
+          <td>{{ linea.tecnico_destino.nif }}</td>
+          <td>{{ linea.material.codigo }}</td>
+          <td>{{ linea.lote }}</td>
+          <td>{{ linea.serie.numero|default:"—" }}</td>
+          <td>{{ linea.cantidad }}</td>
+        </tr>
       {% endfor %}
     </tbody>
   </table>

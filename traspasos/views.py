@@ -7,7 +7,11 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from django.views.decorators.http import (
+    require_GET,
+    require_http_methods,
+    require_POST,
+)
 
 from materiales.models import Material
 from series.models import Serie
@@ -18,7 +22,9 @@ from .models import EstadoTraspaso
 
 
 def _respuesta(mensaje, status):
-    return HttpResponse(mensaje, status=status, content_type="text/html; charset=utf-8")
+    return HttpResponse(
+        mensaje, status=status, content_type="text/html; charset=utf-8"
+    )
 
 
 def _tenant_o_error(request):
@@ -33,10 +39,17 @@ def _lineas(request, tenant):
     total = int(request.POST.get("lineas-TOTAL_FORMS", "0") or 0)
     for indice in range(total):
         material_id = request.POST.get(f"lineas-{indice}-material_id")
+        origen_id = request.POST.get(f"lineas-{indice}-tecnico_origen_id")
+        destino_id = request.POST.get(f"lineas-{indice}-tecnico_destino_id")
         serie_ids = request.POST.getlist(f"lineas-{indice}-serie_ids")
         texto_series = request.POST.get(f"lineas-{indice}-series", "")
         cantidad = request.POST.get(f"lineas-{indice}-cantidad", "")
-        if not material_id and not serie_ids and not cantidad and not texto_series:
+        if (
+            not material_id
+            and not serie_ids
+            and not cantidad
+            and not texto_series
+        ):
             continue
         if not serie_ids and texto_series:
             numeros = [
@@ -53,8 +66,12 @@ def _lineas(request, tenant):
             )
         lineas.append(
             {
+                "tecnico_origen_id": origen_id,
+                "tecnico_destino_id": destino_id,
                 "material_id": material_id,
-                "serie_ids": [int(s) for s in serie_ids if str(s).isdigit()],
+                "serie_ids": [
+                    int(s) for s in serie_ids if str(s).isdigit()
+                ],
                 "cantidad": cantidad,
             }
         )
@@ -63,9 +80,12 @@ def _lineas(request, tenant):
 
 def _contexto(tenant):
     return {
-        "tecnicos": Tecnico.objects.filter(tenant=tenant).order_by("nombre", "nif"),
+        "tecnicos": Tecnico.objects.filter(tenant=tenant).order_by(
+            "nombre", "nif"
+        ),
         "materiales": Material.objects.filter(activo=True).order_by("codigo"),
         "hoy": date.today(),
+        "lineas": range(5),
     }
 
 
@@ -82,7 +102,11 @@ def lista_traspasos(request):
     return render(
         request,
         "traspasos/lista.html",
-        {"pagina": pagina, "traspasos": pagina.object_list, "estado": estado or ""},
+        {
+            "pagina": pagina,
+            "traspasos": pagina.object_list,
+            "estado": estado or "",
+        },
     )
 
 
@@ -95,32 +119,25 @@ def nuevo_traspaso(request):
     contexto = _contexto(tenant)
     if request.method == "POST":
         try:
-            if request.POST.get("accion") == "borrador":
-                traspaso = services.crear_borrador_traspaso(
-                    tenant,
-                    request.POST.get("tecnico_origen"),
-                    request.POST.get("tecnico_destino"),
-                    request.POST.get("fecha") or date.today(),
-                    _lineas(request, tenant),
-                    request.usuario,
+            traspaso = services.crear_solicitud_traspaso(
+                tenant,
+                request.POST.get("fecha") or date.today(),
+                _lineas(request, tenant),
+                request.usuario,
+            )
+            if request.POST.get("accion") == "enviar":
+                traspaso = services.enviar_solicitud_traspaso(
+                    traspaso, request.usuario
                 )
-                messages.success(request, "Borrador guardado")
-            else:
-                traspaso = services.crear_borrador_traspaso(
-                    tenant,
-                    request.POST.get("tecnico_origen"),
-                    request.POST.get("tecnico_destino"),
-                    request.POST.get("fecha") or date.today(),
-                    _lineas(request, tenant),
-                    request.usuario,
-                )
-                traspaso = services.enviar_traspaso(traspaso, request.usuario)
                 messages.success(request, "Traspaso enviado")
+            else:
+                messages.success(request, "Borrador guardado")
         except services.ValidacionTraspaso as exc:
             contexto["error"] = str(exc)
-            return render(request, "traspasos/formulario.html", contexto, status=400)
+            return render(
+                request, "traspasos/formulario.html", contexto, status=400
+            )
         return redirect("detalle_traspaso", traspaso_id=traspaso.pk)
-    contexto["lineas"] = range(3)
     return render(request, "traspasos/formulario.html", contexto)
 
 
@@ -137,7 +154,10 @@ def detalle_traspaso(request, traspaso_id):
     return render(
         request,
         "traspasos/detalle.html",
-        {"traspaso": traspaso, "puede_enviar": traspaso.estado == EstadoTraspaso.BORRADOR},
+        {
+            "traspaso": traspaso,
+            "puede_enviar": traspaso.estado == EstadoTraspaso.BORRADOR,
+        },
     )
 
 
@@ -157,19 +177,18 @@ def editar_traspaso(request, traspaso_id):
     contexto["traspaso"] = traspaso
     if request.method == "POST":
         try:
-            services.actualizar_borrador_traspaso(
+            services.actualizar_lineas_borrador(
                 traspaso,
-                request.POST.get("tecnico_origen"),
-                request.POST.get("tecnico_destino"),
                 request.POST.get("fecha") or date.today(),
                 _lineas(request, tenant),
                 request.usuario,
             )
         except services.ValidacionTraspaso as exc:
             contexto["error"] = str(exc)
-            return render(request, "traspasos/formulario.html", contexto, status=409)
+            return render(
+                request, "traspasos/formulario.html", contexto, status=409
+            )
         return redirect("detalle_traspaso", traspaso_id=traspaso.pk)
-    contexto["lineas"] = range(3)
     return render(request, "traspasos/formulario.html", contexto)
 
 
@@ -181,7 +200,7 @@ def enviar_traspaso(request, traspaso_id):
         return error
     try:
         traspaso = services.obtener_traspaso(tenant, traspaso_id)
-        services.enviar_traspaso(traspaso, request.usuario)
+        services.enviar_solicitud_traspaso(traspaso, request.usuario)
     except services.TraspasoNoExiste:
         return _respuesta("El traspaso no existe", 404)
     except services.ValidacionTraspaso as exc:
@@ -222,7 +241,9 @@ def excel_traspaso(request, traspaso_id):
         open(ruta, "rb"),
         as_attachment=True,
         filename=f"traspaso-{traspaso.pk}.xlsx",
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        content_type=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
     )
 
 
@@ -249,6 +270,62 @@ def series_tecnico(request):
 
 
 @login_required
+@require_GET
+def stock_tecnico(request):
+    tenant, error = _tenant_o_error(request)
+    if error is not None:
+        return error
+    tecnico = Tecnico.objects.filter(
+        pk=request.GET.get("tecnico"), tenant=tenant
+    ).first()
+    if tecnico is None:
+        return _respuesta("El técnico no existe", 404)
+    return render(
+        request,
+        "traspasos/_stock_tecnico.html",
+        {
+            "tecnico": tecnico,
+            "stock": services.stock_tecnico_para_traspaso(tenant, tecnico),
+        },
+    )
+
+
+@login_required
+@require_GET
+def materiales_tecnico(request):
+    """Materiales en mano del técnico, con cantidades o series elegibles."""
+    tenant, error = _tenant_o_error(request)
+    if error is not None:
+        return error
+    tecnico = Tecnico.objects.filter(
+        pk=request.GET.get("tecnico"), tenant=tenant
+    ).first()
+    if tecnico is None:
+        return _respuesta("El técnico no existe", 404)
+
+    materiales = []
+    for fila in services.stock_tecnico_para_traspaso(tenant, tecnico):
+        item = {
+            "material": fila.material,
+            "cantidad": fila.cantidad,
+            "series": [],
+        }
+        if fila.material.es_seriado:
+            item["series"] = list(
+                services.series_para_tecnico(
+                    tenant, tecnico, fila.material
+                )
+            )
+        materiales.append(item)
+
+    return render(
+        request,
+        "traspasos/_materiales_tecnico.html",
+        {"tecnico": tecnico, "materiales": materiales},
+    )
+
+
+@login_required
 @require_POST
 def validar_disponibilidad(request):
     tenant, error = _tenant_o_error(request)
@@ -260,7 +337,9 @@ def validar_disponibilidad(request):
     material = Material.objects.filter(pk=request.POST.get("material")).first()
     if tecnico is None or material is None:
         return JsonResponse({"valido": False, "errores": ["Datos inválidos"]})
-    series_ids = [int(s) for s in request.POST.getlist("series") if str(s).isdigit()]
+    series_ids = [
+        int(s) for s in request.POST.getlist("series") if str(s).isdigit()
+    ]
     series = list(Serie.objects.filter(pk__in=series_ids, tenant=tenant))
     return JsonResponse(
         services.validar_disponibilidad(

@@ -267,6 +267,19 @@ Validación automatizada ejecutada sobre PostgreSQL con `.\.venv\Scripts\python.
 | CA-07 | `test_rechazo_no_mueve_stock` y `test_rechazo_libera_reserva` | Cubierto |
 | CA-08 | `test_confirmar_reinicia_asignada_en_y_no_toca_stock_general` | Cubierto |
 | CA-09 | `test_confirmar_reinicia_asignada_en_y_no_toca_stock_general` | Cubierto |
+| CA-10 | `test_traspaso_uno_a_varios` y `test_excel_agrupa_por_tecnico_en_uno_a_varios` | Cubierto |
+| CA-11 | `test_traspaso_varios_a_uno` | Cubierto |
+| CA-12 | `test_stock_tecnico_para_traspaso_solo_lectura` y `test_formulario_muestra_paneles_de_stock` | Cubierto |
+
+La validación 2026-11-21 amplía el modelo a origen/destino por línea, estructura 1→N / N→1 y paneles
+de stock actual de origen y destino en el formulario. La suite completa quedó en **719 pruebas en
+verde**.
+
+La interfaz final del traspaso se organiza en tres columnas: **Técnico que entrega**, **Materiales en
+mano** y **Técnicos que reciben**. Al elegir el técnico que entrega se carga su stock real; para
+materiales no seriados se digita la cantidad por técnico y para seriados se marcan las series. Cada
+material agregado se replica como línea para cada receptor seleccionado y el botón **Registrar
+traspaso** envía la solicitud al almacén.
 
 Complementarios cubiertos: `test_hash_alterado_bloquea_la_descarga`,
 `test_cancelar_borrador_no_genera_reserva`, `test_tenant_ajeno_no_accede_al_traspaso`,

@@ -60,8 +60,6 @@ def test_dos_confirmaciones_simultaneas_mueven_una_sola_vez(
     solicitud = SolicitudTraspaso.objects.create(
         tenant=tenant,
         region=tenant.region,
-        tecnico_origen=tecnico,
-        tecnico_destino=destino,
         fecha=date.today(),
         estado=EstadoTraspaso.ENVIADA,
         creado_por=usuario_tenant,
@@ -72,6 +70,8 @@ def test_dos_confirmaciones_simultaneas_mueven_una_sola_vez(
     LineaTraspaso.objects.create(
         tenant=tenant,
         solicitud=solicitud,
+        tecnico_origen=tecnico,
+        tecnico_destino=destino,
         material=material_seriado,
         serie=serie,
         cantidad=1,

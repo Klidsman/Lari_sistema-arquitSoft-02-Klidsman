@@ -278,6 +278,9 @@ def actualizar_stock_confirmacion_asignacion(solicitud, actor):
     tecnico_por_serie = {
         linea.serie_id: linea.tecnico for linea in lineas if linea.serie_id
     }
+    material_por_serie = {
+        linea.serie_id: linea.material_id for linea in lineas if linea.serie_id
+    }
     cambios = []
     series_actualizadas = []
 
@@ -294,6 +297,7 @@ def actualizar_stock_confirmacion_asignacion(solicitud, actor):
             if (
                 serie.estado != EstadoSerie.RESERVADA
                 or serie.tenant_id != solicitud.tenant_id
+                or serie.material_id != material_por_serie[serie.pk]
             ):
                 raise SerieNoReservada()
 

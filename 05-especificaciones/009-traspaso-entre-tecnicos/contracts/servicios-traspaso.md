@@ -16,6 +16,8 @@ en modelos, formularios ni plantillas.
 ```python
 @dataclass(frozen=True)
 class LineaEntrada:
+    tecnico_origen: Tecnico
+    tecnico_destino: Tecnico
     material: Material
     serie: Serie | None
     cantidad: int
@@ -28,6 +30,7 @@ class LineaEntrada:
 | `PermisoDenegado` | “No tienes permiso para crear traspasos” / “No tienes permiso para gestionar traspasos” |
 | `TecnicosDistintoTenant` | “Los técnicos deben ser del mismo tenant” |
 | `OrigenDestinoIguales` | “El técnico origen y destino no pueden ser el mismo” |
+| `EstructuraTecnicosInvalida` | “El traspaso debe ser de un técnico a varios o de varios técnicos a uno, con al menos dos técnicos distintos” |
 | `TecnicoNoExiste` | “El técnico no existe” / “El técnico destino no está activo” |
 | `MaterialNoExiste` | “El material no existe” |
 | `SerieNoEnTecnico` | “La serie no está asignada al técnico origen” |
@@ -74,24 +77,31 @@ class CuadreTraspaso:
 - Exige `RESPONSABLE_ALMACEN`, región activa y almacén activo.
 - Si no, `PermisoDenegado`.
 
-### `validar_tecnicos(origen, destino, tenant) -> None`
+### `validar_estructura_tecnicos(lineas, tenant) -> None`
 
-- Resuelve ambos con `tecnicos.services.obtener_tecnico(tenant, id)`; el destino se valida con
-  `tecnicos.services.validar_tecnico_para_operacion(tenant, id)`.
-- Ambos existen y pertenecen al tenant; si no, `TecnicosDistintoTenant`.
-- `origen.id != destino.id`; si no, `OrigenDestinoIguales`.
-- El destino está activo; si no, `TecnicoNoExiste`.
-- El origen puede estar inactivo si aún tiene stock.
+- Recibe las líneas ya resueltas, cada una con `tecnico_origen` y `tecnico_destino`.
+- Todos los técnicos existen, están en el tenant y cada línea cumple `origen.id != destino.id`;
+  si no, `OrigenDestinoIguales` o `TecnicosDistintoTenant`.
+- Los destinos están activos; si no, `TecnicoNoExiste`. Un origen puede estar inactivo si aún tiene
+  stock.
+- El conjunto de técnicos distintos debe tener al menos 2 elementos.
+- La forma debe ser **1→N** (un único origen, uno o varios destinos) o **N→1** (varios orígenes, un
+  único destino). Si hay varios orígenes y varios destinos, `EstructuraTecnicosInvalida`.
 - Los selectores usan `tecnicos.services.tecnicos_para_operacion(tenant)`; para documentos
   históricos, `tecnicos_para_reporte(tenant, incluir_inactivos=True)`.
 - La resolución por NIF del Excel usa `tecnicos.services.obtener_tecnico_por_nif(tenant, nif)`.
+
+### `tecnicos_implicados(lineas) -> set[Tecnico]`
+
+- Devuelve la unión de orígenes y destinos, sin duplicados.
+- Se usa para bloquear el stock de todos los técnicos en envío y confirmación.
 
 ## Disponibilidad
 
 ### `calcular_reservado_tecnico(tecnico, material) -> int`
 
-- Suma líneas no seriadas de solicitudes `ENVIADA` del técnico y material.
-- Cuenta 1 por cada línea seriada de solicitudes `ENVIADA`.
+- Suma líneas no seriadas de solicitudes `ENVIADA` cuyo `tecnico_origen` es el técnico y material.
+- Cuenta 1 por cada línea seriada de solicitudes `ENVIADA` de ese mismo origen y material.
 - No escribe ni bloquea.
 
 ### `calcular_disponible_tecnico(tecnico, material) -> int`
@@ -105,27 +115,30 @@ class CuadreTraspaso:
 - Excluye series con línea en solicitud `ENVIADA`.
 - Filtra por número si `q` no está vacío; ordena por número.
 
-### `validar_disponibilidad_lineas(origen, lineas) -> None`
+### `validar_disponibilidad_lineas(lineas) -> None`
 
-- Seriados: cada serie `ASIGNADA` al origen, mismo tenant/material y no reservada.
-- No seriados: suma por material y compara con `calcular_disponible_tecnico`.
+- Cada línea usa su propio `tecnico_origen`.
+- Seriados: cada serie `ASIGNADA` al origen de su línea, mismo tenant/material y no reservada.
+- No seriados: agrupa por `(tecnico_origen, material)` y compara con
+  `calcular_disponible_tecnico`.
 - No crea reservas.
 
 ## Operaciones
 
-### `crear_solicitud_traspaso(tenant, origen, destino, fecha, lineas, actor) -> SolicitudTraspaso`
+### `crear_solicitud_traspaso(tenant, fecha, lineas, actor) -> SolicitudTraspaso`
 
-1. `validar_cuenta_tenant`, `validar_tecnicos`, materiales y disponibilidad.
-2. `validar_cuadre_traspaso(construir_movimientos(lineas))`.
-3. `transaction.atomic`: crear solicitud `BORRADOR` con `region=tenant.region` y líneas con
-   `tenant`/`lote`; auditar alta de solicitud y líneas.
-4. No reservar series ni cantidades; no generar Excel.
-5. Devolver la solicitud.
+1. `validar_cuenta_tenant`, validar técnicos de cada línea y estructura 1→N / N→1.
+2. Resolver materiales y validar disponibilidad por origen.
+3. `validar_cuadre_traspaso(construir_movimientos(lineas))`.
+4. `transaction.atomic`: crear solicitud `BORRADOR` con `region=tenant.region` y líneas con
+   `tenant`, `tecnico_origen`, `tecnico_destino` y `lote`; auditar alta de solicitud y líneas.
+5. No reservar series ni cantidades; no generar Excel.
+6. Devolver la solicitud.
 
-### `actualizar_lineas_borrador(solicitud, lineas, actor) -> SolicitudTraspaso`
+### `actualizar_lineas_borrador(solicitud, fecha, lineas, actor) -> SolicitudTraspaso`
 
 1. Exigir `BORRADOR` y tenant del actor; si no, `EstadoTraspasoInvalido` o `NoEncontrado`.
-2. Revalidar disponibilidad y cuadre.
+2. Revalidar técnicos, estructura, disponibilidad y cuadre.
 3. `transaction.atomic`: reemplazar líneas, auditar bajas y altas.
 4. No tocar stock, series ni Excel.
 
@@ -133,8 +146,9 @@ class CuadreTraspaso:
 
 1. `validar_cuenta_tenant` y exigir `BORRADOR`.
 2. `transaction.atomic`:
-   - Bloquear solicitud, `Tenant`, `StockTecnico` por `(material_id, tecnico_id)` y series por `id`.
-   - Revalidar técnicos, disponibilidad, reservas y cuadre.
+   - Bloquear solicitud, `Tenant`, `StockTecnico` de todos los técnicos implicados por
+     `(material_id, tecnico_id)` y series por `id`.
+   - Revalidar técnicos, estructura, disponibilidad, reservas y cuadre.
    - Cambiar a `ENVIADA`, `enviada_en=ahora`, `actualizado_por=actor`.
    - Generar Excel, guardar `excel_ruta`/`excel_hash`.
    - Auditar `SolicitudTraspaso/estado` y `SolicitudTraspaso/excel`.
@@ -145,12 +159,13 @@ class CuadreTraspaso:
 
 1. `validar_cuenta_almacen(actor, solicitud.region)` y exigir `ENVIADA`.
 2. `transaction.atomic`:
-   - Bloquear solicitud, `Tenant`, `StockTecnico` de ambos técnicos por `(material_id, tecnico_id)`
-     y series por `id`.
-   - Revalidar que cada serie siga `ASIGNADA` al origen y que el stock alcance.
-   - Revalidar cuadre.
-   - Por serie: `tecnico=destino`, `asignada_en=ahora`; estado `ASIGNADA`.
-   - Por material: `decrementar_stock_tecnico(origen, material, total, actor)` e
+   - Bloquear solicitud, `Tenant`, `StockTecnico` de todos los técnicos implicados por
+     `(material_id, tecnico_id)` y series por `id`.
+   - Revalidar que cada serie siga `ASIGNADA` al origen de su línea y que el stock alcance.
+   - Revalidar estructura y cuadre.
+   - Por serie: `tecnico=destino de la línea`, `asignada_en=ahora`; estado `ASIGNADA`.
+   - Agrupar por `(origen, destino, material)`:
+     `decrementar_stock_tecnico(origen, material, total, actor)` e
      `incrementar_stock_tecnico(destino, material, total, actor)`.
    - Cambiar a `CONFIRMADA`, `confirmada_en=ahora`, `actualizado_por=actor`.
    - Auditar estado, `Serie/tecnico` y `Serie/asignada_en`.
@@ -183,8 +198,9 @@ class CuadreTraspaso:
 
 - Devuelve `(ruta_relativa, hash_sha256)`.
 - Dos hojas: `Desasignación` (Z32) y `Asignación` (Z31).
+- Cada hoja agrupa las líneas por técnico y escribe un bloque de metadatos por NIF.
 - Metadatos: movimiento, Centro, Almacén, NIF, fecha, tenant, región e ID.
-- Tabla de seriales y tabla de material menor.
+- Tabla de seriales y tabla de material menor por grupo.
 - Nombre seguro `traspasos/<tenant_id>/traspaso-<id>-<hash>.xlsx`.
 - No envía correo.
 

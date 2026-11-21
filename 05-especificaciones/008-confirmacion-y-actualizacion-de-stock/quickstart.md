@@ -70,6 +70,19 @@ pytest --cov=stock
 Las pruebas requieren PostgreSQL real; no se ejecutan sobre SQLite porque validan
 `CheckConstraint`, `UniqueConstraint`, `select_for_update` y concurrencia.
 
+### Resultado actual (2026-11-21)
+
+```text
+pytest -q
+706 passed
+```
+
+Las pruebas de confirmación, concurrencia y auditoría de 008 están en
+`tests/integration/test_stock_confirmacion.py`, `test_stock_concurrencia.py` y
+`test_stock_auditoria.py`. El contrato de los dataclasses está en
+`tests/contract/test_stock_confirmacion_contrato.py`. La cobertura con `pytest --cov=stock` queda
+pendiente de revisión.
+
 ## Escenarios de validación
 
 Los escenarios se ejecutan con pruebas que crean sus propios datos (tenant, región, técnico,
@@ -86,7 +99,7 @@ detalle de firmas está en `contracts/servicios-stock.md`.
 otro tenant cambia. Una serie que no estaba `RESERVADA` aborta la confirmación con
 `SerieNoReservada` y deja todo como estaba.
 
-Prueba principal: `test_series_pasan_a_asignada_al_confirmar`.
+Prueba principal: `test_series_y_stock_se_mueven_una_sola_vez`.
 
 ### CA-02: Stock del técnico sube
 
@@ -96,7 +109,7 @@ Prueba principal: `test_series_pasan_a_asignada_al_confirmar`.
 **Esperado**: `StockTecnico.cantidad == 15`; se crea la fila si el técnico no tenía stock del
 material (0 → 5). El total agregado por material se escribe una sola vez.
 
-Prueba principal: `test_stock_tecnico_sube_con_series_y_no_seriados`.
+Prueba principal: `test_series_y_stock_se_mueven_una_sola_vez`.
 
 ### CA-03: Stock general baja
 
@@ -106,7 +119,7 @@ Prueba principal: `test_stock_tecnico_sube_con_series_y_no_seriados`.
 **Esperado**: `StockGeneral.cantidad == 95`. Si el stock no alcanza, la confirmación falla con
 `StockInsuficiente` y el stock queda en 100; nunca se crea una fila con cantidad negativa.
 
-Prueba principal: `test_stock_general_baja_con_series_y_no_seriados`.
+Prueba principal: `test_series_y_stock_se_mueven_una_sola_vez`.
 
 ### CA-04: Actualización transaccional
 
@@ -119,17 +132,17 @@ Prueba principal: `test_stock_general_baja_con_series_y_no_seriados`.
 **Esperado**: no hay cambios en ninguno de los cuatro; la solicitud sigue `ENVIADA` y
 `confirmada_en` sigue nula. Ninguna actualización parcial es visible.
 
-Prueba principal: `test_confirmacion_fallida_revierte_todo`.
+Prueba principal: `test_stock_insuficiente_no_modifica_nada`.
 
 ### CA-05: Días en mano inician con la confirmación
 
-1. Confirmar una asignación de material seriado y registrar `confirmada_en`.
+1. Confirmar una asignación de material seriado y registrar `Serie.asignada_en`.
 2. Calcular los días en mano con la lógica de 006 usando una fecha de referencia del día siguiente.
 
-**Esperado**: 1 día. 008 no crea contador ni tabla; `confirmada_en` lo escribe 007 en la misma
-transacción y 008 solo lo lee.
+**Esperado**: 1 día. 008 no crea contador ni tabla; fija `Serie.asignada_en`. `confirmada_en` lo
+escribe 007 en la misma transacción y 006 calcula los días desde `Serie.asignada_en`.
 
-Prueba principal: `test_dias_en_mano_inician_en_confirmada_en`.
+Prueba principal: `test_dias_en_mano_inician_en_asignada_en`.
 
 ### CA-06: Auditoría completa
 
@@ -144,7 +157,7 @@ Prueba principal: `test_dias_en_mano_inician_en_confirmada_en`.
 - Actor igual al usuario de la sesión que confirma; sin secretos, binarios ni rutas absolutas.
 - El registro `SolicitudAsignacion/estado` es de 007 y aparece una sola vez.
 
-Prueba principal: `test_auditoria_completa_de_series_y_stock`.
+Prueba principal: `test_auditoria_de_series_y_stock`.
 
 ### CA-07: No seriados actualizan cantidad
 
