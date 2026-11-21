@@ -5,7 +5,7 @@
     <h1>Cortes mensuales</h1>
     <a class="boton" href="{% url 'generar_corte' %}">Generar corte</a>
   </div>
-  <form method="get">
+  <form method="get" class="buscador">
     <label>Año <input type="number" name="anio" min="2000" max="2100" value="{{ anio }}"></label>
     <button type="submit">Filtrar</button>
   </form>

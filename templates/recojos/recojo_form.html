@@ -11,8 +11,7 @@
 
   <form method="post" action="{% url 'crear_recojo' %}">
     {% csrf_token %}
-    <div class="recojo-layout"
-         style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:1.25rem;align-items:start;">
+    <div class="recojo-layout">
       <div class="recojo-principal">
         {{ form.as_p }}
 
@@ -31,8 +30,7 @@
       </div>
 
       <aside id="series-lateral"
-             class="recojo-lateral"
-             style="position:sticky;top:1rem;max-height:80vh;overflow:auto;">
+             class="recojo-lateral">
         <h2>Series del recojo</h2>
         {% if resultado and resultado.series_estados %}
           {% include "recojos/_vista_previa_series.html" with estados=resultado.series_estados %}

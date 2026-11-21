@@ -1,0 +1,501 @@
+/* Componentes de contenido: tabla, formularios, botones y estados. */
+
+:root {
+  --superficie: #ffffff;
+  --superficie-alt: #f0f2f5;
+  --filete-tenue: #eef1f4;
+  --texto-tenue: #52606d;
+  --acento-hundido: #18496b;
+}
+
+.contenido a {
+  color: var(--acento);
+}
+
+/* Controles de formulario */
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+select,
+textarea {
+  min-height: 2.25rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.4rem;
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+input[type="file"] {
+  padding: 0.45rem;
+  border: 1px dashed var(--borde);
+  border-radius: 0.4rem;
+  background: var(--superficie);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--acento);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--superficie-alt);
+  color: var(--texto-tenue);
+  cursor: not-allowed;
+}
+
+.contenido form p {
+  margin: 0 0 1rem;
+}
+
+.contenido form p label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.contenido form p input:not([type="checkbox"]):not([type="radio"]),
+.contenido form p select,
+.contenido form p textarea {
+  width: 100%;
+  max-width: 32rem;
+}
+
+fieldset {
+  margin: 0 0 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+}
+
+legend {
+  padding: 0 0.35rem;
+  font-weight: 600;
+}
+
+.linea-recojo label {
+  display: block;
+  margin: 0.6rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.linea-recojo select,
+.linea-recojo input:not([type="checkbox"]):not([type="radio"]),
+.linea-recojo textarea {
+  width: 100%;
+  margin-top: 0.3rem;
+}
+
+/* Botones y enlaces de acción */
+
+button,
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.4rem;
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+button:hover,
+.boton:hover {
+  border-color: var(--acento);
+  color: var(--acento);
+}
+
+button:active,
+.boton:active {
+  transform: translateY(1px);
+}
+
+.boton {
+  border-color: var(--acento);
+  background: var(--acento);
+  color: #fff;
+}
+
+a.boton,
+a.boton:hover {
+  color: #fff;
+}
+
+.boton:hover {
+  border-color: var(--acento-hundido);
+  background: var(--acento-hundido);
+  color: #fff;
+}
+
+.boton-secundario {
+  border-color: var(--borde);
+  background: var(--superficie);
+  color: var(--texto);
+}
+
+a.boton-secundario {
+  color: var(--texto);
+}
+
+.boton-secundario:hover {
+  border-color: var(--acento);
+  color: var(--acento);
+}
+
+.en-linea {
+  display: inline;
+  margin: 0;
+}
+
+.acciones {
+  white-space: nowrap;
+}
+
+.acciones a {
+  color: var(--acento);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.acciones a:hover {
+  text-decoration: underline;
+}
+
+.acciones form {
+  display: inline;
+  margin-left: 0.5rem;
+}
+
+.acciones button {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--acento);
+  font-size: 0.875rem;
+}
+
+.acciones button:hover {
+  color: var(--acento-hundido);
+  text-decoration: underline;
+}
+
+/* Cabecera de sección */
+
+.cabecera-seccion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.cabecera-seccion h1 {
+  margin: 0;
+}
+
+/* Buscadores y filtros */
+
+.buscador {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+}
+
+.buscador label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--texto-tenue);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.buscador input,
+.buscador select {
+  min-height: 2.25rem;
+}
+
+.buscador input[type="search"] {
+  min-width: 16rem;
+}
+
+/* Tablas */
+
+.tabla,
+.vista-previa-series {
+  width: 100%;
+  border: 1px solid var(--borde);
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--superficie);
+}
+
+.tabla-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 900px) {
+  .tabla-scroll {
+    padding-bottom: 0.25rem;
+  }
+
+  .tabla-scroll table {
+    min-width: max-content;
+  }
+}
+
+.tabla th,
+.vista-previa-series th {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--borde);
+  background: var(--superficie-alt);
+  color: var(--texto-tenue);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.tabla td,
+.vista-previa-series td {
+  padding: 0.65rem 0.75rem;
+  border-top: 1px solid var(--filete-tenue);
+  font-size: 0.9375rem;
+  vertical-align: top;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla tbody tr:hover,
+.vista-previa-series tbody tr:hover {
+  background: #fafbfc;
+}
+
+.tabla tbody tr:first-child td,
+.vista-previa-series tbody tr:first-child td {
+  border-top: 0;
+}
+
+.tabla td[colspan] {
+  padding: 1.75rem 1rem;
+  color: var(--texto-tenue);
+  text-align: center;
+}
+
+.fila-alerta td {
+  background: #fdf3f3;
+  color: var(--error);
+}
+
+/* Paginación */
+
+.paginacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0;
+  color: var(--texto-tenue);
+  font-size: 0.875rem;
+}
+
+.paginacion a {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.35rem;
+  background: var(--superficie);
+  color: var(--acento);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.paginacion a:hover {
+  border-color: var(--acento);
+}
+
+/* Etiquetas y códigos */
+
+.etiqueta,
+.estado {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--superficie-alt);
+  color: var(--texto-tenue);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.etiqueta-anulado {
+  border-color: #e3b6b9;
+  background: #fdf3f3;
+  color: var(--error);
+}
+
+.codigo {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.9em;
+  letter-spacing: 0.02em;
+}
+
+/* Detalle de entidad */
+
+.detalle {
+  display: grid;
+  grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
+  gap: 0.45rem 1.25rem;
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+}
+
+.detalle dt {
+  color: var(--texto-tenue);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.detalle dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+/* Estados vacíos y ayudas */
+
+.ayuda {
+  color: var(--texto-tenue);
+  font-size: 0.9rem;
+}
+
+.sin-resultados {
+  margin: 1rem 0;
+  padding: 1.25rem;
+  border: 1px dashed var(--borde);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+  color: var(--texto-tenue);
+  text-align: center;
+}
+
+/* Mensajes */
+
+.mensaje-error {
+  border-color: var(--error);
+  background: #fdf3f3;
+  color: var(--error);
+}
+
+.mensaje-success {
+  border-color: var(--exito);
+  background: #f2f8f4;
+  color: var(--exito);
+}
+
+.mensaje-aviso {
+  border-color: #e6d6a8;
+  background: #fdf8ec;
+  color: #6b4e00;
+}
+
+/* Menú de módulo */
+
+.menu-modulo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu-modulo a {
+  display: block;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+  color: var(--texto);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.menu-modulo a:hover {
+  border-color: var(--acento);
+  color: var(--acento);
+}
+
+/* Resumen de carga */
+
+.resumen-carga {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 1rem 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+}
+
+.resumen-carga p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+/* Tipografía de contenido */
+
+.contenido h1 {
+  margin: 0 0 1rem;
+  font-size: 1.6rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.contenido h2 {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}

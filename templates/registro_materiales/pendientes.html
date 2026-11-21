@@ -2,7 +2,7 @@
 {% block title %}Órdenes pendientes · Lari{% endblock %}
 {% block contenido %}
   <h1>Órdenes pendientes</h1>
-  <form method="get">
+  <form method="get" class="buscador">
     <label>Periodo <input type="month" name="periodo" value="{{ periodo }}"></label>
     <label>Antigüedad (días) <input type="number" name="dias" min="1" value="{{ dias }}"></label>
     <button type="submit">Filtrar</button>
