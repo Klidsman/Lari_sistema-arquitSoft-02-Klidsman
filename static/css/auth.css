@@ -1,0 +1,415 @@
+/* Superficie de acceso: split-screen en escritorio, una columna en móvil. */
+
+.pagina-acceso {
+  background: var(--fondo);
+}
+
+.pagina-acceso .cabecera {
+  display: none;
+}
+
+.pagina-acceso .contenido {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: none;
+  min-height: 100dvh;
+  margin: 0;
+  padding: clamp(1rem, 4vw, 3rem);
+}
+
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  width: min(100%, 62rem);
+  min-height: 34rem;
+  overflow: hidden;
+  border: 1px solid var(--borde);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 1.5rem 3.5rem rgba(15, 28, 38, 0.1);
+}
+
+/* Panel de marca */
+
+.auth-marca {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: clamp(2rem, 4vw, 3.25rem);
+  background: #0f1c26;
+  color: #fff;
+}
+
+.auth-marca__cuerpo,
+.auth-pie {
+  position: relative;
+}
+
+.auth-logo {
+  margin: 0;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.auth-logo__desc {
+  margin: 0.4rem 0 0;
+  color: #aab7c4;
+  font-size: 0.9375rem;
+}
+
+.auth-hechos {
+  display: grid;
+  gap: 0.9rem;
+  margin: 3rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth-hechos li {
+  position: relative;
+  padding-left: 1.15rem;
+  color: #c9d4de;
+  font-size: 0.9375rem;
+}
+
+.auth-hechos li::before {
+  content: "";
+  position: absolute;
+  top: 0.5em;
+  left: 0;
+  width: 0.4rem;
+  height: 0.4rem;
+  border: 1px solid #6f8ba3;
+  border-radius: 50%;
+}
+
+.auth-pie {
+  margin: 0;
+  color: #7f93a5;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+}
+
+/* Panel de formulario */
+
+.auth-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: clamp(2rem, 5vw, 3.75rem);
+  background: #fff;
+}
+
+.auth-encabezado h1 {
+  margin: 0;
+  color: var(--texto);
+  font-size: 1.75rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.auth-subtitulo {
+  max-width: 36ch;
+  margin: 0.6rem 0 2rem;
+  color: #5b6875;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/* Formulario de acceso */
+
+.auth-formulario p {
+  margin: 0 0 1.15rem;
+}
+
+.auth-formulario label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--texto);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.auth-formulario input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--texto);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.auth-panel .boton-primario,
+.auth-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--acento);
+  border-radius: 0.5rem;
+  background: var(--acento);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-panel .boton-primario:hover,
+.auth-boton:hover {
+  border-color: #174a6d;
+  background: #174a6d;
+}
+
+.auth-panel .boton-primario:active,
+.auth-boton:active {
+  transform: translateY(1px);
+}
+
+.auth-panel .boton-enlace {
+  font-size: 0.9rem;
+}
+
+/* Flujo de segundo factor dentro de la superficie de acceso */
+
+.auth-panel .flujo-totp {
+  max-width: none;
+}
+
+.auth-panel .paso-totp {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.auth-panel .alta-intro {
+  margin: 0 0 1.5rem;
+}
+
+.auth-panel .campo-codigo {
+  max-width: none;
+}
+
+.auth-panel .formulario-totp,
+.auth-solo__panel .formulario-totp {
+  max-width: 20rem;
+}
+
+.auth-panel .auth-alerta {
+  max-width: 62ch;
+}
+
+.auth-panel .formulario-totp .boton-primario,
+.auth-solo__panel .formulario-totp .boton-primario {
+  width: 100%;
+}
+
+.auth-panel .cerrar-sesion {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+}
+
+/* Alta del segundo factor: guía y clave en dos columnas dentro de una tarjeta
+   ancha. La tapa de la marca se convierte en franja superior para no crecer
+   con los pasos. */
+
+.auth--alta {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+
+.auth--alta .auth-marca {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding: 1.1rem clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.auth--alta .auth-marca__cuerpo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+
+.auth--alta .auth-logo__desc {
+  margin: 0;
+}
+
+.auth--alta .auth-hechos {
+  display: none;
+}
+
+.auth--alta .auth-pie {
+  margin-left: auto;
+}
+
+.auth-alta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  grid-template-areas:
+    "cuenta clave"
+    "confirmacion clave";
+  gap: 1.75rem 2.5rem;
+  align-items: start;
+  margin-top: 1.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--borde);
+}
+
+.auth-alta .paso-totp {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+
+.auth-alta .paso-totp--cuenta {
+  grid-area: cuenta;
+}
+
+.auth-alta .paso-totp--clave {
+  grid-area: clave;
+}
+
+.auth-alta .paso-totp--confirmacion {
+  grid-area: confirmacion;
+}
+
+/* Aviso de error de autenticación */
+
+.auth-alerta {
+  margin: 0 0 1.25rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #e3b6b9;
+  border-left: 3px solid var(--error);
+  border-radius: 0.5rem;
+  background: #fdf3f3;
+  color: var(--error);
+  font-size: 0.9375rem;
+}
+
+/* Configuración de 2FA desde el perfil: tarjeta dentro del shell */
+
+.auth-solo {
+  display: grid;
+  place-items: start center;
+  padding: 1rem 0 3rem;
+}
+
+.auth-solo__panel {
+  width: min(100%, 44rem);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px solid var(--borde);
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.auth-solo__panel--alta {
+  width: min(100%, 62rem);
+}
+
+.auth-solo__panel h1 {
+  margin: 0 0 1.5rem;
+  font-size: 1.75rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.auth-solo__panel .flujo-totp {
+  max-width: none;
+}
+
+/* Adaptación */
+
+@media (max-width: 900px) {
+  .pagina-acceso .contenido {
+    display: block;
+    padding: 0;
+  }
+
+  .auth {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    align-content: start;
+    min-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .auth-marca {
+    gap: 0;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .auth-marca__cuerpo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+  }
+
+  .auth-logo__desc {
+    margin: 0;
+  }
+
+  .auth-hechos,
+  .auth-pie {
+    display: none;
+  }
+
+  .auth-panel {
+    justify-content: flex-start;
+    padding: 1.75rem 1.25rem 2.5rem;
+  }
+
+  .auth-subtitulo {
+    margin-bottom: 1.5rem;
+  }
+
+  .auth-alta {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "cuenta"
+      "clave"
+      "confirmacion";
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+  }
+
+  .auth-solo {
+    padding: 0;
+  }
+
+  .auth-solo__panel {
+    border: 0;
+    border-radius: 0;
+    padding: 1.25rem 0 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-panel {
+    padding: 1.5rem 1rem 2.25rem;
+  }
+
+  .auth-encabezado h1,
+  .auth-solo__panel h1 {
+    font-size: 1.5rem;
+  }
+
+  .auth-logo {
+    font-size: 1.25rem;
+  }
+}

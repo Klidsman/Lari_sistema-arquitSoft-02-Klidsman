@@ -9,10 +9,19 @@ class LoginForm(forms.Form):
     email = forms.EmailField(
         label="Correo",
         error_messages={"invalid": "El correo no es válido"},
+        widget=forms.EmailInput(
+            attrs={
+                "autocomplete": "username",
+                "autocapitalize": "none",
+                "spellcheck": "false",
+            }
+        ),
     )
     password = forms.CharField(
         label="Contraseña",
-        widget=forms.PasswordInput,
+        widget=forms.PasswordInput(
+            attrs={"autocomplete": "current-password"}
+        ),
     )
 
 
@@ -24,6 +33,16 @@ class SegundoFactorForm(forms.Form):
             "invalid": "Debes completar el segundo factor",
             "required": "Debes completar el segundo factor",
         },
+        widget=forms.TextInput(
+            attrs={
+                "inputmode": "numeric",
+                "pattern": "[0-9]*",
+                "maxlength": "6",
+                "autocomplete": "one-time-code",
+                "autocapitalize": "none",
+                "spellcheck": "false",
+            }
+        ),
     )
 
 

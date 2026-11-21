@@ -8,6 +8,7 @@ from acceso.totp import (
     descifrar_secreto,
     generar_token,
     hash_token,
+    secreto_agrupado,
     verificar_codigo,
 )
 
@@ -41,3 +42,9 @@ def test_token_hash():
     token = generar_token()
     assert hash_token(token) == hash_token(token)
     assert len(hash_token(token)) == 64
+
+
+def test_secreto_agrupado_en_bloques_de_cuatro():
+    assert secreto_agrupado("JBSWY3DPEHPK3PXP") == "JBSW Y3DP EHPK 3PXP"
+    assert secreto_agrupado("jbsw y3dp") == "JBSW Y3DP"
+    assert secreto_agrupado("") == ""

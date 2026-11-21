@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body_class %}pagina-acceso{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=1">
+{% endblock %}
+
+{% block contenido %}
+  <div class="auth{% block auth_modificador %}{% endblock %}">
+    <aside class="auth-marca" aria-label="Información de Lari">
+      <div class="auth-marca__cuerpo">
+        <p class="auth-logo">Lari</p>
+        <p class="auth-logo__desc">Control de materiales</p>
+
+        <ul class="auth-hechos">
+          <li>Una cuenta por tenant</li>
+          <li>Trazabilidad por serie</li>
+          <li>Conciliación sin descuadres</li>
+        </ul>
+      </div>
+      <p class="auth-pie">Uso interno · Operación diaria</p>
+    </aside>
+
+    <section class="auth-panel" aria-labelledby="auth-titulo">
+      <header class="auth-encabezado">
+        <h1 id="auth-titulo">{% block auth_titulo %}{% endblock %}</h1>
+        <p class="auth-subtitulo">{% block auth_subtitulo %}{% endblock %}</p>
+      </header>
+
+      {% block auth_contenido %}{% endblock %}
+    </section>
+  </div>
+{% endblock %}
