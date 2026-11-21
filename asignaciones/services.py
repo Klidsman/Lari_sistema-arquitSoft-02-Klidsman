@@ -704,9 +704,9 @@ def enviar_solicitud(solicitud, actor):
         )
         transaction.on_commit(
             lambda: __import__(
-                "asignaciones.almacen_services",
-                fromlist=["enviar_correo_solicitud"],
-            ).enviar_correo_solicitud(bloqueada.pk)
+                "asignaciones.correo",
+                fromlist=["encolar_envio_solicitud"],
+            ).encolar_envio_solicitud(bloqueada.pk)
         )
 
     return bloqueada

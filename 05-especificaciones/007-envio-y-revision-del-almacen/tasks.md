@@ -57,7 +57,7 @@ de solicitudes.
 
 - Implementado el núcleo: `EnvioCorreo`, campos `motivo_rechazo`/`rechazada_en`, bandeja del almacén, detalle/previsualización, confirmar, rechazar, descarga con verificación SHA-256, históricos y fragmento de pendientes.
 - Implementada la confirmación de stock de 008 (`RESERVADA→ASIGNADA`, `StockGeneral→StockTecnico`) y su uso desde 007.
-- Se registra un intento de correo al enviar; los reintentos programados, SSE completo y pruebas de todos los ciclos quedan pendientes.
+- Reintentos de correo implementados: tareas `programar_envio_solicitud` y `enviar_excel_solicitud`, 4 intentos con `countdown` fijo, cierre auditado de `EnvioCorreo`, notificación best-effort al tenant y aviso de fallo definitivo en el detalle. Las pruebas de todos los ciclos y el SSE completo siguen pendientes.
 - Suite en verde con pruebas del flujo principal.
 
 ## Fase 1: Setup (infraestructura compartida)
@@ -134,14 +134,14 @@ fallo definitivo, sin cambiar el estado de la solicitud.
 
 ### Implementación de US1
 
-- [ ] T039 [US1] Implementar `programar_envio_solicitud(solicitud_id)` en `asignaciones/correo.py`: releer la solicitud, exigir `ENVIADA`, `excel_ruta` y `excel_hash`, crear el intento 1 con `destinatario=solicitud.region.almacen.buzon`, `archivo=solicitud.excel_ruta`, `hash_sha256=solicitud.excel_hash`, `estado="REINTENTANDO"` y encolar la tarea
-- [ ] T040 [US1] Implementar `enviar_excel_solicitud(solicitud_id, numero_intento)` en `asignaciones/tasks.py`: releer solicitud e intento, validar `ENVIADA` y `REINTENTANDO`, verificar archivo y hash, construir y enviar el correo con `django.core.mail.EmailMessage` y cerrar el intento como `EXITOSO` o `FALLIDO`
-- [ ] T041 [US1] Implementar en `asignaciones/tasks.py` la reprogramación: si `numero_intento < settings.ENVIOS_MAX_INTENTOS`, crear el siguiente intento `REINTENTANDO` y encolar con `countdown=settings.ENVIOS_INTERVALO_REINTENTO_SEGUNDOS`; si se agotaron, no reprogramar
-- [ ] T042 [US1] Implementar en `asignaciones/correo.py` y `asignaciones/tasks.py` el manejo de fallos: buzón no configurado, almacén inactivo, Excel ausente o alterado, error SMTP y broker no disponible; guardar `error_mensaje` truncado y no exponer trazas ni credenciales
-- [ ] T043 [US1] Implementar `envio_definitivo_fallido(solicitud)` en `asignaciones/correo.py`: verdadero si el intento `ENVIOS_MAX_INTENTOS` está `FALLIDO` y no existe ningún `EXITOSO`; usarlo en el detalle de 006 para mostrar “No se pudo enviar el correo al almacén”
-- [ ] T044 [US1] Implementar en `asignaciones/services.py` el gancho de 006: al finalizar `enviar_solicitud`, registrar `transaction.on_commit(lambda: programar_envio_solicitud(solicitud.id))`; no enviar antes del commit y no dejar el correo dentro de la transacción
-- [ ] T045 [US1] Implementar en `asignaciones/correo.py` la notificación best-effort al tenant del fallo definitivo y la verificación de que el fallo de correo no cambia `SolicitudAsignacion.estado`
-- [ ] T046 [US1] Auditar en `asignaciones/services.py`/`asignaciones/tasks.py` cada cierre de `EnvioCorreo` con `EnvioCorreo/estado` `REINTENTANDO→EXITOSO` o `→FALLIDO`, incluyendo `numero_intento`, destinatario, archivo, hash y `error_mensaje`, sin cuerpo del correo ni credenciales
+- [X] T039 [US1] Implementar `programar_envio_solicitud(solicitud_id)` en `asignaciones/correo.py`: releer la solicitud, exigir `ENVIADA`, `excel_ruta` y `excel_hash`, crear el intento 1 con `destinatario=solicitud.region.almacen.buzon`, `archivo=solicitud.excel_ruta`, `hash_sha256=solicitud.excel_hash`, `estado="REINTENTANDO"` y encolar la tarea
+- [X] T040 [US1] Implementar `enviar_excel_solicitud(solicitud_id, numero_intento)` en `asignaciones/tasks.py`: releer solicitud e intento, validar `ENVIADA` y `REINTENTANDO`, verificar archivo y hash, construir y enviar el correo con `django.core.mail.EmailMessage` y cerrar el intento como `EXITOSO` o `FALLIDO`
+- [X] T041 [US1] Implementar en `asignaciones/tasks.py` la reprogramación: si `numero_intento < settings.ENVIOS_MAX_INTENTOS`, crear el siguiente intento `REINTENTANDO` y encolar con `countdown=settings.ENVIOS_INTERVALO_REINTENTO_SEGUNDOS`; si se agotaron, no reprogramar
+- [X] T042 [US1] Implementar en `asignaciones/correo.py` y `asignaciones/tasks.py` el manejo de fallos: buzón no configurado, almacén inactivo, Excel ausente o alterado, error SMTP y broker no disponible; guardar `error_mensaje` truncado y no exponer trazas ni credenciales
+- [X] T043 [US1] Implementar `envio_definitivo_fallido(solicitud)` en `asignaciones/correo.py`: verdadero si el intento `ENVIOS_MAX_INTENTOS` está `FALLIDO` y no existe ningún `EXITOSO`; usarlo en el detalle de 006 para mostrar “No se pudo enviar el correo al almacén”
+- [X] T044 [US1] Implementar en `asignaciones/services.py` el gancho de 006: al finalizar `enviar_solicitud`, registrar `transaction.on_commit(lambda: programar_envio_solicitud(solicitud.id))`; no enviar antes del commit y no dejar el correo dentro de la transacción
+- [X] T045 [US1] Implementar en `asignaciones/correo.py` la notificación best-effort al tenant del fallo definitivo y la verificación de que el fallo de correo no cambia `SolicitudAsignacion.estado`
+- [X] T046 [US1] Auditar en `asignaciones/services.py`/`asignaciones/tasks.py` cada cierre de `EnvioCorreo` con `EnvioCorreo/estado` `REINTENTANDO→EXITOSO` o `→FALLIDO`, incluyendo `numero_intento`, destinatario, archivo, hash y `error_mensaje`, sin cuerpo del correo ni credenciales
 
 **Checkpoint**: US1 funcional e independiente; el Excel se envía, se registra cada intento y el fallo no bloquea la solicitud.
 

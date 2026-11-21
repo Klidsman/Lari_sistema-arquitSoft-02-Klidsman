@@ -202,6 +202,10 @@ def detalle_asignacion(request, solicitud_id):
             "totales": services.totales_solicitud(solicitud),
             "alertas": services.alertas_cupo_solicitud(solicitud),
             "puede_enviar": solicitud.estado == EstadoSolicitud.BORRADOR,
+            "envio_fallido": __import__(
+                "asignaciones.correo",
+                fromlist=["envio_definitivo_fallido"],
+            ).envio_definitivo_fallido(solicitud),
         },
     )
 

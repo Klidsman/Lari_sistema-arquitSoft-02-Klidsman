@@ -5,6 +5,10 @@
 {% block contenido %}
   <h1>Solicitud {{ solicitud.pk }}</h1>
 
+  {% if envio_fallido %}
+    <p class="mensaje mensaje-error">No se pudo enviar el correo al almacén</p>
+  {% endif %}
+
   {% for alerta in alertas %}
     <p class="mensaje">{{ alerta.tecnico.nif }}: {{ alerta.mensaje }}</p>
   {% endfor %}

@@ -4,11 +4,11 @@ import hashlib
 from pathlib import Path
 
 from django.conf import settings
-from django.core.mail import EmailMessage
-from django.db import transaction
+from django.core.mail import EmailMessage, send_mail
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from acceso.models import Rol
+from acceso.models import Rol, Usuario
 from auditoria.services import registrar_cambio
 from series.models import EstadoSerie, Serie
 from stock.services import (
@@ -263,49 +263,289 @@ def verificar_archivo(solicitud):
     return ruta
 
 
-def enviar_correo_solicitud(solicitud_id, numero_intento=1):
-    solicitud = SolicitudAsignacion.objects.filter(pk=solicitud_id).first()
-    if solicitud is None:
-        return None
+class ErrorEnvioCorreo(Exception):
+    """Error de negocio del envío, con mensaje apto para EnvioCorreo."""
+
+    def __init__(self, mensaje):
+        super().__init__(mensaje)
+        self.mensaje = mensaje
+
+    def __str__(self):
+        return self.mensaje
+
+
+def _almacen_de(solicitud):
     try:
-        ruta = verificar_archivo(solicitud)
         almacen = solicitud.region.almacen
-        envio = EnvioCorreo.objects.create(
+    except Exception:
+        return None
+    return almacen
+
+
+def _buzon_de(solicitud, obligatorio=True):
+    almacen = _almacen_de(solicitud)
+    if almacen is None or not almacen.activo:
+        if obligatorio:
+            raise ErrorEnvioCorreo("El almacén de la región no está activo")
+        return ""
+    if not almacen.buzon:
+        if obligatorio:
+            raise ErrorEnvioCorreo("El buzón del almacén no está configurado")
+        return ""
+    return almacen.buzon
+
+
+def _crear_intento(solicitud, numero_intento):
+    """Crea el intento una sola vez; si ya existe, devuelve el existente."""
+    existente = EnvioCorreo.objects.filter(
+        solicitud=solicitud,
+        numero_intento=numero_intento,
+    ).first()
+    if existente is not None:
+        return existente
+
+    try:
+        return EnvioCorreo.objects.create(
             solicitud=solicitud,
             tenant=solicitud.tenant,
             region=solicitud.region,
             numero_intento=numero_intento,
-            destinatario=almacen.buzon,
+            destinatario=_buzon_de(solicitud, obligatorio=False),
             archivo=solicitud.excel_ruta,
             hash_sha256=solicitud.excel_hash,
             estado=EnvioCorreo.ESTADO_REINTENTANDO,
         )
-        mensaje = EmailMessage(
-            subject=settings.ALMACEN_ALERTA_ASUNTO,
-            body=(
-                f"Solicitud de asignación {solicitud.pk} "
-                f"del tenant {solicitud.tenant.codigo}."
+    except IntegrityError:
+        return EnvioCorreo.objects.get(
+            solicitud=solicitud,
+            numero_intento=numero_intento,
+        )
+
+
+def _actor_de(solicitud):
+    return solicitud.actualizado_por or solicitud.creado_por
+
+
+def _cerrar(envio, solicitud, estado, error_mensaje=""):
+    anterior = envio.estado
+    envio.estado = estado
+    envio.error_mensaje = (error_mensaje or "")[:500]
+    envio.enviado_en = timezone.now()
+    with transaction.atomic():
+        envio.save(update_fields=["estado", "error_mensaje", "enviado_en"])
+        registrar_cambio(
+            "EnvioCorreo",
+            envio.pk,
+            "estado",
+            anterior,
+            estado,
+            _actor_de(solicitud),
+            tenant=solicitud.tenant,
+        )
+    return envio
+
+
+def _mensaje_error(exc):
+    if isinstance(exc, (SolicitudNoExiste, ArchivoAlterado)):
+        return "El archivo del Excel no está disponible o fue modificado"
+    if isinstance(exc, ErrorEnvioCorreo):
+        return exc.mensaje
+    return str(exc)[:500]
+
+
+def _cuerpo_correo(solicitud):
+    from .services import totales_solicitud
+
+    totales = totales_solicitud(solicitud)
+    return (
+        f"Solicitud de asignación {solicitud.pk} del tenant "
+        f"{solicitud.tenant.codigo}.\n"
+        f"Fecha: {solicitud.fecha.isoformat()}\n"
+        f"Técnicos: {solicitud.nifs_tecnicos or '—'}\n"
+        f"Líneas: {totales['total_lineas']} · "
+        f"Series: {totales['total_series']} · "
+        f"Cantidad: {totales['total_cantidad']}\n\n"
+        "Revisa la solicitud en la bandeja de despachos del almacén."
+    )
+
+
+def _enviar_correo(solicitud, envio):
+    buzon = _buzon_de(solicitud)
+    ruta = verificar_archivo(solicitud)
+    mensaje = EmailMessage(
+        subject=(
+            f"{settings.ALMACEN_ALERTA_ASUNTO} "
+            f"#{solicitud.pk} · {solicitud.tenant.codigo}"
+        ),
+        body=_cuerpo_correo(solicitud),
+        from_email=settings.ENVIOS_REMITENTE,
+        to=[buzon],
+    )
+    mensaje.attach(
+        f"asignacion-{solicitud.pk}.xlsx",
+        ruta.read_bytes(),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    mensaje.send(fail_silently=False)
+
+
+def _notificar_tenant_fallo(solicitud, envio):
+    usuario = (
+        Usuario.objects.filter(
+            tenant=solicitud.tenant,
+            rol=Rol.USUARIO_TENANT,
+            is_active=True,
+        )
+        .order_by("pk")
+        .first()
+    )
+    if usuario is None:
+        return
+    try:
+        send_mail(
+            subject=(
+                f"No se pudo enviar la solicitud {solicitud.pk} al almacén"
+            ),
+            message=(
+                f"El envío de la solicitud {solicitud.pk} al almacén no se "
+                f"pudo completar después de {envio.numero_intento} intentos. "
+                "La solicitud sigue disponible en tu bandeja para revisión."
             ),
             from_email=settings.ENVIOS_REMITENTE,
-            to=[almacen.buzon],
+            recipient_list=[usuario.email],
+            fail_silently=True,
         )
-        mensaje.attach(
-            f"asignacion-{solicitud.pk}.xlsx",
-            ruta.read_bytes(),
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    except Exception:
+        pass
+
+
+def _programar_siguiente(solicitud, numero_intento):
+    siguiente = _crear_intento(solicitud, numero_intento)
+    if siguiente.estado != EnvioCorreo.ESTADO_REINTENTANDO:
+        return siguiente
+
+    try:
+        from .tasks import enviar_excel_solicitud
+
+        enviar_excel_solicitud.apply_async(
+            args=[solicitud.pk, numero_intento],
+            countdown=settings.ENVIOS_INTERVALO_REINTENTO_SEGUNDOS,
         )
-        mensaje.send(fail_silently=False)
-    except Exception as exc:
-        if "envio" in locals():
-            envio.estado = EnvioCorreo.ESTADO_FALLIDO
-            envio.error_mensaje = str(exc)[:500]
-            envio.enviado_en = timezone.now()
-            envio.save(update_fields=["estado", "error_mensaje", "enviado_en"])
+    except Exception:
+        _cerrar(
+            siguiente,
+            solicitud,
+            EnvioCorreo.ESTADO_FALLIDO,
+            "No se pudo programar el envío del correo",
+        )
+        _notificar_tenant_fallo(solicitud, siguiente)
+
+    return siguiente
+
+
+def programar_envio_solicitud(solicitud_id):
+    """Crea el intento 1 y encola el envío. Idempotente."""
+    solicitud = (
+        SolicitudAsignacion.objects.select_related("tenant", "region")
+        .filter(pk=solicitud_id)
+        .first()
+    )
+    if solicitud is None or solicitud.estado != EstadoSolicitud.ENVIADA:
         return None
 
-    envio.estado = EnvioCorreo.ESTADO_EXITOSO
-    envio.enviado_en = timezone.now()
-    envio.save(update_fields=["estado", "enviado_en"])
+    if not solicitud.excel_ruta or not solicitud.excel_hash:
+        envio = _crear_intento(solicitud, 1)
+        if envio.estado == EnvioCorreo.ESTADO_REINTENTANDO:
+            _cerrar(
+                envio,
+                solicitud,
+                EnvioCorreo.ESTADO_FALLIDO,
+                "El archivo del Excel no está disponible o fue modificado",
+            )
+        _notificar_tenant_fallo(solicitud, envio)
+        return envio
+
+    envio = _crear_intento(solicitud, 1)
+    if envio.estado != EnvioCorreo.ESTADO_REINTENTANDO:
+        return envio
+
+    try:
+        from .tasks import enviar_excel_solicitud
+
+        enviar_excel_solicitud.apply_async(args=[solicitud.pk, 1])
+    except Exception:
+        _cerrar(
+            envio,
+            solicitud,
+            EnvioCorreo.ESTADO_FALLIDO,
+            "No se pudo programar el envío del correo",
+        )
+        _notificar_tenant_fallo(solicitud, envio)
+
+    return envio
+
+
+def encolar_envio_solicitud(solicitud_id):
+    """Encola el intento 1; si el broker falla, deja el intento fallido."""
+    try:
+        from .tasks import programar_envio_solicitud as tarea_programar
+
+        tarea_programar.delay(solicitud_id)
+    except Exception:
+        registrar_fallo_programacion(solicitud_id)
+
+
+def registrar_fallo_programacion(solicitud_id):
+    solicitud = (
+        SolicitudAsignacion.objects.select_related("tenant", "region")
+        .filter(pk=solicitud_id)
+        .first()
+    )
+    if solicitud is None or solicitud.estado != EstadoSolicitud.ENVIADA:
+        return None
+
+    envio = _crear_intento(solicitud, 1)
+    if envio.estado == EnvioCorreo.ESTADO_REINTENTANDO:
+        _cerrar(
+            envio,
+            solicitud,
+            EnvioCorreo.ESTADO_FALLIDO,
+            "No se pudo programar el envío del correo",
+        )
+        _notificar_tenant_fallo(solicitud, envio)
+    return envio
+
+
+def procesar_envio_solicitud(solicitud_id, numero_intento):
+    """Ejecuta un intento, lo cierra y reprograma o notifica."""
+    solicitud = (
+        SolicitudAsignacion.objects.select_related("tenant", "region")
+        .filter(pk=solicitud_id)
+        .first()
+    )
+    if solicitud is None or solicitud.estado != EstadoSolicitud.ENVIADA:
+        return None
+
+    envio = _crear_intento(solicitud, numero_intento)
+    if envio.estado != EnvioCorreo.ESTADO_REINTENTANDO:
+        return envio
+
+    try:
+        _enviar_correo(solicitud, envio)
+    except Exception as exc:
+        _cerrar(
+            envio,
+            solicitud,
+            EnvioCorreo.ESTADO_FALLIDO,
+            _mensaje_error(exc),
+        )
+        if numero_intento < settings.ENVIOS_MAX_INTENTOS:
+            _programar_siguiente(solicitud, numero_intento + 1)
+        else:
+            _notificar_tenant_fallo(solicitud, envio)
+    else:
+        _cerrar(envio, solicitud, EnvioCorreo.ESTADO_EXITOSO)
+
     return envio
 
 
