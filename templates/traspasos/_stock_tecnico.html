@@ -1,5 +1,5 @@
 {% if stock %}
-  <p class="ayuda">Stock actual de {{ tecnico.nif }} - {{ tecnico.nombre }}</p>
+  <p class="ayuda">Stock de {{ tecnico.nif }} - {{ tecnico.nombre }}</p>
   <table class="tabla">
     <thead>
       <tr>
@@ -7,7 +7,8 @@
         <th>Descripción</th>
         <th>Lote</th>
         <th>Tipo</th>
-        <th>Cantidad</th>
+        <th>Disponible</th>
+        <th>En mano</th>
       </tr>
     </thead>
     <tbody>
@@ -17,7 +18,8 @@
           <td>{{ fila.material.descripcion }}</td>
           <td>{{ fila.material.lote|default:"—" }}</td>
           <td>{{ fila.material.es_seriado|yesno:"Seriado,No seriado" }}</td>
-          <td>{{ fila.cantidad }}</td>
+          <td>{{ fila.disponible }}</td>
+          <td>{{ fila.stock }}</td>
         </tr>
       {% endfor %}
     </tbody>

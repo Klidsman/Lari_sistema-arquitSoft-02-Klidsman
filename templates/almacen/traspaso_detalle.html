@@ -9,6 +9,11 @@
     {% for tecnico in traspaso.destinos %}{{ tecnico.nif }}{% if not forloop.last %}, {% endif %}{% endfor %}
     · {{ traspaso.get_estado_display }}
   </p>
+  <p class="ayuda">
+    {{ traspaso.lineas.count }} línea(s) ·
+    {{ traspaso.origenes|length }} técnico(s) que entregan ·
+    {{ traspaso.destinos|length }} técnico(s) que reciben
+  </p>
   <table class="tabla">
     <thead>
       <tr>

@@ -1,4 +1,5 @@
 {% if materiales %}
+  <p class="ayuda">Stock de {{ tecnico.nif }} - {{ tecnico.nombre }}</p>
   <div class="materiales-tecnico">
     {% for item in materiales %}
       <article class="material-traspaso"
@@ -6,22 +7,29 @@
                data-codigo="{{ item.material.codigo }}"
                data-descripcion="{{ item.material.descripcion }}"
                data-stock="{{ item.cantidad }}"
+               data-stock-total="{{ item.stock }}"
+               data-reservado="{{ item.reservado }}"
                data-seriado="{% if item.material.es_seriado %}1{% else %}0{% endif %}">
         <div class="material-traspaso__cabecera">
           <div class="material-traspaso__nombre">
             <span class="material-nombre">{{ item.material.codigo }}</span>
             <span class="material-descripcion">{{ item.material.descripcion }}</span>
           </div>
-          <span class="material-stock">{{ item.cantidad }} en mano</span>
+          <span class="material-stock" data-stock-texto>
+            {{ item.cantidad }} disponible de {{ item.stock }} en mano
+            {% if item.reservado %}({{ item.reservado }} reservado){% endif %}
+          </span>
         </div>
 
         {% if item.material.es_seriado %}
           <div class="material-traspaso__series">
-            <p class="ayuda">Series disponibles: {{ item.series|length }}</p>
+            <p class="ayuda">
+              Series disponibles: <span data-series-count>{{ item.series|length }}</span>
+            </p>
             {% if item.series %}
               <div class="series-lista">
                 {% for serie in item.series %}
-                  <label class="serie-opcion">
+                  <label class="serie-opcion" data-serie-id="{{ serie.pk }}">
                     <input type="checkbox" value="{{ serie.pk }}" data-numero="{{ serie.numero }}">
                     <span>{{ serie.numero }}</span>
                   </label>
@@ -30,19 +38,31 @@
               <button type="button" class="boton boton-secundario" data-agregar-series>
                 Agregar series marcadas
               </button>
+              <p class="ayuda" data-sin-series hidden>
+                No quedan series disponibles: ya están en el traspaso.
+              </p>
             {% else %}
               <p class="ayuda">No hay series disponibles para este material.</p>
             {% endif %}
           </div>
         {% else %}
-          <div class="material-traspaso__accion">
-            <label>Cantidad por técnico
-              <input type="number" min="1" max="{{ item.cantidad }}" value="1" data-cantidad-input>
-            </label>
-            <button type="button" class="boton boton-secundario" data-agregar-cantidad>
-              Agregar
-            </button>
-          </div>
+          {% if item.cantidad > 0 %}
+            <div class="material-traspaso__accion" data-accion-cantidad>
+              <label>Cantidad por técnico
+                <input type="number" min="1" max="{{ item.cantidad }}" value="1" data-cantidad-input>
+              </label>
+              <button type="button" class="boton boton-secundario" data-agregar-cantidad>
+                Agregar
+              </button>
+            </div>
+            <p class="ayuda" data-sin-disponible hidden>
+              Sin stock disponible: ya agregaste todo al traspaso.
+            </p>
+          {% else %}
+            <p class="ayuda">
+              Sin stock disponible: todo está reservado en traspasos guardados.
+            </p>
+          {% endif %}
         {% endif %}
       </article>
     {% endfor %}

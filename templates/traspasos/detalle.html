@@ -12,6 +12,11 @@
     <dt>Estado</dt><dd>{{ traspaso.get_estado_display }}</dd>
     <dt>Hash</dt><dd>{{ traspaso.excel_hash }}</dd>
   </dl>
+  <p class="ayuda">
+    {{ traspaso.lineas.count }} línea(s) ·
+    {{ traspaso.origenes|length }} técnico(s) que entregan ·
+    {{ traspaso.destinos|length }} técnico(s) que reciben
+  </p>
   <table class="tabla">
     <thead>
       <tr>
@@ -37,8 +42,11 @@
     </tbody>
   </table>
   {% if puede_enviar %}
-    <form method="post" action="{% url 'enviar_traspaso' traspaso.pk %}">{% csrf_token %}<button>Enviar</button></form>
-    <form method="post" action="{% url 'cancelar_traspaso' traspaso.pk %}">{% csrf_token %}<button>Cancelar</button></form>
+    <div class="acciones">
+      <a class="boton boton-secundario" href="{% url 'editar_traspaso' traspaso.pk %}">Editar</a>
+      <form method="post" action="{% url 'enviar_traspaso' traspaso.pk %}">{% csrf_token %}<button>Enviar</button></form>
+      <form method="post" action="{% url 'cancelar_traspaso' traspaso.pk %}">{% csrf_token %}<button>Cancelar</button></form>
+    </div>
   {% endif %}
   {% if traspaso.excel_ruta %}<p><a href="{% url 'excel_traspaso' traspaso.pk %}">Descargar Excel</a></p>{% endif %}
 {% endblock %}

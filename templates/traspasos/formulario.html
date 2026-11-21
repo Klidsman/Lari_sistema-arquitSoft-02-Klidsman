@@ -2,8 +2,8 @@
 {% block title %}Nuevo traspaso · Lari{% endblock %}
 {% block contenido %}
   <div class="cabecera-seccion">
-    <h1>Nuevo traspaso</h1>
-    <a class="boton boton-secundario" href="{% url 'lista_traspasos' %}">Volver</a>
+    <h1>{% if traspaso %}Editar traspaso {{ traspaso.pk }}{% else %}Nuevo traspaso{% endif %}</h1>
+    <a class="boton boton-secundario" href="{% if traspaso %}{% url 'detalle_traspaso' traspaso.pk %}{% else %}{% url 'lista_traspasos' %}{% endif %}">Volver</a>
   </div>
 
   {% if error %}<p class="mensaje mensaje-error" role="alert">{{ error }}</p>{% endif %}
@@ -11,12 +11,16 @@
 
   <p class="ayuda">
     Elige al técnico que entrega, agrega materiales de su stock y marca uno o varios
-    técnicos que los reciban. Cada cantidad es por técnico que recibe.
+    técnicos que los reciban. Un mismo técnico puede entregar unos materiales y recibir
+    otros. Cada cantidad es por técnico que recibe y ningún material se entrega al mismo
+    técnico que lo entrega.
   </p>
 
-  <form method="post" id="form-traspaso" novalidate>
+  <form method="post" id="form-traspaso" novalidate
+        data-solicitud-id="{% if traspaso %}{{ traspaso.pk }}{% endif %}">
     {% csrf_token %}
     <input type="hidden" name="fecha" value="{{ hoy|date:'Y-m-d' }}">
+    <input type="hidden" name="clave_idempotencia" value="{{ clave_idempotencia }}">
     <input type="hidden" name="lineas-TOTAL_FORMS" id="lineas-total" value="0">
     <input type="hidden" name="lineas-INITIAL_FORMS" value="0">
     <input type="hidden" name="lineas-MIN_NUM_FORMS" value="0">
@@ -53,7 +57,7 @@
         <h2 id="titulo-reciben">Técnicos que reciben</h2>
         <div id="tecnicos-reciben" class="lista-tecnicos">
           {% for tecnico in tecnicos %}
-            <label class="tecnico-recibe" data-tecnico-id="{{ tecnico.pk }}">
+            <label class="tecnico-recibe" data-tecnico-id="{{ tecnico.pk }}" data-nif="{{ tecnico.nif }}">
               <input type="checkbox" value="{{ tecnico.pk }}" disabled>
               <span class="tecnico-nif">{{ tecnico.nif }}</span>
               <span class="tecnico-nombre">{{ tecnico.nombre }}</span>
@@ -70,12 +74,21 @@
         </div>
 
         <div class="acciones-traspaso">
-          <button type="submit" class="boton" name="accion" value="enviar">
-            Registrar traspaso
-          </button>
-          <button type="submit" class="boton boton-secundario" name="accion" value="borrador">
-            Guardar borrador
-          </button>
+          {% if traspaso %}
+            <button type="submit" class="boton" name="accion" value="borrador">
+              Guardar cambios
+            </button>
+            <a class="boton boton-secundario" href="{% url 'detalle_traspaso' traspaso.pk %}">
+              Cancelar
+            </a>
+          {% else %}
+            <button type="submit" class="boton" name="accion" value="enviar">
+              Registrar traspaso
+            </button>
+            <button type="submit" class="boton boton-secundario" name="accion" value="borrador">
+              Guardar borrador
+            </button>
+          {% endif %}
         </div>
       </section>
     </div>
@@ -83,6 +96,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+{% if datos_iniciales %}{{ datos_iniciales|json_script:"datos-iniciales" }}{% endif %}
 <script>
 (function () {
   "use strict";
@@ -99,8 +113,18 @@
   var sinDestinos = document.getElementById("sin-destinos");
   var totalFormularios = document.getElementById("lineas-total");
   var urlMateriales = "{% url 'materiales_tecnico_traspaso' %}";
+  var nodoDatos = document.getElementById("datos-iniciales");
+  var datosIniciales = null;
+  if (nodoDatos) {
+    try {
+      datosIniciales = JSON.parse(nodoDatos.textContent);
+    } catch (error) {
+      datosIniciales = null;
+    }
+  }
 
   var origenId = null;
+  var origenNif = null;
   var carrito = [];
   var destinos = {};
 
@@ -122,22 +146,43 @@
     });
   }
 
-  function limpiarCarrito() {
-    carrito = [];
-    destinos = {};
-    renderResumen();
+  function origenesEnCarrito() {
+    var origenes = {};
+    carrito.forEach(function (item) {
+      if (item.origenId) origenes[item.origenId] = true;
+    });
+    return origenes;
+  }
+
+  function destinosDelItem(item) {
+    if (item.destinos && item.destinos.length) {
+      return item.destinos.slice();
+    }
+    return Object.keys(destinos);
+  }
+
+  function firmaDestinos(lista) {
+    return (lista || []).slice().sort().join(",");
+  }
+
+  function nifDeTecnico(tecnicoId) {
+    var etiqueta = listaReciben.querySelector(
+      '.tecnico-recibe[data-tecnico-id="' + tecnicoId + '"]'
+    );
+    if (etiqueta && etiqueta.dataset.nif) return etiqueta.dataset.nif;
+    var boton = listaEntrega.querySelector(
+      '.tecnico-opcion[data-tecnico-id="' + tecnicoId + '"]'
+    );
+    return boton ? boton.dataset.nif : tecnicoId;
   }
 
   function actualizarDestinos() {
     var hayOrigen = Boolean(origenId);
     var visibles = 0;
     listaReciben.querySelectorAll(".tecnico-recibe").forEach(function (etiqueta) {
-      var id = etiqueta.dataset.tecnicoId;
       var entrada = etiqueta.querySelector("input");
-      var esOrigen = hayOrigen && id === origenId;
-      etiqueta.hidden = esOrigen;
-      entrada.disabled = !hayOrigen || esOrigen;
-      entrada.checked = false;
+      etiqueta.hidden = false;
+      entrada.disabled = !hayOrigen;
       if (!etiqueta.hidden) visibles += 1;
     });
     sinDestinos.hidden = visibles > 0;
@@ -146,7 +191,13 @@
   function cargarMateriales() {
     panelMateriales.innerHTML = '<p class="ayuda">Cargando stock…</p>';
     ayudaMateriales.hidden = true;
-    fetch(urlMateriales + "?tecnico=" + encodeURIComponent(origenId), {
+    var solicitudId = form.dataset.solicitudId || "";
+    var url =
+      urlMateriales +
+      "?tecnico=" +
+      encodeURIComponent(origenId) +
+      (solicitudId ? "&solicitud=" + encodeURIComponent(solicitudId) : "");
+    return fetch(url, {
       headers: { "X-Requested-With": "XMLHttpRequest" },
     })
       .then(function (respuesta) {
@@ -155,6 +206,7 @@
       })
       .then(function (html) {
         panelMateriales.innerHTML = html;
+        actualizarPanelMateriales();
       })
       .catch(function () {
         panelMateriales.innerHTML =
@@ -164,11 +216,13 @@
 
   function seleccionarOrigen(boton) {
     origenId = boton.dataset.tecnicoId;
+    origenNif = boton.dataset.nif;
     marcarOrigen(boton);
     limpiarError();
-    limpiarCarrito();
     actualizarDestinos();
-    cargarMateriales();
+    return cargarMateriales().then(function () {
+      actualizarDestinos();
+    });
   }
 
   listaEntrega.addEventListener("click", function (evento) {
@@ -206,23 +260,55 @@
       return;
     }
 
+    var destinosItem = Object.keys(destinos);
+    var firma = firmaDestinos(destinosItem);
+    var previos = carrito
+      .filter(function (item) {
+        return (
+          item.tipo === "cantidad" &&
+          item.materialId === materialId &&
+          item.origenId === origenId &&
+          firmaDestinos(item.destinos) === firma
+        );
+      })
+      .reduce(function (suma, item) {
+        return suma + item.cantidad;
+      }, 0);
+    var restante = stock - previos;
+    if (cantidad > restante) {
+      mostrarError(
+        "La cantidad supera el stock disponible (" + restante + ")."
+      );
+      entrada.focus();
+      return;
+    }
+
     var existente = carrito.findIndex(function (item) {
-      return item.tipo === "cantidad" && item.materialId === materialId;
+      return (
+        item.tipo === "cantidad" &&
+        item.materialId === materialId &&
+        item.origenId === origenId &&
+        firmaDestinos(item.destinos) === firma
+      );
     });
-    var item = {
-      tipo: "cantidad",
-      materialId: materialId,
-      codigo: fila.dataset.codigo,
-      descripcion: fila.dataset.descripcion,
-      cantidad: cantidad,
-      stock: stock,
-    };
     if (existente >= 0) {
-      carrito[existente] = item;
+      carrito[existente].cantidad += cantidad;
     } else {
-      carrito.push(item);
+      carrito.push({
+        tipo: "cantidad",
+        origenId: origenId,
+        origenNif: origenNif,
+        materialId: materialId,
+        codigo: fila.dataset.codigo,
+        descripcion: fila.dataset.descripcion,
+        cantidad: cantidad,
+        stock: stock,
+        destinos: destinosItem.slice(),
+      });
     }
     entrada.value = "1";
+    actualizarDestinos();
+    actualizarPanelMateriales();
     renderResumen();
   }
 
@@ -235,6 +321,13 @@
       mostrarError("Marca al menos una serie para agregar.");
       return;
     }
+    var destinosItem = Object.keys(destinos);
+    if (destinosItem.length > 1) {
+      mostrarError(
+        "Selecciona un solo técnico que reciba para agregar series."
+      );
+      return;
+    }
     marcadas.forEach(function (casilla) {
       var serieId = casilla.value;
       var yaEsta = carrito.some(function (item) {
@@ -243,16 +336,21 @@
       if (!yaEsta) {
         carrito.push({
           tipo: "serie",
+          origenId: origenId,
+          origenNif: origenNif,
           materialId: fila.dataset.materialId,
           codigo: fila.dataset.codigo,
           descripcion: fila.dataset.descripcion,
           serieId: serieId,
           numero: casilla.dataset.numero,
           stock: parseInt(fila.dataset.stock, 10) || 0,
+          destinos: destinosItem.slice(),
         });
       }
       casilla.checked = false;
     });
+    actualizarDestinos();
+    actualizarPanelMateriales();
     renderResumen();
   }
 
@@ -278,8 +376,80 @@
     var boton = evento.target.closest("[data-quitar-item]");
     if (!boton) return;
     carrito.splice(parseInt(boton.dataset.quitarItem, 10), 1);
+    actualizarDestinos();
+    actualizarPanelMateriales();
     renderResumen();
   });
+
+  function actualizarPanelMateriales() {
+    if (!origenId) return;
+    panelMateriales.querySelectorAll(".material-traspaso").forEach(function (fila) {
+      var materialId = fila.dataset.materialId;
+      var esSeriado = fila.dataset.seriado === "1";
+      var base = parseInt(fila.dataset.stock, 10) || 0;
+      var total = parseInt(fila.dataset.stockTotal, 10) || base;
+      var reservado = parseInt(fila.dataset.reservado, 10) || 0;
+      var items = carrito.filter(function (item) {
+        return item.origenId === origenId && item.materialId === materialId;
+      });
+      var consumido = esSeriado
+        ? items.length
+        : items.reduce(function (suma, item) {
+            return suma + item.cantidad;
+          }, 0);
+      var restante = Math.max(0, base - consumido);
+
+      var texto = fila.querySelector("[data-stock-texto]");
+      if (texto) {
+        texto.textContent =
+          restante +
+          " disponible de " +
+          total +
+          " en mano" +
+          (reservado ? " (" + reservado + " reservado)" : "");
+      }
+
+      if (esSeriado) {
+        var enCarrito = items.map(function (item) {
+          return item.serieId;
+        });
+        var visibles = 0;
+        fila.querySelectorAll(".serie-opcion").forEach(function (etiqueta) {
+          var oculta = enCarrito.indexOf(etiqueta.dataset.serieId) >= 0;
+          etiqueta.hidden = oculta;
+          if (oculta) {
+            var casilla = etiqueta.querySelector("input");
+            if (casilla) casilla.checked = false;
+          } else {
+            visibles += 1;
+          }
+        });
+        var contador = fila.querySelector("[data-series-count]");
+        if (contador) contador.textContent = String(visibles);
+        var botonSeries = fila.querySelector("[data-agregar-series]");
+        var sinSeries = fila.querySelector("[data-sin-series]");
+        if (botonSeries) botonSeries.hidden = visibles === 0;
+        if (sinSeries) sinSeries.hidden = visibles > 0;
+      } else {
+        var accion = fila.querySelector("[data-accion-cantidad]");
+        var sinDisponible = fila.querySelector("[data-sin-disponible]");
+        var entrada = fila.querySelector("[data-cantidad-input]");
+        if (restante > 0) {
+          if (accion) accion.hidden = false;
+          if (sinDisponible) sinDisponible.hidden = true;
+          if (entrada) {
+            entrada.max = String(restante);
+            if (parseInt(entrada.value, 10) > restante) {
+              entrada.value = String(restante);
+            }
+          }
+        } else {
+          if (accion) accion.hidden = true;
+          if (sinDisponible) sinDisponible.hidden = false;
+        }
+      }
+    });
+  }
 
   function renderResumen() {
     var cantidadDestinos = Object.keys(destinos).length;
@@ -291,23 +461,55 @@
 
     var lista = document.createElement("ul");
     lista.className = "lista-resumen";
+    var totalesPorDestino = {};
 
     carrito.forEach(function (item, indice) {
+      var destinosItem = destinosDelItem(item).filter(function (destinoId) {
+        return destinoId !== item.origenId;
+      });
+
+      destinosItem.forEach(function (destinoId) {
+        if (!totalesPorDestino[destinoId]) {
+          totalesPorDestino[destinoId] = {
+            nif: nifDeTecnico(destinoId),
+            materiales: {},
+          };
+        }
+        var materiales = totalesPorDestino[destinoId].materiales;
+        if (!materiales[item.materialId]) {
+          materiales[item.materialId] = {
+            codigo: item.codigo,
+            unidades: 0,
+          };
+        }
+        materiales[item.materialId].unidades +=
+          item.tipo === "serie" ? 1 : item.cantidad;
+      });
+
       var elemento = document.createElement("li");
       elemento.className = "resumen-item";
 
       var texto = document.createElement("span");
       texto.className = "resumen-item__texto";
+      var prefijo = item.origenNif ? item.origenNif + " · " : "";
+      var destinoTexto = destinosItem.length
+        ? " → " + destinosItem.map(nifDeTecnico).join(", ")
+        : " → sin receptor";
       if (item.tipo === "serie") {
         texto.textContent =
-          item.codigo + " · serie " + item.numero;
+          prefijo +
+          item.codigo +
+          " · serie " +
+          item.numero +
+          destinoTexto;
       } else {
         texto.textContent =
+          prefijo +
           item.codigo +
           " · " +
           item.cantidad +
           (item.cantidad === 1 ? " unidad" : " unidades") +
-          (cantidadDestinos > 1 ? " por técnico" : "");
+          destinoTexto;
       }
 
       var quitar = document.createElement("button");
@@ -324,47 +526,76 @@
     resumen.innerHTML = "";
     resumen.appendChild(lista);
 
-    if (cantidadDestinos === 0) {
+    var destinosConTotales = Object.keys(totalesPorDestino);
+    destinosConTotales.forEach(function (destinoId) {
+      var datos = totalesPorDestino[destinoId];
+      var partes = Object.keys(datos.materiales).map(function (materialId) {
+        var total = datos.materiales[materialId];
+        return (
+          total.codigo +
+          ": " +
+          total.unidades +
+          (total.unidades === 1 ? " unidad" : " unidades")
+        );
+      });
+      var parrafo = document.createElement("p");
+      parrafo.className = "ayuda";
+      parrafo.textContent =
+        datos.nif + " recibirá: " + partes.join(" · ");
+      resumen.appendChild(parrafo);
+    });
+
+    if (cantidadDestinos === 0 && !destinosConTotales.length) {
       var aviso = document.createElement("p");
       aviso.className = "ayuda";
-      aviso.textContent = "Marca al menos un técnico que reciba.";
+      aviso.textContent =
+        "Marca al menos un técnico que reciba antes de agregar materiales.";
       resumen.appendChild(aviso);
     } else {
       var nota = document.createElement("p");
       nota.className = "ayuda";
+      var cantidadOrigenes = Object.keys(origenesEnCarrito()).length;
       nota.textContent =
-        "Se entregará a " +
-        cantidadDestinos +
-        (cantidadDestinos === 1 ? " técnico." : " técnicos.");
+        "Cada material conserva los receptores elegidos al agregarlo." +
+        (cantidadOrigenes > 1
+          ? " Materiales de " + cantidadOrigenes + " técnicos que entregan."
+          : "");
       resumen.appendChild(nota);
     }
   }
 
   function validarStock() {
-    var cantidadDestinos = Object.keys(destinos).length;
     var totales = {};
     carrito.forEach(function (item) {
-      if (!totales[item.materialId]) {
-        totales[item.materialId] = {
-          unidades: 0,
+      var destinosItem = destinosDelItem(item).filter(function (destinoId) {
+        return destinoId !== item.origenId;
+      });
+      if (!destinosItem.length) return;
+      var clave = item.origenId + "|" + item.materialId;
+      if (!totales[clave]) {
+        totales[clave] = {
+          necesario: 0,
           stock: item.stock,
           codigo: item.codigo,
+          origenNif: item.origenNif,
         };
       }
-      totales[item.materialId].unidades +=
-        item.tipo === "serie" ? 1 : item.cantidad;
+      totales[clave].necesario +=
+        (item.tipo === "serie" ? 1 : item.cantidad) * destinosItem.length;
     });
 
     var claves = Object.keys(totales);
     for (var i = 0; i < claves.length; i += 1) {
       var datos = totales[claves[i]];
-      if (datos.unidades * cantidadDestinos > datos.stock) {
+      if (datos.necesario > datos.stock) {
         return (
           "El material " +
           datos.codigo +
-          " supera el stock en mano al entregarlo a " +
-          cantidadDestinos +
-          " técnico(s)."
+          " de " +
+          datos.origenNif +
+          " supera el stock en mano (" +
+          datos.stock +
+          ")."
         );
       }
     }
@@ -381,6 +612,10 @@
   }
 
   form.addEventListener("submit", function (evento) {
+    if (form.dataset.enviando === "1") {
+      evento.preventDefault();
+      return;
+    }
     limpiarError();
     if (!origenId) {
       evento.preventDefault();
@@ -392,18 +627,35 @@
       mostrarError("Agrega al menos un material o serie al traspaso.");
       return;
     }
-    if (!Object.keys(destinos).length) {
+    var origenes = Object.keys(origenesEnCarrito());
+    if (!origenes.length) {
       evento.preventDefault();
-      mostrarError("Marca al menos un técnico que reciba.");
+      mostrarError("Agrega al menos un material o serie al traspaso.");
       return;
     }
-    if (
-      Object.keys(destinos).length > 1 &&
-      carrito.some(function (item) { return item.tipo === "serie"; })
-    ) {
+    var sinReceptor = carrito.some(function (item) {
+      return !destinosDelItem(item).some(function (destinoId) {
+        return destinoId !== item.origenId;
+      });
+    });
+    if (sinReceptor) {
       evento.preventDefault();
       mostrarError(
-        "Las series solo pueden entregarse a un técnico. Deja un solo destinatario o quita las series."
+        "Todos los materiales deben tener al menos un receptor distinto del origen."
+      );
+      return;
+    }
+    var serieConVariosDestinos = carrito.some(function (item) {
+      if (item.tipo !== "serie") return false;
+      var destinosItem = destinosDelItem(item).filter(function (destinoId) {
+        return destinoId !== item.origenId;
+      });
+      return destinosItem.length > 1;
+    });
+    if (serieConVariosDestinos) {
+      evento.preventDefault();
+      mostrarError(
+        "Las series solo pueden entregarse a un técnico. Deja un solo destinatario para cada serie o quita las series."
       );
       return;
     }
@@ -420,8 +672,12 @@
 
     var indice = 0;
     carrito.forEach(function (item) {
-      Object.keys(destinos).forEach(function (destinoId) {
-        agregarOculto("lineas-" + indice + "-tecnico_origen_id", origenId);
+      destinosDelItem(item).forEach(function (destinoId) {
+        if (destinoId === item.origenId) return;
+        agregarOculto(
+          "lineas-" + indice + "-tecnico_origen_id",
+          item.origenId
+        );
         agregarOculto("lineas-" + indice + "-tecnico_destino_id", destinoId);
         agregarOculto("lineas-" + indice + "-material_id", item.materialId);
         if (item.tipo === "serie") {
@@ -432,8 +688,42 @@
         indice += 1;
       });
     });
+    if (indice === 0) {
+      evento.preventDefault();
+      mostrarError(
+        "No hay líneas válidas: revisa los receptores de cada material."
+      );
+      return;
+    }
     totalFormularios.value = String(indice);
+    form.dataset.enviando = "1";
   });
+
+  function inicializarEdicion() {
+    if (!datosIniciales || !datosIniciales.origen) return;
+    var boton = listaEntrega.querySelector(
+      '.tecnico-opcion[data-tecnico-id="' + datosIniciales.origen + '"]'
+    );
+    if (!boton) return;
+    seleccionarOrigen(boton).then(function () {
+      carrito = (datosIniciales.items || []).slice();
+      actualizarDestinos();
+      (datosIniciales.destinos || []).forEach(function (destinoId) {
+        var etiqueta = listaReciben.querySelector(
+          '.tecnico-recibe[data-tecnico-id="' + destinoId + '"]'
+        );
+        if (!etiqueta) return;
+        var entrada = etiqueta.querySelector("input");
+        if (entrada.disabled) return;
+        entrada.checked = true;
+        destinos[destinoId] = true;
+      });
+      actualizarPanelMateriales();
+      renderResumen();
+    });
+  }
+
+  inicializarEdicion();
 })();
 </script>
 {% endblock %}
