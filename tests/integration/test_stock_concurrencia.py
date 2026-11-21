@@ -93,6 +93,7 @@ def test_dos_confirmaciones_de_la_misma_solicitud_mueven_stock_una_vez(
     assert StockTecnico.objects.get(
         tecnico=tecnico, material=material_seriado
     ).cantidad == 1
+    connections.close_all()
 
 
 @pytest.mark.django_db(transaction=True)
@@ -132,3 +133,4 @@ def test_dos_solicitudes_compiten_por_el_mismo_stock(
     assert StockTecnico.objects.get(
         tecnico=tecnico, material=material_no_seriado
     ).cantidad == 1
+    connections.close_all()

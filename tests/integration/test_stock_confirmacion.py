@@ -159,6 +159,183 @@ def test_serie_no_reservada_no_modifica_nada(
 
 
 @pytest.mark.django_db
+def test_varios_materiales_y_series_agregan_por_material(
+    usuario_tenant,
+    usuario_almacen,
+    tenant,
+    tecnico,
+    material_seriado,
+    material_no_seriado,
+    serie_existente,
+    almacen,
+    stock_general,
+):
+    from tecnicos.models import Tecnico
+    from series.models import Serie
+
+    segundo = Tecnico.objects.create(
+        tenant=tenant,
+        nif="LA3333",
+        nombre="Segundo",
+        creado_por=usuario_tenant,
+    )
+    segunda_serie = Serie.objects.create(
+        numero="OTRA00000001",
+        tenant=tenant,
+        region=tenant.region,
+        material=material_seriado,
+        lote=material_seriado.lote,
+        estado=EstadoSerie.DISPONIBLE,
+        creado_por=usuario_tenant,
+    )
+    StockGeneral.objects.create(
+        tenant=tenant, material=material_no_seriado, cantidad=10
+    )
+    solicitud = crear_y_enviar_solicitud(
+        tenant,
+        date.today(),
+        [
+            {
+                "tecnico_id": tecnico.pk,
+                "material_id": material_seriado.pk,
+                "serie_ids": [serie_existente.pk],
+            },
+            {
+                "tecnico_id": segundo.pk,
+                "material_id": material_seriado.pk,
+                "serie_ids": [segunda_serie.pk],
+            },
+            {
+                "tecnico_id": tecnico.pk,
+                "material_id": material_no_seriado.pk,
+                "cantidad": 2,
+            },
+        ],
+        usuario_tenant,
+    )
+
+    resultado = actualizar_stock_confirmacion_asignacion(
+        solicitud, usuario_almacen
+    )
+
+    assert resultado.total_series == 2
+    assert resultado.total_cantidad == 2
+    assert StockTecnico.objects.filter(material=material_seriado).count() == 2
+    assert StockTecnico.objects.filter(material=material_no_seriado).count() == 1
+    assert RegistroCambio.objects.filter(
+        entidad="StockGeneral", campo="cantidad"
+    ).count() >= 2
+
+
+@pytest.mark.django_db
+def test_segunda_confirmacion_no_mueve_stock(
+    usuario_tenant,
+    usuario_almacen,
+    tenant,
+    tecnico,
+    material_seriado,
+    serie_existente,
+    almacen,
+    stock_general,
+):
+    solicitud = _enviada(
+        usuario_tenant,
+        tenant,
+        tecnico,
+        material_seriado,
+        serie=serie_existente,
+    )
+
+    actualizar_stock_confirmacion_asignacion(solicitud, usuario_almacen)
+    with pytest.raises(SerieNoReservada):
+        actualizar_stock_confirmacion_asignacion(solicitud, usuario_almacen)
+
+    assert StockGeneral.objects.get(pk=stock_general.pk).cantidad == 99
+    assert StockTecnico.objects.get(
+        tecnico=tecnico, material=material_seriado
+    ).cantidad == 1
+
+
+@pytest.mark.django_db
+def test_dias_en_mano_inician_en_asignada_en(
+    usuario_tenant,
+    usuario_almacen,
+    tenant,
+    tecnico,
+    material_seriado,
+    serie_existente,
+    almacen,
+    stock_general,
+):
+    from datetime import timedelta
+
+    from asignaciones.services import dias_en_mano_serie
+
+    solicitud = _enviada(
+        usuario_tenant,
+        tenant,
+        tecnico,
+        material_seriado,
+        serie=serie_existente,
+    )
+    actualizar_stock_confirmacion_asignacion(solicitud, usuario_almacen)
+    serie_existente.refresh_from_db()
+
+    assert serie_existente.asignada_en is not None
+    assert dias_en_mano_serie(
+        serie_existente,
+        hoy=serie_existente.asignada_en.date() + timedelta(days=1),
+    ) == 1
+    assert not hasattr(serie_existente, "dias_en_mano")
+
+
+@pytest.mark.django_db
+def test_serie_de_otro_material_no_se_acepta(
+    usuario_tenant,
+    usuario_almacen,
+    tenant,
+    tecnico,
+    material_seriado,
+    material_no_seriado,
+    almacen,
+    stock_general,
+):
+    from asignaciones.models import EstadoSolicitud, LineaAsignacion, SolicitudAsignacion
+    from series.models import Serie
+
+    serie_otro_material = Serie.objects.create(
+        numero="MATER0000001",
+        tenant=tenant,
+        region=tenant.region,
+        material=material_no_seriado,
+        lote=material_no_seriado.lote,
+        estado=EstadoSerie.RESERVADA,
+        creado_por=usuario_tenant,
+    )
+    solicitud = SolicitudAsignacion.objects.create(
+        tenant=tenant,
+        region=tenant.region,
+        fecha=date.today(),
+        estado=EstadoSolicitud.ENVIADA,
+        creado_por=usuario_tenant,
+    )
+    LineaAsignacion.objects.create(
+        tenant=tenant,
+        solicitud=solicitud,
+        tecnico=tecnico,
+        material=material_seriado,
+        lote=material_seriado.lote,
+        serie=serie_otro_material,
+        cantidad=1,
+    )
+
+    with pytest.raises(SerieNoReservada):
+        actualizar_stock_confirmacion_asignacion(solicitud, usuario_almacen)
+
+    assert StockGeneral.objects.get(pk=stock_general.pk).cantidad == 100
+
+
+@pytest.mark.django_db
 def test_solicitud_sin_lineas_es_invalida(
     usuario_tenant, usuario_almacen, tenant
 ):
@@ -174,6 +351,54 @@ def test_solicitud_sin_lineas_es_invalida(
 
     with pytest.raises(ConfirmacionStockInvalida):
         actualizar_stock_confirmacion_asignacion(solicitud, usuario_almacen)
+
+
+@pytest.mark.django_db
+def test_no_modifica_stock_de_otro_tenant(
+    usuario_tenant,
+    usuario_almacen,
+    usuario_otro_tenant,
+    tenant,
+    tecnico,
+    material_seriado,
+    serie_existente,
+    almacen,
+    stock_general,
+):
+    from tecnicos.models import Tecnico
+
+    otro_tenant = usuario_otro_tenant.tenant
+    otro_tecnico = Tecnico.objects.create(
+        tenant=otro_tenant,
+        nif="LA6666",
+        nombre="Otro",
+        creado_por=usuario_otro_tenant,
+    )
+    otro_general = StockGeneral.objects.create(
+        tenant=otro_tenant,
+        material=material_seriado,
+        cantidad=7,
+    )
+    otro_tecnico_stock = StockTecnico.objects.create(
+        tenant=otro_tenant,
+        tecnico=otro_tecnico,
+        material=material_seriado,
+        cantidad=3,
+    )
+    solicitud = _enviada(
+        usuario_tenant,
+        tenant,
+        tecnico,
+        material_seriado,
+        serie=serie_existente,
+    )
+
+    actualizar_stock_confirmacion_asignacion(solicitud, usuario_almacen)
+
+    otro_general.refresh_from_db()
+    otro_tecnico_stock.refresh_from_db()
+    assert otro_general.cantidad == 7
+    assert otro_tecnico_stock.cantidad == 3
 
 
 @pytest.mark.django_db
