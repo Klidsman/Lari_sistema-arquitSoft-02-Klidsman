@@ -184,7 +184,7 @@ calcular los días en mano con la lógica de 006 para el día siguiente; debe mo
 ### Implementación de US3
 
 - [X] T051 [US3] Asegurar en `stock/services.py` que `ResultadoConfirmacionStock.confirmada_en` se lee de la solicitud y nunca se escribe desde 008; fijar `Serie.asignada_en` una sola vez y retirar cualquier contador de días en mano si apareció
-- [ ] T052 [US3] Verificar en `asignaciones/services.py`, `asignaciones/models.py` y los servicios de 006 que `confirmada_en` se fija solo en `confirmar_solicitud` de 007 y que los días se calculan desde `Serie.asignada_en`, con respaldo histórico; documentar la comprobación en `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/quickstart.md`
+- [X] T052 [US3] Verificar en `asignaciones/services.py`, `asignaciones/models.py` y los servicios de 006 que `confirmada_en` se fija solo en `confirmar_solicitud` de 007 y que los días se calculan desde `Serie.asignada_en`, con respaldo histórico; documentar la comprobación en `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/quickstart.md`
 - [X] T053 [US3] Ejecutar `pytest tests/integration/test_stock_confirmacion.py tests/contract/test_stock_confirmacion_contrato.py` y verificar que CA-05 queda en verde
 
 **Checkpoint**: US3 funcional; los días en mano usan una única fuente y 008 no duplica el dato.
@@ -224,7 +224,7 @@ la auditoría y encontrar 5 registros `Serie/estado`, un `StockTecnico/cantidad`
 - [X] T061 [P] Agregar en `tests/integration/test_stock_concurrencia.py` la prueba de dos confirmaciones simultáneas de solicitudes distintas que compiten por el mismo stock: solo una mueve stock y la otra recibe `StockInsuficiente`, sin interbloqueo
 - [ ] T062 [P] Agregar en `tests/integration/test_stock_concurrencia.py` la prueba de confirmación con 100 series en menos de 2 segundos y sin una consulta por línea, usando `django_assert_num_queries` o medición equivalente
 - [X] T063 [P] Agregar en `tests/integration/test_stock_concurrencia.py` las pruebas de aislamiento entre dos tenants: `StockGeneral` y `StockTecnico` de otro tenant no se leen ni se modifican; la RLS, si está activa, bloquea el acceso directo; `StockTecnico.tenant` coincide con `tecnico.tenant`
-- [ ] T064 [P] Actualizar `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/quickstart.md` con los comandos y resultados reales de la suite, sin duplicar el detalle de `contracts/` ni `data-model.md`
+- [X] T064 [P] Actualizar `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/quickstart.md` con los comandos y resultados reales de la suite, sin duplicar el detalle de `contracts/` ni `data-model.md`
 - [X] T065 [P] Revisar `stock/services.py` y `stock/models.py`: sin lógica de negocio en modelos, sin endpoints, vistas, plantillas ni tareas Celery, sin `tenant_id` del cliente, sin `F()` ciego en decrementos, sin cantidades negativas y con mensajes en español
 - [X] T066 [P] Revisar el orden global en `06-plan-implementacion/desglose-tareas.md` y corregirlo si no deja la parte fundacional de 008 antes de 004 y 005
 - [X] T067 Ejecutar `pytest -k "stock"` sobre `tests/unit`, `tests/integration` y `tests/contract` con PostgreSQL y corregir cualquier fallo; no cerrar la feature con pruebas en rojo
@@ -247,13 +247,12 @@ la auditoría y encontrar 5 registros `Serie/estado`, un `StockTecnico/cantidad`
 
 ### Cierre 2026-11-20
 
-- Reconciliadas **64/70** tareas. La confirmación directa de 008, stock técnico/general, auditoría,
+- Reconciliadas **66/70** tareas. La confirmación directa de 008, stock técnico/general, auditoría,
   contrato de resultados, agregación, días en mano, reversión por auditoría/007, aislamiento y
   concurrencia ya tienen pruebas en `test_stock_confirmacion.py`, `test_stock_auditoria.py`,
   `test_stock_concurrencia.py` y `test_stock_confirmacion_contrato.py`.
 - La suite completa queda en verde con 706 pruebas.
-- Quedan fixtures nominales de T003, documentación de quickstart (T052/T064), rendimiento a 100
-  series (T062), cobertura (T068) y escenarios manuales (T069).
+- Quedan fixtures nominales de T003, rendimiento a 100 series (T062), cobertura (T068) y escenarios manuales (T069).
 
 ## Dependencias y orden de ejecución
 
