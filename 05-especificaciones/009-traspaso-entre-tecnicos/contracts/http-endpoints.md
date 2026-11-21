@@ -90,7 +90,7 @@ acepta `tenant_id`, `region_id`, NIF, tipo de material, lote ni estado desde el 
 | Traspaso ajeno o inexistente | `404` | “El traspaso no existe” |
 | Técnicos de otro tenant | `400` | “Los técnicos deben ser del mismo tenant” |
 | Origen igual a destino de una línea | `400` | “El técnico origen y destino no pueden ser el mismo” |
-| Estructura distinta de 1→N o N→1 | `400` | “El traspaso debe ser de un técnico a varios o de varios técnicos a uno, con al menos dos técnicos distintos” |
+| Estructura sin al menos dos técnicos | `400` | “El traspaso debe implicar al menos dos técnicos distintos” |
 | Destino inactivo | `400` | “El técnico destino no está activo” |
 | Serie no asignada al origen | `409` | “La serie no está asignada al técnico origen” |
 | Serie reservada | `409` | “La serie está reservada en otro traspaso” |

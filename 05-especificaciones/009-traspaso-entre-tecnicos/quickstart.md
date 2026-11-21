@@ -172,14 +172,15 @@ Prueba principal: `test_dias_en_mano_reinician_al_traspasar`.
 
 ### Creación y edición
 
-- Un borrador no reserva series ni cantidades y no genera Excel.
+- Un borrador reserva stock y series desde que se guarda, y no genera Excel.
 - Editar líneas de un borrador revalida disponibilidad y cuadre; no toca stock ni series.
 - Editar un traspaso `ENVIADA`, `CONFIRMADA`, `RECHAZADA` o `CANCELADA` devuelve `409`.
 - Un traspaso de otro tenant devuelve `404`.
 
 ### Disponibilidad y selector
 
-- `calcular_reservado_tecnico` suma líneas no seriadas y cuenta 1 por serie de solicitudes `ENVIADA`.
+- `calcular_reservado_tecnico` suma líneas no seriadas y cuenta 1 por serie de solicitudes en
+  `BORRADOR` o `ENVIADA`.
 - `calcular_disponible_tecnico` aplica `max(0, stock técnico − reservado)`.
 - `series_disponibles_para_traspaso` muestra solo series `ASIGNADA` del origen, del material y no
   reservadas.
@@ -246,7 +247,7 @@ La funcionalidad se considera validada cuando:
 - [ ] Las series cambian de técnico solo al confirmar y conservan `ASIGNADA`.
 - [ ] `Serie.asignada_en` se reinicia al confirmar y 006 calcula los días desde ese campo.
 - [ ] El Excel tiene dos hojas, cuadra y se descarga verificando el hash.
-- [ ] Las reservas se derivan de `ENVIADA` y se liberan al rechazar o cancelar.
+- [ ] Las reservas se derivan de `BORRADOR` y `ENVIADA` y se liberan al rechazar o cancelar.
 - [ ] La auditoría está completa y no duplica la de 008.
 - [ ] Ningún tenant ve datos de otro.
 - [ ] No se agregaron correo, Celery, permisos Django por cadena ni cambios a `StockGeneral`.

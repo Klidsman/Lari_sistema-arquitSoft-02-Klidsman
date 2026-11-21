@@ -10,7 +10,12 @@ from auditoria.services import registrar_cambio
 from tecnicos.models import Tecnico
 from tenants.models import Tenant
 
-from .models import StockGeneral, StockTecnico
+from .models import (
+    MovimientoTecnico,
+    StockGeneral,
+    StockTecnico,
+    TipoMovimientoTecnico,
+)
 
 MENSAJE_CANTIDAD = "La cantidad debe ser mayor a 0"
 MENSAJE_STOCK_GENERAL = "El tenant no tiene suficiente stock general"
@@ -106,11 +111,121 @@ def obtener_stock_general(tenant, material) -> int:
 
 
 def obtener_stock_tecnico(tecnico, material) -> int:
+    total = (
+        MovimientoTecnico.objects.filter(
+            tecnico=tecnico,
+            material=material,
+        ).aggregate(total=Sum("cantidad"))["total"]
+    )
+    if total is not None:
+        return total
     fila = StockTecnico.objects.filter(
         tecnico=tecnico,
         material=material,
     ).first()
     return fila.cantidad if fila is not None else 0
+
+
+def recalcular_stock_tecnico(tecnico, material) -> int:
+    """Recalcula la proyección desde los movimientos (saldo autoritativo)."""
+    total = (
+        MovimientoTecnico.objects.filter(
+            tecnico=tecnico,
+            material=material,
+        ).aggregate(total=Sum("cantidad"))["total"]
+    )
+    if total is None:
+        return obtener_stock_tecnico(tecnico, material)
+    if total < 0:
+        raise StockInsuficiente(MENSAJE_STOCK_TECNICO)
+    fila = StockTecnico.objects.filter(
+        tecnico=tecnico,
+        material=material,
+    ).first()
+    if fila is not None and fila.cantidad != total:
+        fila.cantidad = total
+        fila.save(update_fields=["cantidad"])
+    return total
+
+
+def _asegurar_saldo_inicial(fila, actor):
+    if fila.cantidad == 0:
+        return
+    existe = MovimientoTecnico.objects.filter(
+        tenant=fila.tenant,
+        tecnico=fila.tecnico,
+        material=fila.material,
+    ).exists()
+    if not existe:
+        MovimientoTecnico.objects.create(
+            tenant=fila.tenant,
+            tecnico=fila.tecnico,
+            material=fila.material,
+            cantidad=fila.cantidad,
+            tipo=TipoMovimientoTecnico.SALDO_INICIAL,
+            referencia=f"INICIAL:{fila.pk}",
+            creado_por=actor,
+        )
+
+
+def registrar_movimiento_tecnico(
+    tecnico,
+    material,
+    cantidad,
+    actor,
+    tipo=TipoMovimientoTecnico.AJUSTE,
+    referencia="",
+) -> int:
+    """Registra un movimiento firmado y recalcula el saldo desde el libro."""
+    if not isinstance(cantidad, int) or isinstance(cantidad, bool) or cantidad == 0:
+        raise CantidadInvalida
+    _validar_tecnico(tecnico)
+    tenant = tecnico.tenant
+
+    with transaction.atomic():
+        _bloquear_tenant(tenant)
+        fila = (
+            StockTecnico.objects.select_for_update()
+            .filter(tecnico=tecnico, material=material)
+            .first()
+        )
+        if fila is not None and fila.tenant_id != tenant.pk:
+            raise TenantNoCoincide
+        if fila is None:
+            fila = StockTecnico.objects.create(
+                tenant=tenant,
+                tecnico=tecnico,
+                material=material,
+                cantidad=0,
+            )
+
+        if referencia:
+            existente = MovimientoTecnico.objects.filter(
+                tenant=tenant,
+                tecnico=tecnico,
+                material=material,
+                tipo=tipo,
+                referencia=referencia,
+            ).first()
+            if existente is not None:
+                return recalcular_stock_tecnico(tecnico, material)
+
+        _asegurar_saldo_inicial(fila, actor)
+        anterior = fila.cantidad
+        MovimientoTecnico.objects.create(
+            tenant=tenant,
+            tecnico=tecnico,
+            material=material,
+            cantidad=cantidad,
+            tipo=tipo,
+            referencia=referencia,
+            creado_por=actor,
+        )
+        nuevo = recalcular_stock_tecnico(tecnico, material)
+        if nuevo < 0:
+            raise StockInsuficiente(MENSAJE_STOCK_TECNICO)
+        _auditar("StockTecnico", fila.pk, anterior, nuevo, actor, tenant)
+        return nuevo
 
 
 def calcular_reservado(tenant, material) -> int:
@@ -192,34 +307,23 @@ def _validar_tecnico(tecnico):
         raise TecnicoNoExiste
 
 
-def incrementar_stock_tecnico(tecnico, material, cantidad, actor) -> int:
+def incrementar_stock_tecnico(
+    tecnico,
+    material,
+    cantidad,
+    actor,
+    tipo=TipoMovimientoTecnico.AJUSTE,
+    referencia="",
+) -> int:
     _validar_cantidad(cantidad)
-    _validar_tecnico(tecnico)
-    tenant = tecnico.tenant
-
-    with transaction.atomic():
-        _bloquear_tenant(tenant)
-        fila = (
-            StockTecnico.objects.select_for_update()
-            .filter(tecnico=tecnico, material=material)
-            .first()
-        )
-        if fila is not None and fila.tenant_id != tenant.pk:
-            raise TenantNoCoincide
-        if fila is None:
-            fila = StockTecnico.objects.create(
-                tenant=tenant,
-                tecnico=tecnico,
-                material=material,
-                cantidad=0,
-            )
-
-        anterior = fila.cantidad
-        fila.cantidad = anterior + cantidad
-        fila.save(update_fields=["cantidad"])
-        _auditar("StockTecnico", fila.pk, anterior, fila.cantidad, actor, tenant)
-
-    return fila.cantidad
+    return registrar_movimiento_tecnico(
+        tecnico,
+        material,
+        cantidad,
+        actor,
+        tipo=tipo,
+        referencia=referencia,
+    )
 
 
 @dataclass(frozen=True)
@@ -318,7 +422,14 @@ def actualizar_stock_confirmacion_asignacion(solicitud, actor):
             tecnico = tecnicos[tecnico_id]
             tecnico_anterior = obtener_stock_tecnico(tecnico, materiales[material_id])
             tecnico_nuevo = incrementar_stock_tecnico(
-                tecnico, materiales[material_id], cantidad, actor
+                tecnico,
+                materiales[material_id],
+                cantidad,
+                actor,
+                tipo=TipoMovimientoTecnico.ASIGNACION,
+                referencia=(
+                    f"ASIGNACION:{solicitud.pk}:{tecnico_id}:{material_id}"
+                ),
             )
             cambios.append(
                 CambioStockMaterial(
@@ -391,26 +502,20 @@ def actualizar_stock_confirmacion_asignacion(solicitud, actor):
         ),
     )
 
-def decrementar_stock_tecnico(tecnico, material, cantidad, actor) -> int:
+def decrementar_stock_tecnico(
+    tecnico,
+    material,
+    cantidad,
+    actor,
+    tipo=TipoMovimientoTecnico.AJUSTE,
+    referencia="",
+) -> int:
     _validar_cantidad(cantidad)
-    _validar_tecnico(tecnico)
-    tenant = tecnico.tenant
-
-    with transaction.atomic():
-        _bloquear_tenant(tenant)
-        fila = (
-            StockTecnico.objects.select_for_update()
-            .filter(tecnico=tecnico, material=material)
-            .first()
-        )
-        if fila is not None and fila.tenant_id != tenant.pk:
-            raise TenantNoCoincide
-        if fila is None or fila.cantidad < cantidad:
-            raise StockInsuficiente(MENSAJE_STOCK_TECNICO)
-
-        anterior = fila.cantidad
-        fila.cantidad = anterior - cantidad
-        fila.save(update_fields=["cantidad"])
-        _auditar("StockTecnico", fila.pk, anterior, fila.cantidad, actor, tenant)
-
-    return fila.cantidad
+    return registrar_movimiento_tecnico(
+        tecnico,
+        material,
+        -cantidad,
+        actor,
+        tipo=tipo,
+        referencia=referencia,
+    )

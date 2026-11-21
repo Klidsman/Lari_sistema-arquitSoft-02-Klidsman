@@ -37,7 +37,7 @@ entre estado y custodia, y coordina las correcciones en 004, 005, 006, 008 y 011
 | Excel | `openpyxl`; dos hojas; generado al enviar; hash SHA-256 |
 | Stock | Se usan los servicios de 008; **nunca** se escribe `StockGeneral` |
 | Series | `series.Serie` con `tecnico` y `asignada_en`; 009 cambia la custodia |
-| Reservas | Derivadas de solicitudes `ENVIADA`; no hay tabla de reservas |
+| Reservas | Derivadas de solicitudes en `BORRADOR` o `ENVIADA`; no hay tabla de reservas |
 | Transacciones | Crear, enviar, confirmar, rechazar y cancelar son atómicas |
 | Bloqueos | `select_for_update` en orden estable; sin `F()` ciego |
 | Auditoría | `auditoria.RegistroCambio` en la misma transacción |
@@ -79,7 +79,7 @@ Si falta cualquiera, la implementación se detiene y se reporta.
 |---|---|---|
 | I. Aislamiento multitenant (NO NEGOCIABLE) | PASA | `SolicitudTraspaso` y `LineaTraspaso` llevan `tenant`; la solicitud lleva `region`. Tenant y región salen de la sesión y de `tenant.region`, nunca del cliente. Técnicos, series y stock de otro tenant se rechazan. RLS como respaldo. |
 | II. Jerarquía Región → Tenant → Técnico | PASA | Origen y destino pertenecen al tenant; el almacén confirma solo traspasos de su región. El Administrador de plataforma no opera traspasos. |
-| III. Invariantes de stock | PASA | El stock general no se lee ni se escribe. El stock técnico baja en el origen y sube en el destino por el mismo total. No se traspasa más de lo disponible, descontando reservas `ENVIADA`. |
+| III. Invariantes de stock | PASA | El stock general no se lee ni se escribe. El stock técnico baja en el origen y sube en el destino por el mismo total. No se traspasa más de lo disponible, descontando reservas `BORRADOR` y `ENVIADA`. |
 | IV. Identidad y unicidad de series | PASA | Se usa `series.Serie`; una serie solo se traspasa si está `ASIGNADA` al origen. No se crea otra tabla de series ni otro número. La serie no cambia de tenant, región ni material. |
 | V. Integridad transaccional | PASA | Crear, enviar, confirmar, rechazar y cancelar son transacciones únicas. Cualquier fallo revierte líneas, estado, reservas, stock, Excel y auditoría. |
 | VI. Auditoría inmutable y trazabilidad | PASA | Se auditan `SolicitudTraspaso/estado`, `LineaTraspaso/alta`, `Serie/tecnico`, `Serie/asignada_en` y los `StockTecnico/cantidad` que escribe 008. Sin secretos ni binarios. |
@@ -87,7 +87,7 @@ Si falta cualquiera, la implementación se detiene y se reporta.
 | VIII. Spec-driven, pruebas y simplicidad | PASA | Cada CA-01…CA-12 tiene prueba. No se agregan dependencias; no se implementa correo/Celery porque la spec 009 no lo pide. La lógica vive en `traspasos/services.py` y es testeable sin interfaz. |
 
 **Post-design re-check**: PASA. El diseño usa una única fuente de líneas para las dos hojas del Excel,
-deriva las reservas de `ENVIADA`, no toca el stock general, no duplica la custodia y corrige la
+deriva las reservas de `BORRADOR` y `ENVIADA`, no toca el stock general, no duplica la custodia y corrige la
 contradicción de la FK de técnico en `Serie`.
 
 ## Project Structure
@@ -339,8 +339,7 @@ BORRADOR ── enviar ──▶ ENVIADA ── confirmar ──▶ CONFIRMADA
   traspasos”.
 - `TecnicosDistintoTenant`: “Los técnicos deben ser del mismo tenant”.
 - `OrigenDestinoIguales`: “El técnico origen y destino no pueden ser el mismo”.
-- `EstructuraTecnicosInvalida`: “El traspaso debe ser de un técnico a varios o de varios técnicos a
-  uno, con al menos dos técnicos distintos”.
+- `EstructuraTecnicosInvalida`: “El traspaso debe implicar al menos dos técnicos distintos”.
 - `TecnicoNoExiste`: “El técnico no existe” / “El técnico destino no está activo”.
 - `MaterialNoExiste`: “El material no existe”.
 - `SerieNoEnTecnico`: “La serie no está asignada al técnico origen”.
@@ -371,8 +370,8 @@ BORRADOR ── enviar ──▶ ENVIADA ── confirmar ──▶ CONFIRMADA
   - `origen.id != destino.id` en cada línea.
   - El destino de cada línea está activo; el origen puede estar inactivo si aún tiene stock.
   - Hay al menos dos técnicos distintos.
-  - La forma es 1→N (un único origen) o N→1 (un único destino); si no,
-    `EstructuraTecnicosInvalida`.
+  - Un técnico puede ser origen de unas líneas y destino de otras; solo se prohíbe la línea consigo
+    mismo.
 - `tecnicos_implicados(lineas)`: unión de orígenes y destinos, para bloquear stock.
 - `tecnicos_para_traspaso(tenant)`: solo activos del tenant, ordenados por NIF.
 
@@ -440,7 +439,7 @@ class CuadreTraspaso:
     tenant.region`, `creado_por=actor`; crea las líneas con `tenant`, `tecnico_origen`,
     `tecnico_destino` y `lote` del catálogo; audita `SolicitudTraspaso/alta` y
     `LineaTraspaso/alta`.
-  - No reserva series ni cantidades y no genera Excel.
+  - Queda en `BORRADOR`, reserva stock y series por estado y no genera Excel.
   - Devuelve la solicitud.
 - `actualizar_lineas_borrador(solicitud, fecha, lineas, actor)`:
   - Solo `BORRADOR` y mismo tenant.
@@ -462,11 +461,14 @@ class CuadreTraspaso:
     parcial.
   - No envía correo ni encola tareas en 009.
 - `generar_excel_traspaso(solicitud) -> (ruta, hash)` en `traspasos/excel.py`:
-  - Hoja 1 `Desasignación` con movimiento Z32, agrupada por técnico origen; cada grupo tiene su
-    Centro/Almacén de la región, NIF, tenant, región, ID y fecha.
-  - Hoja 2 `Asignación` con Z31, agrupada por técnico destino.
-  - Tabla de seriales: código, descripción, lote, serie y cantidad 1.
-  - Tabla de material menor: código, descripción, lote y cantidad agregada.
+  - Hoja 1 `Desasignación` con movimiento Z32 y una fila por línea.
+  - Hoja 2 `Asignación` con Z31 y las mismas filas.
+  - Columnas: `Movimiento`, `Centro`, `Almacén`, `Material`, `Descripción de materiales`,
+    `Cantidad`, `NIF Técnico`, `Lote`, `Serie`.
+  - `NIF Técnico` es el origen de la línea en Z32 y el destino en Z31.
+  - En Z32 y Z31, los no seriados se agrupan por técnico, material y lote sumando la cantidad; las
+    series conservan una fila por serie.
+  - Cabecera con estilos, filas con fondo claro, filtro automático y panel congelado.
   - Ambas hojas usan la misma lista canónica y el mismo orden.
   - Nombre seguro `traspasos/<tenant_id>/traspaso-<id>-<hash>.xlsx`; hash SHA-256 de los bytes.
 - `verificar_hash_excel(solicitud, contenido)`:
@@ -559,7 +561,7 @@ class CuadreTraspaso:
 | Cuenta de almacén y región | Servicio (007) | “No tienes permiso para gestionar traspasos” |
 | Técnicos del mismo tenant | Servicio | “Los técnicos deben ser del mismo tenant” |
 | Origen y destino distintos | Servicio y `CheckConstraint` | “El técnico origen y destino no pueden ser el mismo” |
-| Al menos dos técnicos y forma 1→N / N→1 | Servicio | “El traspaso debe ser de un técnico a varios o de varios técnicos a uno, con al menos dos técnicos distintos” |
+| Al menos dos técnicos; un técnico puede entregar y recibir | Servicio | “El traspaso debe implicar al menos dos técnicos distintos” |
 | Destino activo | Servicio | “El técnico destino no está activo” |
 | Serie asignada al origen | Servicio | “La serie no está asignada al técnico origen” |
 | Serie no reservada | Servicio | “La serie está reservada en otro traspaso” |
@@ -583,8 +585,8 @@ class CuadreTraspaso:
   series candidatas; se revalida dentro del bloqueo para que dos envíos no reserven la misma serie.
 - Al confirmar, se bloquean solicitud, tenant, stock de todos los técnicos implicados y series; se
   revalida que el origen de cada línea aún las tenga y que el stock alcance.
-- Las reservas no son una tabla: se derivan de `ENVIADA`. Al confirmar, rechazar o cancelar, la
-  solicitud cambia de estado y la reserva desaparece.
+- Las reservas no son una tabla: se derivan de `BORRADOR` y `ENVIADA`. Al confirmar, rechazar o
+  cancelar, la solicitud cambia de estado y la reserva desaparece.
 - No se usan decrementos con `F()` ciego; se usan los servicios de 008, que bloquean, validan y
   auditan.
 - Si dos traspasos compiten por la misma serie o cantidad, el segundo falla con `SerieReservada` o
@@ -692,7 +694,7 @@ Estas correcciones se aplican antes de implementar 009 (principio VIII):
 - **Custodia en `Serie`**: `tecnico` + `asignada_en` es la fuente única para CA-06 y CA-09. Alternativa
   descartada: deducir el técnico de la última `LineaAsignacion`, que no refleja traspasos y rompe los
   días en mano.
-- **Sin tabla de reservas**: la reserva se deriva de `ENVIADA`; menos estado duplicado. La
+- **Sin tabla de reservas**: la reserva se deriva de `BORRADOR` y `ENVIADA`; menos estado duplicado. La
   concurrencia se resuelve con bloqueo y revalidación. Alternativa descartada: una tabla de reservas
   que habría que limpiar en cada transición.
 - **Una lista canónica de líneas**: las dos hojas del Excel se generan de la misma lista; el cuadre
@@ -714,7 +716,7 @@ Estas correcciones se aplican antes de implementar 009 (principio VIII):
 | Decisión | Por qué no viola la constitución |
 |---|---|
 | Añadir `tecnico`/`asignada_en` a `Serie` | Es la única forma de cumplir el cambio de técnico y el reinicio de días en mano; no duplica series ni cambia su identidad. |
-| Reservas derivadas de `ENVIADA` | Evita una tabla de reservas paralela; la solicitud es la fuente de verdad. |
+| Reservas derivadas de `BORRADOR` y `ENVIADA` | Evita una tabla de reservas paralela; la solicitud es la fuente de verdad. |
 | Proyecciones de cuadre | No crea una segunda lista persistida; solo verifica que ambas hojas del Excel representen la misma lista canónica. |
 | Rutas de almacén en 009 | La spec exige confirmación humana del almacén; se añaden rutas mínimas, sin duplicar la bandeja de 007. |
 | Sin correo/Celery | La spec 009 no lo pide; se evita duplicar 007 y se registra como deuda. |

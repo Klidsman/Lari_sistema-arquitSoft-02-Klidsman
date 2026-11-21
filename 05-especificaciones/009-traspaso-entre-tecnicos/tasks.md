@@ -395,6 +395,24 @@ o varios orígenes a un destino, con listas de stock visibles en la interfaz.
 - [X] T095 Rehacer `templates/traspasos/formulario.html` con el flujo de tres columnas: técnico que entrega, materiales en mano y técnicos que reciben
 - [X] T096 Implementar el carrito en JavaScript que replica cada material por cada receptor y genera las líneas del formulario
 - [X] T097 Añadir estilos del flujo de traspaso en `static/css/base.css` y cubrir con pruebas el formulario y el fragmento de materiales
+- [X] T098 Precargar el carrito al editar un borrador 1→N y añadir el enlace «Editar» en el detalle
+- [X] T099 Revalidar stock y series dentro del envío antes de generar el Excel
+- [X] T100 Cubrir con pruebas la precarga de edición, la revalidación de stock y la revalidación de series
+- [X] T101 Hacer que los borradores reserven stock y series, excluyendo la propia solicitud al editar y enviar
+- [X] T102 Mostrar en la interfaz el stock disponible real (en mano, reservado y disponible) y deshabilitar materiales sin disponible
+- [X] T103 Mostrar el total por técnico en el resumen del traspaso, sumando materiales de varios orígenes
+- [X] T104 Cubrir con pruebas la reserva de borradores, la edición sin doble descuento y la suma de varios orígenes al mismo destino
+- [X] T105 Agrupar en la hoja Z31 los no seriados por destino y material, sumando las cantidades de varios orígenes (2 + 2 = 4)
+- [X] T106 Permitir que un técnico entregue y reciba en el mismo traspaso, sin ocultarlo de la lista de receptores y omitiendo solo las líneas hacia sí mismo
+- [X] T107 Agrupar también la hoja Z32 por técnico origen, material y lote para no duplicar filas del mismo material
+- [X] T108 Añadir `stock.MovimientoTecnico` firmado y calcular el saldo del técnico sumando sus movimientos
+- [X] T109 Migrar los saldos existentes a `SALDO_INICIAL` y mantener `StockTecnico` como proyección
+- [X] T110 Escribir primero las pruebas de dos orígenes a un destino, cadenas 1→2→1 y 1→2→3→1, serie única, exceso de saldo y saldos existentes
+- [X] T111 Añadir pruebas de doble clic y envío fallido; deben fallar antes del cambio
+- [X] T112 Añadir `clave_idempotencia` al alta y crear/enviar en una sola transacción
+- [X] T113 Registrar movimientos `TRASPASO_SALIDA` y `TRASPASO_ENTRADA` al confirmar, sin duplicar por reintento
+- [X] T114 Ejecutar las pruebas antes y después, y verificar que los traspasos existentes conservan sus saldos
+- [X] T115 Guardar los receptores por material agregado, de modo que cambiar de receptor no reasigne los materiales ya agregados
 
 ## Notas
 

@@ -13,8 +13,10 @@ def test_firmas_fundacionales():
         "calcular_disponible": ["tenant", "material"],
         "incrementar_stock_general": ["tenant", "material", "cantidad", "actor"],
         "decrementar_stock_general": ["tenant", "material", "cantidad", "actor"],
-        "incrementar_stock_tecnico": ["tecnico", "material", "cantidad", "actor"],
-        "decrementar_stock_tecnico": ["tecnico", "material", "cantidad", "actor"],
+        "incrementar_stock_tecnico": ["tecnico", "material", "cantidad", "actor", "tipo", "referencia"],
+        "decrementar_stock_tecnico": ["tecnico", "material", "cantidad", "actor", "tipo", "referencia"],
+        "registrar_movimiento_tecnico": ["tecnico", "material", "cantidad", "actor", "tipo", "referencia"],
+        "recalcular_stock_tecnico": ["tecnico", "material"],
     }
 
     for nombre, parametros in esperadas.items():

@@ -85,8 +85,7 @@ class CuadreTraspaso:
 - Los destinos están activos; si no, `TecnicoNoExiste`. Un origen puede estar inactivo si aún tiene
   stock.
 - El conjunto de técnicos distintos debe tener al menos 2 elementos.
-- La forma debe ser **1→N** (un único origen, uno o varios destinos) o **N→1** (varios orígenes, un
-  único destino). Si hay varios orígenes y varios destinos, `EstructuraTecnicosInvalida`.
+- Un técnico puede ser origen de unas líneas y destino de otras.
 - Los selectores usan `tecnicos.services.tecnicos_para_operacion(tenant)`; para documentos
   históricos, `tecnicos_para_reporte(tenant, incluir_inactivos=True)`.
 - La resolución por NIF del Excel usa `tecnicos.services.obtener_tecnico_por_nif(tenant, nif)`.
@@ -125,15 +124,22 @@ class CuadreTraspaso:
 
 ## Operaciones
 
-### `crear_solicitud_traspaso(tenant, fecha, lineas, actor) -> SolicitudTraspaso`
+### `crear_solicitud_traspaso(tenant, fecha, lineas, actor, clave_idempotencia=None) -> SolicitudTraspaso`
 
-1. `validar_cuenta_tenant`, validar técnicos de cada línea y estructura 1→N / N→1.
+1. `validar_cuenta_tenant`, validar técnicos de cada línea y estructura.
 2. Resolver materiales y validar disponibilidad por origen.
 3. `validar_cuadre_traspaso(construir_movimientos(lineas))`.
-4. `transaction.atomic`: crear solicitud `BORRADOR` con `region=tenant.region` y líneas con
-   `tenant`, `tecnico_origen`, `tecnico_destino` y `lote`; auditar alta de solicitud y líneas.
-5. No reservar series ni cantidades; no generar Excel.
-6. Devolver la solicitud.
+4. Si `clave_idempotencia` ya existe para el tenant, devolver esa solicitud sin crear otra.
+5. `transaction.atomic`: crear solicitud `BORRADOR` con `region=tenant.region`,
+   `clave_idempotencia` y líneas; auditar.
+6. No mover stock ni generar Excel.
+7. Devolver la solicitud.
+
+### `crear_y_enviar_traspaso(tenant, fecha, lineas, actor, clave_idempotencia=None)`
+
+1. Ejecutar creación y envío en una sola transacción.
+2. Si el envío falla, no queda borrador ni reserva.
+3. Si la clave ya existe, devolver la solicitud existente sin duplicar movimientos.
 
 ### `actualizar_lineas_borrador(solicitud, fecha, lineas, actor) -> SolicitudTraspaso`
 
@@ -165,8 +171,9 @@ class CuadreTraspaso:
    - Revalidar estructura y cuadre.
    - Por serie: `tecnico=destino de la línea`, `asignada_en=ahora`; estado `ASIGNADA`.
    - Agrupar por `(origen, destino, material)`:
-     `decrementar_stock_tecnico(origen, material, total, actor)` e
-     `incrementar_stock_tecnico(destino, material, total, actor)`.
+     `decrementar_stock_tecnico(origen, material, total, actor, tipo=TRASPASO_SALIDA, referencia=...)`
+     e `incrementar_stock_tecnico(destino, material, total, actor, tipo=TRASPASO_ENTRADA, referencia=...)`.
+   - Cada llamada escribe un `stock.MovimientoTecnico` y recalcula el saldo desde los movimientos.
    - Cambiar a `CONFIRMADA`, `confirmada_en=ahora`, `actualizado_por=actor`.
    - Auditar estado, `Serie/tecnico` y `Serie/asignada_en`.
 3. No leer ni escribir `StockGeneral`.
@@ -245,8 +252,8 @@ class ResultadoTraspaso:
 ## Pruebas de contrato
 
 - Cada servicio tiene la firma, retorno y excepción indicados.
-- Crear no reserva ni genera Excel; enviar reserva y genera; confirmar mueve custodia/stock; rechazar y
-  cancelar no mueven nada.
+- Crear deja la solicitud en `BORRADOR` y reserva stock/series; enviar mantiene la reserva y genera
+  Excel; confirmar mueve custodia/stock; rechazar y cancelar liberan la reserva.
 - El stock general queda idéntico en todo el ciclo.
 - `Serie.asignada_en` se reinicia solo al confirmar el traspaso.
 - Un fallo de auditoría o de Excel revierte la transacción.
