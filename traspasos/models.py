@@ -33,6 +33,9 @@ class SolicitudTraspaso(models.Model):
     motivo_rechazo = models.TextField(blank=True, default="")
     excel_ruta = models.CharField(max_length=255, blank=True, default="")
     excel_hash = models.CharField(max_length=64, blank=True, default="")
+    clave_idempotencia = models.CharField(
+        max_length=64, null=True, blank=True
+    )
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -65,6 +68,12 @@ class SolicitudTraspaso(models.Model):
                     ]
                 ),
                 name="solicitud_traspaso_estado_valido",
+            ),
+            models.UniqueConstraint(
+                fields=["tenant", "clave_idempotencia"],
+                condition=Q(clave_idempotencia__isnull=False)
+                & ~Q(clave_idempotencia=""),
+                name="solicitud_traspaso_idempotencia_unica",
             ),
         ]
         indexes = [
@@ -105,11 +114,13 @@ class SolicitudTraspaso(models.Model):
     def forma(self) -> str:
         origenes = {linea.tecnico_origen_id for linea in self.lineas.all()}
         destinos = {linea.tecnico_destino_id for linea in self.lineas.all()}
-        if len(origenes) == 1 and len(destinos) >= 1:
+        if not origenes or not destinos:
+            return "INVALIDA"
+        if len(origenes) == 1:
             return "1→N"
-        if len(destinos) == 1 and len(origenes) >= 1:
+        if len(destinos) == 1:
             return "N→1"
-        return "INVALIDA"
+        return "MIXTA"
 
     def _tecnicos(self, campo):
         ids = (
