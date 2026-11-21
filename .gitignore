@@ -35,3 +35,15 @@ Thumbs.db
 # Editores
 .idea/
 .vscode/
+
+
+# Impeccable: estado local y capturas
+.impeccable/config.local.json
+.impeccable/review/
+
+# Instalación local de Impeccable (herramientas, no producto)
+.github/agents/
+.github/hooks/
+.github/skills/
+.opencode/skills/impeccable/
+.opencode/commands/impeccable.md

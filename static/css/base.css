@@ -22,11 +22,19 @@ body {
 
 .cabecera {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem 1.5rem;
   padding: 0.9rem 1.5rem;
   background: #fff;
   border-bottom: 1px solid var(--borde);
+}
+
+.navegacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
 }
 
 .marca {
@@ -89,6 +97,38 @@ button {
 
 [hidden] {
   display: none !important;
+}
+
+/* Errores de validación de Django: ul.errorlist */
+.errorlist {
+  margin: 0 0 0.35rem;
+  padding: 0;
+  list-style: none;
+  color: var(--error);
+  font-weight: 600;
+}
+
+.errorlist li {
+  margin: 0;
+}
+
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--error);
+  box-shadow: 0 0 0 1px var(--error);
+}
+
+/* Foco visible y consistente para teclado */
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--acento);
+  outline-offset: 2px;
+}
+
+/* Un URI otpauth o un secreto largo debe poder partirse */
+code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .recojo-layout {
@@ -218,5 +258,212 @@ button {
     position: static;
     max-height: none;
     margin-bottom: 1rem;
+  }
+}
+
+/* Alta del segundo factor: pasos, clave manual y verificación */
+.flujo-totp {
+  max-width: 40rem;
+}
+
+.alta-intro {
+  max-width: 62ch;
+  color: #3e4c59;
+}
+
+.paso-totp {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--borde);
+}
+
+.paso-totp h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.paso-totp p {
+  max-width: 62ch;
+  margin: 0 0 0.75rem;
+}
+
+.clave-totp-bloque {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.clave-totp {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  word-spacing: 0.3em;
+  color: var(--texto);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.boton-copiar,
+.boton-primario {
+  font: inherit;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.boton-copiar {
+  margin-left: auto;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--borde);
+  background: #fff;
+  color: var(--acento);
+  font-weight: 600;
+}
+
+.boton-copiar:hover {
+  border-color: var(--acento);
+}
+
+.estado-copia {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--exito);
+}
+
+.estado-copia:empty {
+  display: none;
+}
+
+.datos-totp {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.9rem 0;
+}
+
+.datos-totp div {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.datos-totp dt {
+  flex: 0 0 5.5rem;
+  color: #52606d;
+}
+
+.datos-totp dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.uri-totp {
+  margin: 0 0 0.9rem;
+  font-size: 0.95rem;
+}
+
+.uri-totp summary {
+  color: var(--acento);
+  cursor: pointer;
+}
+
+.uri-totp code {
+  display: block;
+  margin-top: 0.4rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.85rem;
+}
+
+.aviso-totp {
+  max-width: 62ch;
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e6d6a8;
+  border-radius: 8px;
+  background: #fdf8ec;
+  font-size: 0.95rem;
+}
+
+.campo-codigo {
+  max-width: 16rem;
+  margin: 0 0 1rem;
+}
+
+.campo-codigo label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+
+.campo-codigo input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  background: #fff;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 1.15rem;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.boton-primario {
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--acento);
+  background: var(--acento);
+  color: #fff;
+  font-weight: 600;
+}
+
+.boton-primario:hover {
+  background: #18496b;
+}
+
+.cerrar-sesion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--borde);
+  font-size: 0.95rem;
+}
+
+.boton-enlace {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--acento);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.volver-perfil {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--borde);
+}
+
+@media (max-width: 480px) {
+  .clave-totp {
+    flex-basis: 100%;
+    font-size: 0.98rem;
+    letter-spacing: 0.08em;
+  }
+
+  .boton-copiar {
+    margin-left: 0;
   }
 }

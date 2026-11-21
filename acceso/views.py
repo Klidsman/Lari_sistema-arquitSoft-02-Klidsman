@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST, require_http_methods
 
 from acceso.decorators import requiere_rol
@@ -34,7 +35,7 @@ from .services import (
     usuario_pendiente,
     verificar_segundo_factor,
 )
-from .totp import cifrar_secreto, generar_uri_otpauth, verificar_codigo
+from .totp import cifrar_secreto, contexto_configuracion, verificar_codigo
 
 
 def _render_error(request, plantilla, mensaje, status, contexto=None):
@@ -97,6 +98,7 @@ def login(request):
     return render(request, "acceso/login.html", {"form": form})
 
 
+@never_cache
 def login_2fa(request):
     usuario = usuario_pendiente(request)
     if usuario is None:
@@ -114,6 +116,9 @@ def login_2fa(request):
         usuario.secreto_totp = cifrar_secreto(pyotp.random_base32())
         usuario.save(update_fields=["secreto_totp"])
 
+    alta = contexto_configuracion(usuario) if configurando else {}
+    contexto = {"usuario": usuario, "configurando": configurando, **alta}
+
     if request.method == "POST":
         form = ConfigurarTotpForm(request.POST) if configurando else SegundoFactorForm(request.POST)
         if form.is_valid():
@@ -124,6 +129,7 @@ def login_2fa(request):
                         "acceso/login_2fa.html",
                         SegundoFactorRequerido.mensaje,
                         400,
+                        {**contexto, "form": form},
                     )
                 usuario.segundo_factor_habilitado = True
                 usuario.save(update_fields=["segundo_factor_habilitado"])
@@ -140,6 +146,7 @@ def login_2fa(request):
                     "acceso/login_2fa.html",
                     SegundoFactorRequerido.mensaje,
                     400,
+                    {**contexto, "form": form},
                 )
             return redirect(destino_por_rol(usuario))
     else:
@@ -148,12 +155,7 @@ def login_2fa(request):
     return render(
         request,
         "acceso/login_2fa.html",
-        {
-            "form": form,
-            "usuario": usuario,
-            "configurando": configurando,
-            "uri": generar_uri_otpauth(usuario) if configurando else "",
-        },
+        {"form": form, **contexto},
     )
 
 
@@ -174,6 +176,7 @@ def perfil(request):
 
 
 @login_required
+@never_cache
 def configurar_2fa(request):
     usuario = request.user
 
@@ -188,6 +191,11 @@ def configurar_2fa(request):
                     "acceso/configurar_2fa.html",
                     "Debes completar el segundo factor",
                     400,
+                    {
+                        "form": form,
+                        "usuario": usuario,
+                        **contexto_configuracion(usuario),
+                    },
                 )
             usuario.segundo_factor_habilitado = True
             usuario.save(update_fields=["segundo_factor_habilitado"])
@@ -209,7 +217,7 @@ def configurar_2fa(request):
         {
             "form": form,
             "usuario": usuario,
-            "uri": generar_uri_otpauth(usuario) if usuario.secreto_totp else "",
+            **contexto_configuracion(usuario),
         },
     )
 

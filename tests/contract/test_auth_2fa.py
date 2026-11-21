@@ -8,14 +8,16 @@ from django.urls import reverse
 from acceso.services import CLAVE_PENDIENTE_2FA
 from acceso.totp import cifrar_secreto
 
+SECRETO = "JBSWY3DPEHPK3PXPJBSWY3DPJBSWY3DP"
+SECRETO_AGRUPADO = "JBSW Y3DP EHPK 3PXP JBSW Y3DP JBSW Y3DP"
+
 
 @pytest.fixture
 def admin_2fa(db, usuario_admin):
-    secreto = "JBSWY3DPEHPK3PXPJBSWY3DPJBSWY3DP"
-    usuario_admin.secreto_totp = cifrar_secreto(secreto)
+    usuario_admin.secreto_totp = cifrar_secreto(SECRETO)
     usuario_admin.segundo_factor_habilitado = True
     usuario_admin.save(update_fields=["secreto_totp", "segundo_factor_habilitado"])
-    return usuario_admin, secreto
+    return usuario_admin, SECRETO
 
 
 def _dejar_pendiente(client, usuario):
@@ -70,3 +72,49 @@ def test_logout_exige_post_y_csrf(usuario_tenant):
 
     respuesta = cliente.post(reverse("logout"))
     assert respuesta.status_code == 403
+
+
+@pytest.mark.django_db
+def test_alta_2fa_muestra_pasos_y_clave_agrupada(client, usuario_admin):
+    usuario_admin.secreto_totp = cifrar_secreto(SECRETO)
+    usuario_admin.save(update_fields=["secreto_totp"])
+    _dejar_pendiente(client, usuario_admin)
+
+    respuesta = client.get(reverse("login_2fa"))
+    contenido = respuesta.content.decode()
+
+    assert respuesta.status_code == 200
+    assert "Paso 1" in contenido
+    assert "Paso 2" in contenido
+    assert SECRETO_AGRUPADO in contenido
+    assert "No hay recuperación de códigos" in contenido
+    assert "no-store" in respuesta["Cache-Control"]
+
+
+@pytest.mark.django_db
+def test_alta_2fa_conserva_clave_tras_codigo_invalido(client, usuario_admin):
+    usuario_admin.secreto_totp = cifrar_secreto(SECRETO)
+    usuario_admin.save(update_fields=["secreto_totp"])
+    _dejar_pendiente(client, usuario_admin)
+
+    respuesta = client.post(reverse("login_2fa"), {"codigo": "000000"})
+    contenido = respuesta.content.decode()
+
+    assert respuesta.status_code == 400
+    assert "Debes completar el segundo factor" in contenido
+    assert SECRETO_AGRUPADO in contenido
+
+
+@pytest.mark.django_db
+def test_perfil_muestra_la_clave_del_segundo_factor(client, usuario_admin):
+    usuario_admin.secreto_totp = cifrar_secreto(SECRETO)
+    usuario_admin.save(update_fields=["secreto_totp"])
+    client.force_login(usuario_admin)
+
+    respuesta = client.get(reverse("configurar_2fa"))
+    contenido = respuesta.content.decode()
+
+    assert respuesta.status_code == 200
+    assert SECRETO_AGRUPADO in contenido
+    assert "Paso 3" in contenido
+    assert "no-store" in respuesta["Cache-Control"]
