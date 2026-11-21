@@ -9,7 +9,7 @@ Permitir que los técnicos de un tenant se traspasen materiales entre sí usando
 cada técnico**. Un traspaso puede ser de **un técnico a uno o varios técnicos** o de **varios técnicos
 a un técnico**, siempre con al menos dos técnicos distintos implicados. El sistema genera un Excel de
 dos hojas (Desasignación Z32 y Asignación Z31), requiere confirmación del almacén y no modifica el
-stock general del tenant.
+stock general del tenant. Los borradores reservan stock y series desde que se guardan.
 
 ## 2. Alcance
 
@@ -32,7 +32,7 @@ stock general del tenant.
 
 ### Requisitos Funcionales
 - **RF-33**: Un traspaso mueve materiales entre técnicos del mismo tenant, con un Excel de dos hojas: Desasignación (Z32) y Asignación (Z31)
-- **RF-34**: Un traspaso debe implicar al menos dos técnicos distintos y adoptar la forma 1→N o N→1; ningún técnico puede ser origen y destino de la misma línea
+- **RF-34**: Un traspaso debe implicar al menos dos técnicos distintos; un técnico puede entregar y recibir en el mismo traspaso, pero ninguna línea puede tener el mismo técnico como origen y destino
 - **RF-35**: Cada origen solo puede ceder materiales y series que tiene asignados, descontando lo reservado
 - **RF-36**: Lo que sale de cada técnico debe cuadrar con lo que entra en su destino, por material y por serie. Si no cuadra, se rechaza todo
 - **RF-37**: El Responsable de almacén acepta o rechaza el traspaso. Al aceptar, las series cambian de técnico y el stock se mueve por línea. Al rechazar, no cambia nada
@@ -54,19 +54,17 @@ stock general del tenant.
   - Hoja 1: Desasignación (Z32), agrupada por técnico origen
   - Hoja 2: Asignación (Z31), agrupada por técnico destino
 
-### 5.2 Variedad y Forma del Traspaso (RF-34)
+### 5.2 Variedad y Dirección del Traspaso (RF-34)
 - Un traspaso debe implicar **al menos dos técnicos distintos**
-- Formas admitidas:
-  - **1→N**: un único técnico origen entrega a uno o varios destinos
-  - **N→1**: varios técnicos origen entregan a un único destino
-- No se admite un traspaso con varios orígenes y varios destinos a la vez
+- Un técnico puede actuar como origen de unas líneas y como destino de otras
 - Ninguna línea puede tener el mismo técnico como origen y destino
-- Si no se cumple la forma, se rechaza la solicitud
+- Las direcciones pueden combinarse: A→B, B→A, A→C, etc.
+- Si una línea apunta al mismo técnico que entrega, se rechaza
 
 ### 5.3 Disponibilidad en el Origen (RF-35)
 - Cada técnico origen solo puede ceder materiales y series que tiene asignados
-- La disponibilidad se calcula **por técnico y material**, descontando lo reservado en traspasos
-  pendientes
+- La disponibilidad se calcula **por técnico y material**, descontando lo reservado en traspasos en
+  estado `BORRADOR` o `ENVIADA`
 - Solo se pueden traspasar series en estado Asignada al técnico origen
 - Fórmula: `Disponible(tecnico, material) = StockTecnico(tecnico, material) - Reservado(tecnico, material)`
 - Varias líneas del mismo origen y material se agregan antes de comparar con el disponible
@@ -103,9 +101,11 @@ stock general del tenant.
   2. **Materiales en mano**: solo se muestran los materiales del técnico elegido, con su cantidad
      en mano; para no seriados se digita la cantidad y para seriados se marcan las series.
   3. **Técnicos que reciben**: se marcan uno o varios técnicos y se revisa el resumen de lo que
-     recibirán.
+     recibirán. Cada material guarda los receptores que estaban marcados al agregarlo; cambiarlos
+     después no altera los materiales ya agregados.
 - La lista de stock muestra material, descripción, lote, tipo y cantidad
 - El stock del técnico origen sirve para elegir qué desasignar
+- Un técnico puede aparecer tanto en la lista de quienes entregan como en la de quienes reciben.
 - El resumen del traspaso muestra los materiales y series que recibirá cada técnico seleccionado
 - La consulta es de solo lectura, filtrada por el tenant de la sesión
 
@@ -134,8 +134,10 @@ Entonces el sistema genera el Excel de dos hojas
 Dado que el usuario selecciona el mismo técnico como origen y destino de una línea
 Cuando el sistema valida
 Entonces rechaza la solicitud
-Dado un traspaso que no implica al menos dos técnicos distintos o que mezcla varios orígenes con varios destinos
+Dado un traspaso que no implica al menos dos técnicos distintos
 Entonces el sistema lo rechaza por estructura inválida
+Dado un traspaso donde el técnico A entrega a B y B entrega a A
+Entonces el sistema lo acepta porque cada línea tiene origen y destino distintos
 
 ### CA-03: Solo Cede lo que Tiene Asignado
 Dado un técnico origen con stock de 10
@@ -193,7 +195,6 @@ Entonces ve material, descripción, lote, tipo y cantidad, sin poder modificarlo
 
 | Campo | Tipo | Requerido | Descripción |
 |---|---|---|---|
-| Forma del traspaso | Select | Sí | `1→N` (un técnico a varios) o `N→1` (varios a uno) |
 | Fecha | Date | Sí | Fecha del traspaso (por defecto: hoy) |
 | Técnico para consultar stock | Select | No | Carga la lista de stock del técnico (solo lectura) |
 | Línea: técnico origen | Select | Sí | Técnico que cede en esa línea |
@@ -223,7 +224,7 @@ Entonces ve material, descripción, lote, tipo y cantidad, sin poder modificarlo
 
 1. Un traspaso es entre técnicos del mismo tenant
 2. Un traspaso implica al menos dos técnicos distintos
-3. Un traspaso es 1→N o N→1; no se mezclan varios orígenes con varios destinos
+3. Un técnico puede entregar y recibir en el mismo traspaso
 4. Ninguna línea tiene el mismo técnico como origen y destino
 5. Cada origen solo puede ceder lo que tiene asignado
 6. Lo que sale de cada origen debe cuadrar con lo que entra en el destino de la línea
@@ -241,3 +242,28 @@ Entonces ve material, descripción, lote, tipo y cantidad, sin poder modificarlo
 - El cambio de técnico de series actualiza `series.Serie.tecnico` y reinicia `series.Serie.asignada_en`; la migración de esos campos se coordina con las specs 004/005/008/011
 - El stock general no se toca en ningún momento
 - La actualización de stock técnico se hace con las funciones de spec 008
+
+## 12. Saldos por movimientos (decisión 2026-11-21)
+
+El saldo de un técnico **no es un valor fijo**: se calcula sumando sus movimientos.
+
+- Cada cambio de stock técnico genera un `stock.MovimientoTecnico` firmado:
+  - salida negativa al confirmar un traspaso en el origen,
+  - entrada positiva al confirmar un traspaso en el destino,
+  - movimientos de stock inicial, asignaciones, devoluciones, bajas y conciliaciones.
+- `stock.StockTecnico.cantidad` queda como **proyección/caché** del saldo calculado desde
+  `MovimientoTecnico`; no es la fuente de verdad.
+- `obtener_stock_tecnico` suma los movimientos. Si una fila histórica aún no tiene movimientos, se
+  usa su cantidad como saldo inicial y el primer movimiento crea el asiento `SALDO_INICIAL`.
+- La migración crea un movimiento `SALDO_INICIAL` por cada `StockTecnico` existente.
+- Una serie solo puede estar en un técnico a la vez; el movimiento no duplica series.
+- El saldo del receptor sube **solo al confirmar el almacén**; crear o enviar no mueve stock.
+
+### Idempotencia y atomicidad
+
+- Cada formulario de alta lleva una `clave_idempotencia` única por tenant. Un doble clic o un
+  reintento devuelve el mismo traspaso y no crea otro.
+- Crear y enviar un traspaso ocurre en una sola transacción: si el envío falla, no queda un borrador
+  reservando stock.
+- La confirmación sigue siendo idempotente por estado: una segunda confirmación no duplica
+  movimientos.

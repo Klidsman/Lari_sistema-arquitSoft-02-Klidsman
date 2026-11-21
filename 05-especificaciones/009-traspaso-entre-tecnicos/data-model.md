@@ -29,7 +29,7 @@ erDiagram
 - `SERIE`, `STOCK_TECNICO`, `TECNICO` y `MATERIAL` son externas; 009 solo cambia la custodia de
   `SERIE` y usa los servicios de `STOCK_TECNICO`.
 - `STOCK_GENERAL` no aparece: 009 no lo lee ni lo escribe.
-- No hay tabla de reservas: se derivan de `SOLICITUD_TRASPASO.estado=ENVIADA`.
+- No hay tabla de reservas: se derivan de `SOLICITUD_TRASPASO.estado` en `BORRADOR` o `ENVIADA`.
 - El técnico origen y el destino viven en la **línea**; la solicitud agrupa varias líneas.
 
 ## Entidades
@@ -46,6 +46,7 @@ erDiagram
 | `motivo_rechazo` | `TextField` | No | `blank=True, default=""`; solo al rechazar; máximo 1000 |
 | `excel_ruta` | `CharField(255)` | No | `blank=True, default=""`; ruta relativa |
 | `excel_hash` | `CharField(64)` | No | `blank=True, default=""`; SHA-256 |
+| `clave_idempotencia` | `CharField(64)` | Sí | `null=True, blank=True`; única por tenant; evita duplicados por doble clic |
 | `creado_por` | FK `acceso.Usuario` | No | `PROTECT`, `related_name="traspasos_creados"` |
 | `creado_en` | `DateTimeField` | No | `auto_now_add` |
 | `enviada_en` | `DateTimeField` | Sí | Se fija al enviar |
@@ -73,13 +74,15 @@ erDiagram
 - `origenes`: técnicos distintos con líneas como origen.
 - `destinos`: técnicos distintos con líneas como destino.
 - `tecnicos`: unión de orígenes y destinos.
-- `forma`: `1→N`, `N→1` o `INVALIDA`, calculada a partir de las líneas.
+- `forma`: `1→N` si hay un solo origen, `N→1` si hay un solo destino, `MIXTA` si hay varios
+  orígenes y varios destinos, e `INVALIDA` sin líneas.
 
 **Reglas**
 
 - `tenant` y `region` salen de la sesión y de `tenant.region`; nunca del cliente.
 - La solicitud no guarda un único origen/destino; se derivan de las líneas.
-- Debe haber al menos dos técnicos distintos y forma 1→N o N→1.
+- Debe haber al menos dos técnicos distintos; un técnico puede ser origen y destino en líneas
+  distintas, pero no en la misma línea.
 - Solo `BORRADOR` se edita, envía o cancela; solo `ENVIADA` se confirma o rechaza.
 - No se elimina; se conserva con su estado terminal.
 
@@ -119,7 +122,8 @@ erDiagram
 - Para no seriados, `serie` es nula y `cantidad>0`; varias filas del mismo origen, destino y material
   se agregan en una sola línea.
 - Cada línea tiene una dirección explícita origen → destino.
-- La estructura global de la solicitud debe ser 1→N o N→1.
+- La estructura global solo exige al menos dos técnicos distintos y que ninguna línea se entregue a sí
+  misma.
 - No se edita una línea fuera de `BORRADOR`.
 - No se elimina una línea confirmada; el histórico permanece.
 
@@ -146,6 +150,38 @@ erDiagram
 - 011 devuelve a `DISPONIBLE` y limpia ambos.
 - No cambia tenant, región ni material.
 
+### `stock.MovimientoTecnico` (nuevo, fuente de verdad del saldo)
+
+| Campo | Tipo | Nulo | Regla |
+|---|---|---|---|
+| `id` | `BigAutoField` | No | Clave primaria |
+| `tenant` | FK `tenants.Tenant` | No | `PROTECT`; mismo tenant del técnico |
+| `tecnico` | FK `tecnicos.Tecnico` | No | `PROTECT`; custodio del movimiento |
+| `material` | FK `materiales.Material` | No | `PROTECT` |
+| `cantidad` | `IntegerField` | No | Firmada y distinta de 0; negativa para salidas, positiva para entradas |
+| `tipo` | `CharField(30)` | No | `SALDO_INICIAL`, `ASIGNACION`, `TRASPASO_SALIDA`, `TRASPASO_ENTRADA`, `DEVOLUCION`, `BAJA`, `CONCILIACION`, `AJUSTE` |
+| `referencia` | `CharField(100)` | No | `blank=True, default=""`; identifica el documento y evita duplicados |
+| `creado_por` | FK `acceso.Usuario` | Sí | `PROTECT`; nulo solo en la migración de saldos históricos |
+| `creado_en` | `DateTimeField` | No | `auto_now_add` |
+
+**Restricciones**
+
+- `CheckConstraint(~Q(cantidad=0), name="movimiento_tecnico_cantidad_no_cero")`.
+- `UniqueConstraint(fields=["tenant","tecnico","material","tipo","referencia"], condition=~Q(referencia=""), name="movimiento_tecnico_referencia_unica")`.
+- Índices `(tecnico, material)`, `(tenant, creado_en)`.
+
+**Reglas**
+
+- El saldo de `(tecnico, material)` es la suma de `cantidad` de sus movimientos.
+- `StockTecnico.cantidad` es una proyección/caché; se recalcula sumando movimientos.
+- Si no hay movimientos, la cantidad histórica de `StockTecnico` se usa como saldo inicial y el
+  primer cambio crea un `SALDO_INICIAL`.
+- La migración crea un `SALDO_INICIAL` por cada `StockTecnico` existente con cantidad mayor que 0.
+- Confirmar un traspaso escribe `TRASPASO_SALIDA` en el origen y `TRASPASO_ENTRADA` en el destino,
+  con referencia `TRASPASO:<solicitud_id>:<linea_id>`.
+- No se permite dejar un saldo negativo; la transacción revierte el movimiento.
+- No se editan ni eliminan movimientos confirmados.
+
 ### Entidades externas consumidas
 
 | Entidad | Dueña | Uso en 009 |
@@ -170,7 +206,9 @@ Reservado(tecnico, material) =
 Disponible(tecnico, material) = max(0, StockTecnico.cantidad - Reservado(tecnico, material))
 ```
 
-- Solo cuenta `ENVIADA`; `BORRADOR`, `CONFIRMADA`, `RECHAZADA` y `CANCELADA` no reservan.
+- Cuentan `BORRADOR` y `ENVIADA`; `CONFIRMADA`, `RECHAZADA` y `CANCELADA` no reservan.
+- Al editar o enviar una solicitud, sus propias líneas se excluyen del cálculo para no descontarse
+  dos veces.
 - Para seriados, además de la cantidad, se valida serie por serie que esté `ASIGNADA` al origen y que
   no esté referenciada por otra solicitud `ENVIADA`.
 - Material sin `StockTecnico` devuelve `0`.
@@ -230,8 +268,8 @@ BORRADOR ── enviar ──▶ ENVIADA ── confirmar ──▶ CONFIRMADA
    └── cancelar ─────────────────────────────▶ CANCELADA
 ```
 
-- `BORRADOR`: se puede editar, enviar o cancelar; no reserva ni genera Excel.
-- `ENVIADA`: reserva derivada activa; se puede confirmar o rechazar.
+- `BORRADOR`: se puede editar, enviar o cancelar; reserva stock y series por estado; no genera Excel.
+- `ENVIADA`: mantiene la reserva derivada activa; se puede confirmar o rechazar.
 - `CONFIRMADA`: series en el destino de su línea, stock técnico movido, `asignada_en` reiniciado;
   terminal.
 - `RECHAZADA`: sin cambios de custodia ni stock; motivo obligatorio; terminal.
@@ -257,7 +295,7 @@ ASIGNADA ── devolución 011 ──▶ DISPONIBLE (tecnico=null, asignada_en=
 3. Cargar líneas y materiales.
 4. Validar disponibilidad por origen y cuadre.
 5. `transaction.atomic`: crear/actualizar solicitud y líneas; auditar.
-6. No bloquear series ni stock: el borrador no reserva.
+6. El borrador reserva por estado; las filas de stock y series no se bloquean hasta el envío.
 
 ### Envío
 
@@ -298,10 +336,13 @@ ASIGNADA ── devolución 011 ──▶ DISPONIBLE (tecnico=null, asignada_en=
 ## Excel
 
 - Dos hojas: `Desasignación` (Z32) y `Asignación` (Z31).
-- Cada hoja agrupa las líneas por técnico; cada grupo tiene su propio bloque de metadatos con NIF.
-- Metadatos: movimiento, Centro, Almacén, NIF, fecha, tenant, región e ID.
-- Tabla de seriales: código, descripción, lote, serie y cantidad 1.
-- Tabla de material menor: código, descripción, lote y cantidad agregada.
+- Cada hoja tiene una sola tabla con cabecera en la fila 1 y una fila por línea desde la fila 2.
+- Columnas: `Movimiento`, `Centro`, `Almacén`, `Material`, `Descripción de materiales`, `Cantidad`,
+  `NIF Técnico`, `Lote`, `Serie`.
+- `NIF Técnico` es el origen en `Desasignación` y el destino en `Asignación`, por línea.
+- En `Desasignación` y `Asignación`, los no seriados se agrupan por técnico, material y lote,
+  sumando la cantidad. Las series no se agrupan: cada una conserva su fila.
+- `Cantidad` es `1` para series y la cantidad de la línea para no seriados.
 - Generado al enviar; almacenado con ruta relativa y hash SHA-256.
 - Descarga verificando hash; si no coincide, `HashNoCoincide`.
 - No se guarda el binario en la base ni se audita su contenido.

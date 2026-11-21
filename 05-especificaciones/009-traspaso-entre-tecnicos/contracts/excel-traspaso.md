@@ -20,48 +20,46 @@ puntos del contrato general:
 
 ## Estructura
 
+Cada hoja tiene una sola tabla con una fila por línea del traspaso. La fila 1 es la cabecera y los
+datos empiezan en la fila 2.
+
+| Columna | Contenido |
+|---|---|
+| `Movimiento` | `Z32` en `Desasignación`, `Z31` en `Asignación` |
+| `Centro` | `region.almacen.centro` |
+| `Almacén` | `region.almacen.codigo_almacen` |
+| `Material` | `material.codigo` |
+| `Descripción de materiales` | `material.descripcion` |
+| `Cantidad` | `1` si la línea es seriada; `linea.cantidad` si no lo es |
+| `NIF Técnico` | `tecnico_origen.nif` en `Desasignación`; `tecnico_destino.nif` en `Asignación` |
+| `Lote` | `linea.lote` |
+| `Serie` | `serie.numero` para seriados; vacío para no seriados |
+
 ### Hoja 1: `Desasignación` (Z32)
 
-Se escribe un bloque por cada técnico origen distinto. Metadatos del bloque:
-
-| Campo | Valor |
-|---|---|
-| Movimiento | `Z32` |
-| Centro | `region.almacen.centro` |
-| Almacén | `region.almacen.codigo_almacen` |
-| NIF | `tecnico_origen.nif` |
-| Fecha de solicitud | `solicitud.fecha` |
-| Tenant | `solicitud.tenant.codigo` |
-| Región | `solicitud.region.codigo` |
-| ID de solicitud | `solicitud.id` |
-
-Después del bloque, las líneas de ese técnico origen:
-
-Tabla de seriales:
-
-| Columna | Contenido |
-|---|---|
-| Código de material | `material.codigo` |
-| Descripción | `material.descripcion` |
-| Lote | `linea.lote` |
-| Serie | `serie.numero` |
-| Cantidad | `1` |
-
-Tabla de material menor:
-
-| Columna | Contenido |
-|---|---|
-| Código de material | `material.codigo` |
-| Descripción | `material.descripcion` |
-| Lote | `linea.lote` |
-| Cantidad | `linea.cantidad` agregada por material |
+- `NIF Técnico` es el técnico origen de esa línea.
+- Para materiales **no seriados**, agrupa por `(tecnico_origen, material, lote)` y suma `Cantidad`:
+  si el técnico A entrega 2 al técnico B y 2 al técnico C del mismo material, la hoja muestra
+  **una sola fila de A con cantidad 4**.
+- Para materiales **seriados**, cada serie conserva su propia fila.
+- No hay bloques de metadatos separados ni tablas adicionales.
 
 ### Hoja 2: `Asignación` (Z31)
 
-- Misma estructura, agrupada por `tecnico_destino`.
-- Movimiento `Z31`.
-- NIF del técnico destino de cada grupo.
-- El resto de metadatos es idéntico.
+- Misma estructura y mismas columnas que la hoja 1.
+- `NIF Técnico` es el técnico destino de esa línea.
+- Para materiales **no seriados**, agrupa por `(tecnico_destino, material, lote)` y suma `Cantidad`:
+  si el técnico A entrega 2 y el técnico B entrega 2 del mismo material al técnico C, la hoja
+  muestra **una sola fila de C con cantidad 4**.
+- Para materiales **seriados**, cada serie conserva su propia fila porque la columna `Serie` es
+  distinta.
+
+### Presentación
+
+- Cabecera con `Movimiento`, `Centro` y `Almacén` en azul oscuro; el resto en ámbar.
+- Filas de datos con fondo azul claro y bordes finos.
+- Filtro automático en `A1:I<n>` y panel congelado en `A2`.
+- Anchos de columna fijos para que la tabla se lea sin ajustes manuales.
 
 ## Cuadre
 
