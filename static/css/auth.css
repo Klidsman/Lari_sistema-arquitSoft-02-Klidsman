@@ -167,8 +167,8 @@
 
 .auth-panel .boton-primario:hover,
 .auth-boton:hover {
-  border-color: #174a6d;
-  background: #174a6d;
+  border-color: var(--acento-hundido);
+  background: var(--acento-hundido);
 }
 
 .auth-panel .boton-primario:active,
@@ -291,7 +291,6 @@
   margin: 0 0 1.25rem;
   padding: 0.8rem 1rem;
   border: 1px solid #e3b6b9;
-  border-left: 3px solid var(--error);
   border-radius: 0.5rem;
   background: #fdf3f3;
   color: var(--error);

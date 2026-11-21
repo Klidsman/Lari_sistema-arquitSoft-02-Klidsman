@@ -2,7 +2,7 @@
 {% block title %}Registrar materiales · Lari{% endblock %}
 {% block contenido %}
   <h1>Registrar materiales</h1>
-  <form method="get" action="{% url 'registrar_materiales' %}">
+  <form method="get" action="{% url 'registrar_materiales' %}" class="buscador">
     <label>Técnico
       <select name="tecnico">
         {% for item in tecnicos %}<option value="{{ item.pk }}" {% if tecnico and tecnico.pk == item.pk %}selected{% endif %}>{{ item.nif }}</option>{% endfor %}

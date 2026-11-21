@@ -271,6 +271,7 @@ validación extremo a extremo.
 - [X] T085 Ejecutar `python manage.py makemigrations --check --dry-run` y `python manage.py migrate` sobre PostgreSQL; corregir cualquier migración pendiente en `tenants/migrations/` o `stock_inicial/migrations/`
 - [ ] T086 Ejecutar la suite completa de `tests/unit/`, `tests/integration/` y `tests/contract/` sobre PostgreSQL con `pytest --cov=stock_inicial --cov-report=term-missing` y cerrar brechas hasta cubrir CA-01…CA-13 y los criterios de salida de `quickstart.md`
 - [ ] T087 Ejecutar los escenarios manuales 1–20 de `05-especificaciones/005-stock-inicial-de-tecnicos/quickstart.md` contra PostgreSQL y registrar el resultado
+- [X] T088 Corregir la validación y carga de Excel de stock inicial: cargar HTMX, devolver todos los errores por fila en la validación y en la carga, habilitar «Cargar» solo con `data-valido="true"` y cubrirlo en `tests/contract/test_stock_inicial_validacion_http.py`
 
 ---
 
@@ -279,6 +280,7 @@ validación extremo a extremo.
 - Implementado el flujo completo: carga por Excel, validación previa, carga por formulario, carga única, detalle, edición transaccional y reinicio por servicio.
 - `openpyxl` agregado a `requirements.txt`.
 - Pendientes de pruebas/cierre: T015, T030, T039–T044, T049–T052, T057, T059–T062, T067, T071–T072, T079–T080, T082–T083, T086–T087.
+- Hotfix 2026-11-20: T088 corrige la validación HTMX y la carga rechazada para mostrar fila, campo y mensaje de cada error.
 - El comando `reiniciar_stock_inicial` y los escenarios manuales aún no se ejecutan.
 
 ## Dependencias y orden de ejecución

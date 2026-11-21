@@ -118,6 +118,11 @@ class ResultadoValidacionStockInicial:
     total_series: int = 0
     total_cantidad: int = 0
 
+    @property
+    def filas_error(self) -> int:
+        """Filas con al menos un error, no errores totales."""
+        return len({error.fila for error in self.errores})
+
 
 def validar_cuenta_tenant(actor):
     if actor is None or not getattr(actor, "is_active", False):
@@ -319,7 +324,7 @@ def validar_filas_stock_inicial(tenant, filas, es_formulario=False):
                 errores.append(
                     ErrorValidacion(
                         numero_fila,
-                        "serie",
+                        "tipo",
                         "El material es seriado y requiere número de serie",
                     )
                 )
@@ -366,7 +371,7 @@ def validar_filas_stock_inicial(tenant, filas, es_formulario=False):
                 errores.append(
                     ErrorValidacion(
                         numero_fila,
-                        "serie",
+                        "tipo",
                         "El material no es seriado y no admite número de serie",
                     )
                 )

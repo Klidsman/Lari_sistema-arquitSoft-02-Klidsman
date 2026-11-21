@@ -5,18 +5,42 @@
 {% else %}
   <div data-valido="{{ resultado.valido|yesno:'true,false' }}"
        data-filas-validas="{{ resultado.total_series|add:resultado.total_cantidad }}"
-       data-filas-error="{{ resultado.errores|length }}"
+       data-filas-error="{{ resultado.filas_error }}"
        data-total-tecnicos="{{ resultado.total_tecnicos }}"
        data-total-series="{{ resultado.total_series }}"
        data-total-cantidad="{{ resultado.total_cantidad }}">
+    <p class="resumen">
+      {% if resultado.valido %}
+        El archivo es válido y se puede cargar.
+      {% else %}
+        El archivo tiene {{ resultado.filas_error }} fila{{ resultado.filas_error|pluralize }}
+        con errores. Corrige el Excel y vuelve a intentarlo.
+      {% endif %}
+    </p>
+
+    <p class="resumen resumen--totales">
+      Técnicos: {{ resultado.total_tecnicos }} ·
+      Series: {{ resultado.total_series }} ·
+      Cantidad: {{ resultado.total_cantidad }}
+    </p>
+
     {% if resultado.errores %}
+      <h3>Errores por fila</h3>
       <table class="tabla">
         <thead><tr><th>Fila</th><th>Campo</th><th>Mensaje</th></tr></thead>
         <tbody>
           {% for error in resultado.errores %}
             <tr data-fila="{{ error.fila }}" data-campo="{{ error.campo }}" data-mensaje="{{ error.mensaje }}">
               <td>{{ error.fila }}</td>
-              <td>{{ error.campo }}</td>
+              <td>
+                {% if error.campo == "tecnico" %}Técnico
+                {% elif error.campo == "material" %}Material
+                {% elif error.campo == "serie" %}Serie
+                {% elif error.campo == "cantidad" %}Cantidad
+                {% elif error.campo == "tipo" %}Tipo
+                {% elif error.campo == "archivo" %}Archivo
+                {% else %}{{ error.campo }}{% endif %}
+              </td>
               <td>{{ error.mensaje }}</td>
             </tr>
           {% endfor %}

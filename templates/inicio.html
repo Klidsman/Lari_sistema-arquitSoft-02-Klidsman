@@ -5,10 +5,5 @@
 {% block contenido %}
   <h1>Inicio</h1>
   <p>Bienvenido, {{ request.usuario.email }}.</p>
-  <p>Rol: {{ request.rol }}</p>
-  <p><a href="{% url 'perfil' %}">Mi perfil</a></p>
-  <form method="post" action="{% url 'logout' %}">
-    {% csrf_token %}
-    <button type="submit">Cerrar sesión</button>
-  </form>
+  <p>Selecciona una sección en el menú lateral para empezar.</p>
 {% endblock %}

@@ -8,7 +8,8 @@
   <form hx-get="{% url 'auditoria_acceso' %}"
         hx-target="#tabla-auditoria"
         hx-swap="innerHTML"
-        method="get">
+        method="get"
+        class="buscador">
     <label>Entidad
       <input type="text" name="entidad" value="{{ filtros.entidad|default:'' }}">
     </label>
