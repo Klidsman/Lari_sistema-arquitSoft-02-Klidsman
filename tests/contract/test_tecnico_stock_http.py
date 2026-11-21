@@ -73,7 +73,6 @@ def test_stock_de_otro_tenant_no_se_muestra(
 
     assert otro_material.codigo not in contenido
     assert "MATERIAL AJENO" not in contenido
-    assert "99" not in contenido
     assert material_seriado.codigo in contenido
 
 

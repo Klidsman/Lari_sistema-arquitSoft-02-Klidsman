@@ -215,24 +215,33 @@ def test_envio_genera_excel_dos_hojas_con_hash(
     try:
         assert libro.sheetnames == ["Desasignación", "Asignación"]
         salida, entrada = libro["Desasignación"], libro["Asignación"]
-        assert salida["B1"].value == "Z32"
-        assert entrada["B1"].value == "Z31"
-        assert salida["B4"].value == tecnico.nif
-        assert entrada["B4"].value == destino.nif
-        assert salida["B6"].value == tenant.codigo
-        assert salida["B7"].value == tenant.region.codigo
-        assert salida["A10"].value == "Seriales"
-        assert salida["A13"].value == "Material menor"
-        assert salida["A14"].value == "Código"
-        assert salida["A15"].value == material_no_seriado.codigo
-        assert salida["D15"].value == 4
-        assert entrada["D15"].value == 4
+        assert [salida.cell(1, col).value for col in range(1, 10)] == [
+            "Movimiento",
+            "Centro",
+            "Almacén",
+            "Material",
+            "Descripción de materiales",
+            "Cantidad",
+            "NIF Técnico",
+            "Lote",
+            "Serie",
+        ]
+        assert salida["A2"].value == "Z32"
+        assert entrada["A2"].value == "Z31"
+        assert salida["B2"].value == tenant.region.almacen.centro
+        assert salida["C2"].value == tenant.region.almacen.codigo_almacen
+        assert salida["D2"].value == material_no_seriado.codigo
+        assert salida["E2"].value == material_no_seriado.descripcion
+        assert salida["F2"].value == 4
+        assert salida["G2"].value == tecnico.nif
+        assert entrada["G2"].value == destino.nif
+        assert salida["I2"].value in (None, "")
     finally:
         libro.close()
 
 
 @pytest.mark.django_db
-def test_borrador_no_reserva_ni_mueve_stock(
+def test_borrador_reserva_sin_mover_stock(
     usuario_tenant, tenant, tecnico, material_no_seriado, almacen
 ):
     destino = _destino(tenant, usuario_tenant)
@@ -248,7 +257,7 @@ def test_borrador_no_reserva_ni_mueve_stock(
         [{"material_id": material_no_seriado.pk, "cantidad": 4}],
         usuario_tenant,
     )
-    assert calcular_disponible(tecnico, material_no_seriado) == 10
+    assert calcular_disponible(tecnico, material_no_seriado) == 6
     assert not traspaso.excel_ruta
     assert StockTecnico.objects.get(tecnico=tecnico, material=material_no_seriado).cantidad == 10
 
