@@ -107,6 +107,20 @@ def obtener_tecnico_por_nif(tenant, nif) -> Tecnico:
     return tecnico
 
 
+def stock_actual_tecnico(tecnico):
+    """Stock por material del técnico; solo lectura y acotado a su tenant."""
+    from stock.models import StockTecnico
+
+    return (
+        StockTecnico.objects.filter(
+            tenant=tecnico.tenant,
+            tecnico=tecnico,
+        )
+        .select_related("material")
+        .order_by("material__codigo")
+    )
+
+
 def validar_tecnico_para_operacion(tenant, tecnico_id) -> Tecnico:
     tecnico = obtener_tecnico(tenant, tecnico_id)
     if not tecnico.activo:
