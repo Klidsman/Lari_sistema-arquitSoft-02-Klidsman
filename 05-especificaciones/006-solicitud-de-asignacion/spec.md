@@ -118,7 +118,7 @@ Permitir que los tenants creen solicitudes de asignación de materiales a sus t�
 - Si el almacén rechaza la asignación, las series vuelven a Disponible
 
 ### 5.5 Generación de Excel (RF-25)
-- El sistema genera automáticamente el Excel de asignación al crear la solicitud
+- El sistema genera automáticamente el Excel de asignación al enviar la solicitud (`BORRADOR → ENVIADA`); guardar un borrador no genera Excel
 - El Excel tiene el formato definido en `04-contratos/excel-asignacion.md`
 - Metadatos autocompletados: Movimiento Z31, Centro PR05, Almacén BE03
 - El Excel se guarda con firma SHA-256 para garantizar integridad
@@ -170,9 +170,9 @@ Permitir que los tenants creen solicitudes de asignación de materiales a sus t�
 
 ## 7. Criterios de Aceptación
 
-### CA-01: Creación de Solicitud Válida
+### CA-01: Creación y Envío de Solicitud Válida
 Dado un técnico y materiales disponibles
-Cuando el tenant crea una solicitud de asignación
+Cuando el tenant crea y envía una solicitud de asignación
 Entonces la solicitud se crea, las series pasan a Reservada y se genera el Excel
 
 ### CA-02: Selección de Series Disponibles
@@ -331,5 +331,5 @@ Entonces la operación se rechaza con `409` y no se modifica nada
 - La reserva de series debe ser transaccional
 - La ventana de series debe soportar búsqueda y paginación para grandes volúmenes
 - El cálculo de días en mano se hace al confirmar la asignación (spec 007)
-- La alerta de cupo máximo se calcula sumando días en mano de todos los seriados del técnico
+- La alerta de cupo máximo se calcula por cada equipo seriado que supera los 20 días en mano, no por la suma de días entre equipos
 - El envío del Excel por correo se implementa en spec 007

@@ -113,24 +113,24 @@ material B; verificar series `ASIGNADA`, técnico 10→15 en A y 0→50 en B, ge
 
 ### Pruebas de US1 (escribir primero, deben fallar)
 
-- [ ] T022 [US1] Prueba de integración de **CA-01** en `tests/integration/test_stock_confirmacion.py`: `test_series_pasan_a_asignada_al_confirmar`; solo las series de la solicitud cambian a `ASIGNADA`, las de otra solicitud y otro tenant permanecen igual
-- [ ] T023 [US1] Prueba de integración de **CA-02** en `tests/integration/test_stock_confirmacion.py`: `test_stock_tecnico_sube_con_series_y_no_seriados`; 10 + 5 series = 15 y creación desde 0 cuando no existe la fila
-- [ ] T024 [US1] Prueba de integración de **CA-03** en `tests/integration/test_stock_confirmacion.py`: `test_stock_general_baja_con_series_y_no_seriados`; 100 − 5 series = 95 y rechazo con `StockInsuficiente` sin escribir si no alcanza
-- [ ] T025 [US1] Prueba de integración de **CA-07** en `tests/integration/test_stock_confirmacion.py`: `test_no_seriados_actualizan_cantidad_agregada`; 50 unidades no seriadas suman 50 al técnico y restan 50 del general, agregadas por material
-- [ ] T026 [P] [US1] Prueba de contrato del resultado en `tests/contract/test_stock_confirmacion_contrato.py`: `ResultadoConfirmacionStock` contiene `solicitud_id`, `series_actualizadas`, `cambios_por_material`, `confirmada_en`, `total_series` y `total_cantidad`, y `CambioStockMaterial` contiene `material_id`, `stock_general_anterior`, `stock_general_nuevo`, `stock_tecnico_anterior` y `stock_tecnico_nuevo`
+- [X] T022 [US1] Prueba de integración de **CA-01** en `tests/integration/test_stock_confirmacion.py`: `test_series_pasan_a_asignada_al_confirmar`; solo las series de la solicitud cambian a `ASIGNADA`, las de otra solicitud y otro tenant permanecen igual
+- [X] T023 [US1] Prueba de integración de **CA-02** en `tests/integration/test_stock_confirmacion.py`: `test_stock_tecnico_sube_con_series_y_no_seriados`; 10 + 5 series = 15 y creación desde 0 cuando no existe la fila
+- [X] T024 [US1] Prueba de integración de **CA-03** en `tests/integration/test_stock_confirmacion.py`: `test_stock_general_baja_con_series_y_no_seriados`; 100 − 5 series = 95 y rechazo con `StockInsuficiente` sin escribir si no alcanza
+- [X] T025 [US1] Prueba de integración de **CA-07** en `tests/integration/test_stock_confirmacion.py`: `test_no_seriados_actualizan_cantidad_agregada`; 50 unidades no seriadas suman 50 al técnico y restan 50 del general, agregadas por material
+- [X] T026 [P] [US1] Prueba de contrato del resultado en `tests/contract/test_stock_confirmacion_contrato.py`: `ResultadoConfirmacionStock` contiene `solicitud_id`, `series_actualizadas`, `cambios_por_material`, `confirmada_en`, `total_series` y `total_cantidad`, y `CambioStockMaterial` contiene `material_id`, `stock_general_anterior`, `stock_general_nuevo`, `stock_tecnico_anterior` y `stock_tecnico_nuevo`
 - [ ] T027 [US1] Prueba de integración de mezcla y agregación en `tests/integration/test_stock_confirmacion.py`: una solicitud con varios materiales y varias series del mismo material escribe una sola vez `StockTecnico`/`StockGeneral` por material y audita una vez por material
 - [ ] T028 [US1] Pruebas de validación en `tests/integration/test_stock_confirmacion.py`: serie no `RESERVADA`, serie de otro tenant o de otro material, técnico de otro tenant, línea no seriada con cantidad `0` y solicitud sin líneas abortan con `SerieNoReservada`, `TenantNoCoincide`, `CantidadInvalida` o `ConfirmacionStockInvalida` sin mover stock
 - [ ] T029 [US1] Prueba de idempotencia en `tests/integration/test_stock_confirmacion.py`: una segunda confirmación de la misma solicitud no vuelve a mover stock ni series y, desde 007, recibe `409`
-- [ ] T030 [P] [US1] Prueba de orden de bloqueo en `tests/integration/test_stock_concurrencia.py`: `Tenant` → `StockGeneral` por `material_id` → `StockTecnico` del mismo tenant por `material_id` → `Serie` por `id`, sin interbloqueo entre dos confirmaciones con materiales invertidos
+- [X] T030 [P] [US1] Prueba de orden de bloqueo en `tests/integration/test_stock_concurrencia.py`: `Tenant` → `StockGeneral` por `material_id` → `StockTecnico` del mismo tenant por `material_id` → `Serie` por `id`, sin interbloqueo entre dos confirmaciones con materiales invertidos
 
 ### Implementación de US1
 
-- [ ] T031 [US1] Definir en `stock/services.py` los `dataclass` inmutables `CambioStockMaterial` y `ResultadoConfirmacionStock` con los campos de `data-model.md`, sin lógica de persistencia
+- [X] T031 [US1] Definir en `stock/services.py` los `dataclass` inmutables `CambioStockMaterial` y `ResultadoConfirmacionStock` con los campos de `data-model.md`, sin lógica de persistencia
 - [ ] T032 [US1] Implementar en `stock/services.py` `actualizar_stock_confirmacion_asignacion(solicitud, actor)`: validar `solicitud.estado == "ENVIADA"`, existencia de líneas, técnico del mismo tenant, series `RESERVADA` del tenant/material, cantidades no seriadas `> 0` y stock general suficiente antes de escribir
 - [ ] T033 [US1] Implementar en `stock/services.py` la agregación por material: series suman 1 cada una y líneas no seriadas suman su `cantidad`; agrupar en un diccionario por `material_id` sin una consulta por línea
 - [ ] T034 [US1] Implementar en `stock/services.py` los bloqueos en orden estable: `select_for_update` del `Tenant`, de `StockGeneral` por `tenant` y `material_id` ascendente, de `StockTecnico` del mismo tenant por `material_id` ascendente y de `Serie` por `id` ascendente; no bloquear la solicitud, que ya bloquea 007
-- [ ] T035 [US1] Implementar en `stock/services.py` la transición de cada serie `RESERVADA→ASIGNADA`, fijar `tecnico = técnico de la línea` y `asignada_en = ahora`, y auditar `Serie/estado`, `Serie/tecnico` y `Serie/asignada_en`, dentro de la misma transacción y con el actor de la sesión
-- [ ] T036 [US1] Implementar en `stock/services.py` las escrituras de stock por material: incrementar `StockTecnico` (crear con `tenant = solicitud.tenant` si no existe), decrementar `StockGeneral`, auditar ambos con valor anterior y nuevo, y devolver `ResultadoConfirmacionStock` con `confirmada_en` leído de la solicitud
+- [X] T035 [US1] Implementar en `stock/services.py` la transición de cada serie `RESERVADA→ASIGNADA`, fijar `tecnico = técnico de la línea` y `asignada_en = ahora`, y auditar `Serie/estado`, `Serie/tecnico` y `Serie/asignada_en`, dentro de la misma transacción y con el actor de la sesión
+- [X] T036 [US1] Implementar en `stock/services.py` las escrituras de stock por material: incrementar `StockTecnico` (crear con `tenant = solicitud.tenant` si no existe), decrementar `StockGeneral`, auditar ambos con valor anterior y nuevo, y devolver `ResultadoConfirmacionStock` con `confirmada_en` leído de la solicitud
 - [ ] T037 [US1] Asegurar en `stock/services.py` que la confirmación no escribe `SolicitudAsignacion.estado` ni `confirmada_en`, no libera series, no hace commit propio y propaga cualquier excepción para que 007 revierta toda la transacción
 - [ ] T038 [US1] Verificar en `asignaciones/services.py` que `confirmar_solicitud` llama a `stock.services.actualizar_stock_confirmacion_asignacion(solicitud, actor)` dentro de su `transaction.atomic`, después del bloqueo de la solicitud y antes de fijar `CONFIRMADA`/`confirmada_en`; si falta, coordinarlo con 007 sin duplicar la escritura de stock
 - [ ] T039 [US1] Ejecutar `pytest tests/integration/test_stock_confirmacion.py tests/contract/test_stock_confirmacion_contrato.py tests/integration/test_stock_concurrencia.py` y corregir hasta que CA-01, CA-02, CA-03 y CA-07 estén en verde
@@ -151,11 +151,11 @@ exactamente como antes.
 
 ### Pruebas de US2 (escribir primero, deben fallar)
 
-- [ ] T040 [US2] Prueba de **CA-04** en `tests/integration/test_stock_confirmacion.py`: `test_confirmacion_fallida_revierte_todo`; un fallo inyectado en `incrementar_stock_tecnico` deja series `RESERVADA`, `StockGeneral` y `StockTecnico` intactos, sin auditoría de stock y con la solicitud `ENVIADA`
+- [X] T040 [US2] Prueba de **CA-04** en `tests/integration/test_stock_confirmacion.py`: `test_confirmacion_fallida_revierte_todo`; un fallo inyectado en `incrementar_stock_tecnico` deja series `RESERVADA`, `StockGeneral` y `StockTecnico` intactos, sin auditoría de stock y con la solicitud `ENVIADA`
 - [ ] T041 [P] [US2] Prueba de reversión por auditoría en `tests/integration/test_stock_auditoria.py`: si `registrar_cambio` falla durante la confirmación, se revierten series y stock, y no queda un registro parcial
 - [ ] T042 [US2] Prueba de reversión desde 007 en `tests/integration/test_stock_confirmacion.py`: si 007 falla después de 008 al fijar `CONFIRMADA`/`confirmada_en` o al auditar la solicitud, el stock y las series vuelven al estado anterior
 - [ ] T043 [P] [US2] Prueba de defensa de base en `tests/integration/test_stock_concurrencia.py`: intentar insertar o actualizar `cantidad` negativa por SQL falla por `CheckConstraint` y no deja fila parcial
-- [ ] T044 [US2] Prueba de stock insuficiente en `tests/integration/test_stock_confirmacion.py`: cuando el general no alcanza, `StockInsuficiente` revierte todo y no se crea ninguna fila con `cantidad` negativa
+- [X] T044 [US2] Prueba de stock insuficiente en `tests/integration/test_stock_confirmacion.py`: cuando el general no alcanza, `StockInsuficiente` revierte todo y no se crea ninguna fila con `cantidad` negativa
 
 ### Implementación de US2
 
@@ -202,10 +202,10 @@ la auditoría y encontrar 5 registros `Serie/estado`, un `StockTecnico/cantidad`
 
 ### Pruebas de US4 (escribir primero, deben fallar)
 
-- [ ] T054 [US4] Prueba de **CA-06** para series en `tests/integration/test_stock_auditoria.py`: `test_auditoria_completa_de_series_y_stock`; exactamente un registro `Serie/estado` `RESERVADA→ASIGNADA`, uno `Serie/tecnico` y uno `Serie/asignada_en` por serie, con actor, fecha y datos de la solicitud
-- [ ] T055 [US4] Prueba de **CA-06** para stock en `tests/integration/test_stock_auditoria.py`: un registro `StockTecnico/cantidad` y uno `StockGeneral/cantidad` por material agregado, con valores anterior y nuevo iguales a los del resultado
-- [ ] T056 [US4] Prueba de actor y prohibiciones en `tests/integration/test_stock_auditoria.py`: el actor es el usuario de la sesión y nunca `None` ni el sistema; no hay contraseñas, tokens, secretos, binarios, rutas absolutas ni datos de otro tenant
-- [ ] T057 [US4] Prueba de no duplicación en `tests/integration/test_stock_auditoria.py`: el registro `SolicitudAsignacion/estado` aparece una sola vez y es el de 007; 008 no audita el estado de la solicitud ni el rechazo
+- [X] T054 [US4] Prueba de **CA-06** para series en `tests/integration/test_stock_auditoria.py`: `test_auditoria_completa_de_series_y_stock`; exactamente un registro `Serie/estado` `RESERVADA→ASIGNADA`, uno `Serie/tecnico` y uno `Serie/asignada_en` por serie, con actor, fecha y datos de la solicitud
+- [X] T055 [US4] Prueba de **CA-06** para stock en `tests/integration/test_stock_auditoria.py`: un registro `StockTecnico/cantidad` y uno `StockGeneral/cantidad` por material agregado, con valores anterior y nuevo iguales a los del resultado
+- [X] T056 [US4] Prueba de actor y prohibiciones en `tests/integration/test_stock_auditoria.py`: el actor es el usuario de la sesión y nunca `None` ni el sistema; no hay contraseñas, tokens, secretos, binarios, rutas absolutas ni datos de otro tenant
+- [X] T057 [US4] Prueba de no duplicación en `tests/integration/test_stock_auditoria.py`: el registro `SolicitudAsignacion/estado` aparece una sola vez y es el de 007; 008 no audita el estado de la solicitud ni el rechazo
 
 ### Implementación de US4
 
@@ -221,13 +221,13 @@ la auditoría y encontrar 5 registros `Serie/estado`, un `StockTecnico/cantidad`
 
 **Propósito**: concurrencia real, rendimiento, aislamiento, documentación y validación final.
 
-- [ ] T061 [P] Agregar en `tests/integration/test_stock_concurrencia.py` la prueba de dos confirmaciones simultáneas de solicitudes distintas que compiten por el mismo stock: solo una mueve stock y la otra recibe `StockInsuficiente`, sin interbloqueo
+- [X] T061 [P] Agregar en `tests/integration/test_stock_concurrencia.py` la prueba de dos confirmaciones simultáneas de solicitudes distintas que compiten por el mismo stock: solo una mueve stock y la otra recibe `StockInsuficiente`, sin interbloqueo
 - [ ] T062 [P] Agregar en `tests/integration/test_stock_concurrencia.py` la prueba de confirmación con 100 series en menos de 2 segundos y sin una consulta por línea, usando `django_assert_num_queries` o medición equivalente
 - [ ] T063 [P] Agregar en `tests/integration/test_stock_concurrencia.py` las pruebas de aislamiento entre dos tenants: `StockGeneral` y `StockTecnico` de otro tenant no se leen ni se modifican; la RLS, si está activa, bloquea el acceso directo; `StockTecnico.tenant` coincide con `tecnico.tenant`
 - [ ] T064 [P] Actualizar `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/quickstart.md` con los comandos y resultados reales de la suite, sin duplicar el detalle de `contracts/` ni `data-model.md`
 - [ ] T065 [P] Revisar `stock/services.py` y `stock/models.py`: sin lógica de negocio en modelos, sin endpoints, vistas, plantillas ni tareas Celery, sin `tenant_id` del cliente, sin `F()` ciego en decrementos, sin cantidades negativas y con mensajes en español
 - [X] T066 [P] Revisar el orden global en `06-plan-implementacion/desglose-tareas.md` y corregirlo si no deja la parte fundacional de 008 antes de 004 y 005
-- [ ] T067 Ejecutar `pytest -k "stock"` sobre `tests/unit`, `tests/integration` y `tests/contract` con PostgreSQL y corregir cualquier fallo; no cerrar la feature con pruebas en rojo
+- [X] T067 Ejecutar `pytest -k "stock"` sobre `tests/unit`, `tests/integration` y `tests/contract` con PostgreSQL y corregir cualquier fallo; no cerrar la feature con pruebas en rojo
 - [ ] T068 Ejecutar `pytest --cov=stock` y revisar que cada rama de validación y cada excepción de `stock/services.py` tenga al menos una prueba
 - [ ] T069 Recorrer los escenarios de `quickstart.md` para CA-01…CA-07 y registrar el resultado; si un escenario falla, corregir la implementación o el documento antes de cerrar
 - [X] T070 Revisar `stock/models.py`, `stock/services.py` y `config/settings/base.py`: 008 no agrega dependencias nuevas ni modifica tablas de 004, 006, 007, 009, 010 u 011 fuera de lo previsto, y `StockTecnico` conserva `tenant` validado
@@ -244,6 +244,15 @@ la auditoría y encontrar 5 registros `Serie/estado`, un `StockTecnico/cantidad`
   `SolicitudAsignacion`, `LineaAsignacion` y `confirmar_solicitud`.
 - `calcular_reservado` devuelve `0` mientras la app `asignaciones` no exista; al implementar 006
   deberá adaptarse a su modelo/enum real.
+
+### Cierre 2026-11-20
+
+- Reconciliadas **38/70** tareas. La confirmación directa de 008, stock técnico/general, auditoría,
+  contrato de resultados y concurrencia ya tienen pruebas en `test_stock_confirmacion.py`,
+  `test_stock_concurrencia.py` y `test_stock_confirmacion_contrato.py`.
+- La suite completa queda en verde con 699 pruebas.
+- Quedan pruebas de reversión por auditoría/007, restricciones de base, rendimiento, aislamiento y
+  escenarios manuales; no son cambios de producto pendientes.
 
 ## Dependencias y orden de ejecución
 
