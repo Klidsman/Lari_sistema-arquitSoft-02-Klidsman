@@ -16,7 +16,7 @@
         <td>{{ solicitud.enviada_en|date:"Y-m-d H:i" }}</td>
         <td>{{ solicitud.tenant.codigo }}</td>
         <td>{{ solicitud.nifs_tecnicos }}</td>
-        <td>{{ solicitud.get_estado_display }}</td>
+        <td><span class="etiqueta etiqueta-{{ solicitud.estado|lower }}">{{ solicitud.get_estado_display }}</span></td>
         <td class="acciones"><a class="boton-accion" href="{% url 'detalle_almacen' solicitud.pk %}">Revisar</a></td>
       </tr>
     {% empty %}

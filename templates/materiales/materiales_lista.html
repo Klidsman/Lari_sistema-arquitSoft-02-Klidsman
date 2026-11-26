@@ -36,10 +36,15 @@
     <tbody>
       {% for material in materiales %}
         <tr>
-          <td>{{ material.codigo }}</td>
-          <td>{{ material.descripcion }}</td>
-          <td>{{ material.lote }}</td>
-          <td>{{ material.tipo }}</td>
+          <td><span class="codigo">{{ material.codigo }}</span></td>
+          <td><strong>{{ material.descripcion }}</strong></td>
+          <td>{{ material.lote|default:"—" }}</td>
+          <td>
+            <span class="badge-tipo badge-tipo--{{ material.tipo|lower }}">
+              <span class="badge-tipo__dot" aria-hidden="true"></span>
+              {{ material.tipo }}
+            </span>
+          </td>
           <td>{{ material.creado_por.email }}</td>
           <td>{{ material.creado_en|date:"Y-m-d H:i:s" }}</td>
           <td class="acciones">

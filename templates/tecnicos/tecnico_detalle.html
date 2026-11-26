@@ -41,11 +41,23 @@
       <tbody>
         {% for fila in stock %}
           <tr>
-            <td>{{ fila.material.codigo }}</td>
-            <td>{{ fila.material.descripcion }}</td>
+            <td><span class="codigo">{{ fila.material.codigo }}</span></td>
+            <td><strong>{{ fila.material.descripcion }}</strong></td>
             <td>{{ fila.material.lote|default:"—" }}</td>
-            <td>{{ fila.material.es_seriado|yesno:"Seriado,No seriado" }}</td>
-            <td>{{ fila.cantidad }}</td>
+            <td>
+              {% if fila.material.es_seriado %}
+                <span class="badge-tipo badge-tipo--seriado">
+                  <span class="badge-tipo__dot" aria-hidden="true"></span>
+                  Seriado
+                </span>
+              {% else %}
+                <span class="badge-tipo badge-tipo--no_seriado">
+                  <span class="badge-tipo__dot" aria-hidden="true"></span>
+                  No seriado
+                </span>
+              {% endif %}
+            </td>
+            <td class="columna-numero">{{ fila.cantidad }}</td>
           </tr>
         {% endfor %}
       </tbody>

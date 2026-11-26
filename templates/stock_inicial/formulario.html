@@ -3,6 +3,12 @@
 {% block title %}Stock inicial por formulario · Lari{% endblock %}
 
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'estado_stock_inicial' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a stock inicial</span>
+    </a>
+  </div>
   <h1>Cargar stock inicial por formulario</h1>
   <p class="mensaje">El stock inicial se carga una sola vez por tenant.</p>
 

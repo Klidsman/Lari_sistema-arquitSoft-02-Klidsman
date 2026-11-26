@@ -36,8 +36,9 @@
           <a href="{% url 'historial_orden' orden.pk %}">Ver historial</a>
         </p>
       </div>
-      <a class="boton boton-secundario" href="{% url 'registrar_materiales' %}?tecnico={{ tecnico.pk }}&periodo={{ periodo }}">
-        Volver a las órdenes
+      <a class="boton-volver" href="{% url 'registrar_materiales' %}?tecnico={{ tecnico.pk }}&periodo={{ periodo }}">
+        <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+        <span>Volver a las órdenes</span>
       </a>
     </div>
 

@@ -47,7 +47,13 @@
             <a href="{% url 'detalle_stock_tecnico' tecnico.pk %}">{{ tecnico.nombre }}</a>
           </td>
           <td class="mono">{{ tecnico.nif }}</td>
-          <td>{{ tecnico.activo|yesno:"Activo,Inactivo" }}</td>
+          <td>
+            {% if tecnico.activo %}
+              <span class="etiqueta etiqueta-activo">Activo</span>
+            {% else %}
+              <span class="etiqueta etiqueta-anulado">Inactivo</span>
+            {% endif %}
+          </td>
           <td class="columna-numero">{{ tecnico.materiales }}</td>
           <td class="columna-numero">{{ tecnico.unidades|default:0 }}</td>
           <td class="acciones">

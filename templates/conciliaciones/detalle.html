@@ -34,21 +34,21 @@
   <h2>Series en reporte, no en sistema</h2>
   <ul>
     {% for diferencia in detalle.series.en_reporte_no_sistema %}
-      <li>{{ diferencia.numero }} · {{ diferencia.tecnico.nif }} · {{ diferencia.material.codigo }}</li>
+      <li><span class="badge-serie">{{ diferencia.numero }}</span> · <span class="mono">{{ diferencia.tecnico.nif }}</span> · <span class="codigo">{{ diferencia.material.codigo }}</span></li>
     {% empty %}<li>Sin diferencias.</li>{% endfor %}
   </ul>
 
   <h2>Series en sistema, no en reporte</h2>
   <ul>
     {% for diferencia in detalle.series.en_sistema_no_reporte %}
-      <li>{{ diferencia.numero }} · {{ diferencia.tecnico.nif }} · {{ diferencia.material.codigo }}</li>
+      <li><span class="badge-serie">{{ diferencia.numero }}</span> · <span class="mono">{{ diferencia.tecnico.nif }}</span> · <span class="codigo">{{ diferencia.material.codigo }}</span></li>
     {% empty %}<li>Sin diferencias.</li>{% endfor %}
   </ul>
 
   <h2>Técnicos con inconsistencias (serie en otro técnico)</h2>
   <ul>
     {% for diferencia in detalle.series.en_otro_tecnico %}
-      <li>{{ diferencia.numero }} · reporte: {{ diferencia.tecnico.nif }} · sistema: {{ diferencia.tecnico_sistema.nif }}</li>
+      <li><span class="badge-serie">{{ diferencia.numero }}</span> · reporte: <span class="mono">{{ diferencia.tecnico.nif }}</span> · sistema: <span class="mono">{{ diferencia.tecnico_sistema.nif }}</span></li>
     {% empty %}<li>Sin diferencias.</li>{% endfor %}
   </ul>
 

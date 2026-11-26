@@ -55,11 +55,11 @@
         <tbody>
           {% for linea in resultado.lineas %}
             <tr>
-              <td>{{ linea.tecnico.nif }}</td>
-              <td>{{ linea.material.codigo }}</td>
-              <td>{{ linea.lote }}</td>
-              <td>{{ linea.serie|default:"—" }}</td>
-              <td>{{ linea.cantidad }}</td>
+              <td class="mono">{{ linea.tecnico.nif }}</td>
+              <td><span class="codigo">{{ linea.material.codigo }}</span></td>
+              <td><span class="lote">{{ linea.lote }}</span></td>
+              <td>{% if linea.serie %}<span class="badge-serie">{{ linea.serie }}</span>{% else %}—{% endif %}</td>
+              <td class="columna-numero"><strong>{{ linea.cantidad }}</strong></td>
             </tr>
           {% endfor %}
         </tbody>

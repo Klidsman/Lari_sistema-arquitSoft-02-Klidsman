@@ -25,7 +25,7 @@
           <td>{{ traspaso.forma }}</td>
           <td>{% for tecnico in traspaso.origenes %}{{ tecnico.nif }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
           <td>{% for tecnico in traspaso.destinos %}{{ tecnico.nif }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
-          <td>{{ traspaso.get_estado_display }}</td>
+          <td><span class="etiqueta etiqueta-{{ traspaso.estado|lower }}">{{ traspaso.get_estado_display }}</span></td>
           <td class="acciones"><a class="boton-accion" href="{% url 'detalle_traspaso' traspaso.pk %}">Ver</a></td>
         </tr>
       {% empty %}

@@ -31,7 +31,7 @@
           <td>{{ solicitud.pk }}</td>
           <td>{{ solicitud.fecha|date:"Y-m-d" }}</td>
           <td>{{ solicitud.nifs_tecnicos }}</td>
-          <td>{{ solicitud.get_estado_display }}</td>
+          <td><span class="etiqueta etiqueta-{{ solicitud.estado|lower }}">{{ solicitud.get_estado_display }}</span></td>
           <td>{{ solicitud.lineas.count }}</td>
           <td class="acciones">
             <a class="boton-accion" href="{% url 'detalle_asignacion' solicitud.pk %}">Ver</a>

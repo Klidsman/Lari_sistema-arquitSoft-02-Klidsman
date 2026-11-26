@@ -37,12 +37,18 @@
     <tbody>
       {% for linea in traspaso.lineas.all %}
         <tr>
-          <td>{{ linea.tecnico_origen.nif }}</td>
-          <td>{{ linea.tecnico_destino.nif }}</td>
-          <td>{{ linea.material.codigo }}</td>
-          <td>{{ linea.lote }}</td>
-          <td>{{ linea.serie.numero|default:"—" }}</td>
-          <td>{{ linea.cantidad }}</td>
+          <td><span class="mono">{{ linea.tecnico_origen.nif }}</span></td>
+          <td><span class="mono">{{ linea.tecnico_destino.nif }}</span></td>
+          <td><span class="codigo">{{ linea.material.codigo }}</span></td>
+          <td>{{ linea.lote|default:"—" }}</td>
+          <td>
+            {% if linea.serie %}
+              <span class="badge-serie">{{ linea.serie.numero }}</span>
+            {% else %}
+              <span class="badge-tipo badge-tipo--no_seriado"><span class="badge-tipo__dot" aria-hidden="true"></span>No seriado</span>
+            {% endif %}
+          </td>
+          <td class="columna-numero">{{ linea.cantidad }}</td>
         </tr>
       {% endfor %}
     </tbody>

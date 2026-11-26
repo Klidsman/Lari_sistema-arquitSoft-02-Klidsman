@@ -1293,3 +1293,237 @@ a.boton-secundario {
   outline: 3px solid var(--acento);
   outline-offset: 2px;
 }
+
+
+/* ==========================================================================
+   Tablas Coloridas y Modernas
+   ========================================================================== */
+
+.tabla,
+.vista-previa-series {
+  width: 100%;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.65rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--superficie);
+  box-shadow: var(--sombra-card);
+  overflow: hidden;
+}
+
+.tabla-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 0.65rem;
+  box-shadow: var(--sombra-card);
+}
+
+.tabla th,
+.vista-previa-series th {
+  padding: 0.8rem 1rem;
+  border-bottom: 2px solid #cbd5e1;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.tabla td,
+.vista-previa-series td {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #edf2f7;
+  font-size: 0.9375rem;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+}
+
+/* Filas alternadas suaves (Zebra) */
+.tabla tbody tr:nth-child(even),
+.vista-previa-series tbody tr:nth-child(even) {
+  background: #ffffff;
+}
+
+.tabla tbody tr:nth-child(odd),
+.vista-previa-series tbody tr:nth-child(odd) {
+  background: #fbfcfe;
+}
+
+/* Hover interactivo y colorido */
+.tabla tbody tr:hover,
+.vista-previa-series tbody tr:hover {
+  background: #f0f7ff !important;
+  transition: background-color 140ms ease;
+}
+
+.tabla tbody tr:first-child td,
+.vista-previa-series tbody tr:first-child td {
+  border-top: 0;
+}
+
+.tabla td strong {
+  color: #0f1c26;
+  font-weight: 600;
+}
+
+.tabla .columna-numero {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #0f1c26;
+}
+
+/* Badges para Códigos de Material y Series */
+.codigo,
+.mono,
+.badge-serie {
+  display: inline-block;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #1e3a5f;
+  background: #f1f5f9;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.35rem;
+  border: 1px solid #dbe2ea;
+  white-space: nowrap;
+}
+
+.badge-serie {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+/* ==========================================================================
+   Resaltado de Material SERIADO y NO SERIADO
+   ========================================================================== */
+
+.badge-tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 160ms ease;
+}
+
+.badge-tipo__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* SERIADO: Índigo / Púrpura eléctrico (equipos de alta trazabilidad como routers/ONTs) */
+.badge-tipo--seriado {
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+}
+
+.badge-tipo--seriado .badge-tipo__dot {
+  background: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.badge-tipo--seriado:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+  transform: scale(1.03);
+}
+
+/* NO SERIADO: Verde Esmeralda / Teal (material fungible / granel como cables o conectores) */
+.badge-tipo--no_seriado,
+.badge-tipo--no-seriado {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.badge-tipo--no_seriado .badge-tipo__dot,
+.badge-tipo--no-seriado .badge-tipo__dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+
+.badge-tipo--no_seriado:hover,
+.badge-tipo--no-seriado:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  transform: scale(1.03);
+}
+
+/* ==========================================================================
+   Etiquetas de Estado Coloridas
+   ========================================================================== */
+
+.etiqueta,
+.estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* Estados Positivos / Conformes (Verde) */
+.etiqueta,
+.etiqueta-activo,
+.etiqueta-registrado,
+.etiqueta-confirmado,
+.etiqueta-confirmada,
+.etiqueta-completada {
+  background: #edf7f0;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+/* Estados Negativos / Peligro / Alerta (Rojo) */
+.etiqueta-anulado,
+.etiqueta-anulada,
+.etiqueta-rechazado,
+.etiqueta-rechazada,
+.etiqueta-cancelado,
+.etiqueta-cancelada,
+.etiqueta-inactivo,
+.etiqueta-baja {
+  background: #fdf3f3;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+/* Estados de Revisión / Pendiente / Alerta (Ámbar) */
+.etiqueta-en_revision,
+.etiqueta-revision,
+.etiqueta-pendiente,
+.etiqueta-borrador {
+  background: #fef8ee;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+/* Estados de Tránsito / Enviado (Azul) */
+.etiqueta-enviada,
+.etiqueta-enviado,
+.etiqueta-transito {
+  background: #eff6ff;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}

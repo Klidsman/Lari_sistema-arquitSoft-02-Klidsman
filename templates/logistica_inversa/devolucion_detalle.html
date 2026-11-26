@@ -18,7 +18,12 @@
     <thead><tr><th>Serie</th><th>Material</th><th>Descripción</th><th>Lote</th></tr></thead>
     <tbody>
       {% for linea in lineas %}
-        <tr><td>{{ linea.serie.numero }}</td><td>{{ linea.material.codigo }}</td><td>{{ linea.descripcion }}</td><td>{{ linea.lote }}</td></tr>
+        <tr>
+          <td><span class="badge-serie">{{ linea.serie.numero }}</span></td>
+          <td><span class="codigo">{{ linea.material.codigo }}</span></td>
+          <td><strong>{{ linea.descripcion }}</strong></td>
+          <td>{{ linea.lote|default:"—" }}</td>
+        </tr>
       {% endfor %}
     </tbody>
   </table>
