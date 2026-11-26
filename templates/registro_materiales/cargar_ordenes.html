@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Cargar órdenes · Lari{% endblock %}
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'menu_registro_materiales' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver al menú de materiales</span>
+    </a>
+  </div>
   <h1>Cargar órdenes</h1>
   <form method="post" action="{% url 'cargar_ordenes' %}">
     {% csrf_token %}

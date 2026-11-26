@@ -3,6 +3,12 @@
 {% block title %}Solicitud {{ solicitud.pk }} · Almacén{% endblock %}
 
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'bandeja_almacen' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a la bandeja</span>
+    </a>
+  </div>
   <h1>Solicitud {{ solicitud.pk }}</h1>
 
   {% if envio_fallido %}
@@ -56,5 +62,5 @@
     </form>
   {% endif %}
 
-  <p><a href="{% url 'bandeja_almacen' %}">Volver a la bandeja</a></p>
+  
 {% endblock %}

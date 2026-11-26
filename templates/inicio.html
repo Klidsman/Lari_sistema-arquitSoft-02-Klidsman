@@ -1,229 +1,444 @@
 {% extends "base.html" %}
 
 {% block title %}Inicio · Lari{% endblock %}
+{% block migas_seccion %}Panel Principal{% endblock %}
 
 {% block contenido %}
   <div class="inicio">
-    <header class="inicio-cabecera">
-      <h1>Inicio</h1>
-      <p class="inicio-sesion">
-        {{ request.usuario.email }}
-        <span aria-hidden="true">·</span>
-        {{ request.usuario.get_rol_display }}
-      </p>
+    <!-- Hero operativo moderno y ejecutivo -->
+    <header class="inicio-hero">
+      <div class="inicio-hero__info">
+        <span class="inicio-hero__pill">
+          <span class="inicio-hero__dot" aria-hidden="true"></span>
+          Sistema Operativo Activo
+        </span>
+        <h1 class="inicio-hero__titulo">Centro de Control de Materiales</h1>
+        <p class="inicio-hero__desc">
+          Supervisión integral de asignaciones, custodia técnica, trazabilidad por series y cuadre de inventario.
+        </p>
+      </div>
+
+      <div class="inicio-hero__meta">
+        <div class="inicio-meta-card">
+          <span class="inicio-meta-card__etiqueta">Usuario</span>
+          <strong class="inicio-meta-card__valor inicio-email">{{ request.usuario.email }}</strong>
+        </div>
+        <div class="inicio-meta-card">
+          <span class="inicio-meta-card__etiqueta">Rol</span>
+          <strong class="inicio-meta-card__valor inicio-rol">{{ request.usuario.get_rol_display }}</strong>
+        </div>
+        <div class="inicio-meta-card">
+          <span class="inicio-meta-card__etiqueta">Seguridad</span>
+          <strong class="inicio-meta-card__valor">Aislamiento Multitenant / RLS</strong>
+        </div>
+      </div>
     </header>
 
-    <section class="inicio-panel" aria-labelledby="accesos-titulo">
-      <header class="inicio-panel__cabecera">
-        <h2 id="accesos-titulo">Accesos rápidos</h2>
-      </header>
+    {% if request.rol == "USUARIO_TENANT" %}
+      <!-- Grupo 1: Operaciones de Campo -->
+      <section class="inicio-seccion" aria-labelledby="grupo-campo-titulo">
+        <div class="inicio-seccion__cabecera">
+          <div class="inicio-seccion__titulo-wrap">
+            <h2 id="grupo-campo-titulo" class="inicio-seccion__titulo">
+              <svg class="icono" aria-hidden="true"><use href="#i-recojo"></use></svg>
+              Operación y Movimientos de Campo
+            </h2>
+            <p class="inicio-seccion__subtitulo">Gestión de transferencias, ingresos de material y retornos técnicos.</p>
+          </div>
+          <span class="inicio-seccion__badge">5 Flujos</span>
+        </div>
 
-      <ul class="accesos">
-        {% if request.rol == "USUARIO_TENANT" %}
+        <ul class="accesos-grid">
           <li>
-            <a class="acceso" href="{% url 'listar_materiales' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-material"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Materiales</span>
-                <span class="acceso__desc">Catálogo compartido y habilitación</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'lista_recojos' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-recojo"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--entrada">Entrada</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Recojos</strong>
+                <p class="acceso-card__desc">Ingreso y recepción de materiales al almacén general.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Gestionar recojos</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'listar_tecnicos' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-tecnicos"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Técnicos</span>
-                <span class="acceso__desc">Padrón del tenant y custodia</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'lista_asignaciones' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-asignacion"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--salida">Salida</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Asignaciones</strong>
+                <p class="acceso-card__desc">Solicitudes de dotación y reserva de series para técnicos.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Ver solicitudes</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'lista_recojos' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-recojo"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Recojos</span>
-                <span class="acceso__desc">Ingreso de materiales al almacén</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'lista_traspasos' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-traspaso"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--traspaso">Transferencia</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Traspasos</strong>
+                <p class="acceso-card__desc">Intercambio de custodia de stock entre técnicos de campo.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Registrar traspaso</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'estado_stock_inicial' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-stock"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Stock inicial</span>
-                <span class="acceso__desc">Carga y ajuste por técnico</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'lista_devoluciones' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-devolucion"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--retorno">Logística</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Devoluciones</strong>
+                <p class="acceso-card__desc">Retorno y reingreso de series sobrantes al almacén.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Ver devoluciones</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'stock_actual_tecnicos' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-inventario"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Stock actual</span>
-                <span class="acceso__desc">Custodia vigente por técnico</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'lista_bajas' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-baja"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--baja">Bajas</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Bajas</strong>
+                <p class="acceso-card__desc">Equipos dañados o dados de baja fuera de operación.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Tramitar bajas</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Grupo 2: Inventario, Técnicos y Custodia -->
+      <section class="inicio-seccion" aria-labelledby="grupo-inventario-titulo">
+        <div class="inicio-seccion__cabecera">
+          <div class="inicio-seccion__titulo-wrap">
+            <h2 id="grupo-inventario-titulo" class="inicio-seccion__titulo">
+              <svg class="icono" aria-hidden="true"><use href="#i-inventario"></use></svg>
+              Inventario, Técnicos y Custodia
+            </h2>
+            <p class="inicio-seccion__subtitulo">Control de existencias vigentes, catálogo de materiales y padrón de técnicos.</p>
+          </div>
+          <span class="inicio-seccion__badge">4 Módulos</span>
+        </div>
+
+        <ul class="accesos-grid">
+          <li>
+            <a class="acceso-card" href="{% url 'stock_actual_tecnicos' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-inventario"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--stock">Stock en Vivo</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Stock actual</strong>
+                <p class="acceso-card__desc">Custodia vigente y materiales disponibles por cada técnico.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Consultar stock</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'lista_asignaciones' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-asignacion"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Asignaciones</span>
-                <span class="acceso__desc">Solicitudes y reserva de series</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'listar_tecnicos' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-tecnicos"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--info">Padrón</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Técnicos</strong>
+                <p class="acceso-card__desc">Padrón de técnicos del tenant, estados y asignación.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Listar técnicos</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'lista_traspasos' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-traspaso"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Traspasos</span>
-                <span class="acceso__desc">Custodia entre técnicos</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'listar_materiales' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-material"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--info">Catálogo</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Materiales</strong>
+                <p class="acceso-card__desc">Catálogo compartido, habilitación y clasificación de códigos.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Ver catálogo</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'lista_devoluciones' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-devolucion"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Devoluciones</span>
-                <span class="acceso__desc">Retorno de series al almacén</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'estado_stock_inicial' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-stock"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--neutro">Apertura</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Stock inicial</strong>
+                <p class="acceso-card__desc">Carga masiva por Excel y ajuste inicial por técnico.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Revisar carga</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Grupo 3: Cierre Mensual, Liquidación y Reportes -->
+      <section class="inicio-seccion" aria-labelledby="grupo-cierre-titulo">
+        <div class="inicio-seccion__cabecera">
+          <div class="inicio-seccion__titulo-wrap">
+            <h2 id="grupo-cierre-titulo" class="inicio-seccion__titulo">
+              <svg class="icono" aria-hidden="true"><use href="#i-registro"></use></svg>
+              Liquidación, Cierre y Auditoría
+            </h2>
+            <p class="inicio-seccion__subtitulo">Liquidación de órdenes de trabajo, cálculo de uso mensual y reportes de corte.</p>
+          </div>
+          <span class="inicio-seccion__badge">2 Módulos</span>
+        </div>
+
+        <ul class="accesos-grid">
+          <li>
+            <a class="acceso-card acceso-card--destacado" href="{% url 'menu_registro_materiales' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-registro"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--destacado">Cierre Mensual</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Registro de materiales</strong>
+                <p class="acceso-card__desc">Carga de órdenes, consumo de materiales y cierre de mes con checklist.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Entrar al módulo</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'lista_bajas' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-baja"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Bajas</span>
-                <span class="acceso__desc">Equipos fuera de operación</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'lista_cortes' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-reportes"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--info">Exportaciones</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Reportes</strong>
+                <p class="acceso-card__desc">Generación de cortes periódicos y descargas en Excel/CSV.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Ver cortes</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
+            </a>
+          </li>
+        </ul>
+      </section>
+
+    {% elif request.rol == "RESPONSABLE_ALMACEN" %}
+      <!-- Almacén -->
+      <section class="inicio-seccion" aria-labelledby="grupo-almacen-titulo">
+        <div class="inicio-seccion__cabecera">
+          <div class="inicio-seccion__titulo-wrap">
+            <h2 id="grupo-almacen-titulo" class="inicio-seccion__titulo">
+              <svg class="icono" aria-hidden="true"><use href="#i-bandeja"></use></svg>
+              Gestión de Almacén y Despachos
+            </h2>
+            <p class="inicio-seccion__subtitulo">Revisión de solicitudes pendientes de despacho y confirmación de movimientos.</p>
+          </div>
+        </div>
+
+        <ul class="accesos-grid">
+          <li>
+            <a class="acceso-card acceso-card--destacado" href="{% url 'bandeja_almacen' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-bandeja"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--entrada">Despachos</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Bandeja de despachos</strong>
+                <p class="acceso-card__desc">Solicitudes enviadas por los tenants listas para entrega física.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Abrir bandeja</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'menu_registro_materiales' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-registro"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Registro de materiales</span>
-                <span class="acceso__desc">Órdenes, usos y cierre mensual</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'bandeja_traspasos' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-traspaso"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--traspaso">Confirmación</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Traspasos del almacén</strong>
+                <p class="acceso-card__desc">Confirmación y control de movimientos entre técnicos.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Ver traspasos</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'lista_cortes' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-reportes"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Reportes</span>
-                <span class="acceso__desc">Cortes y exportaciones</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'listar_materiales' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-material"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--info">Catálogo</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Materiales</strong>
+                <p class="acceso-card__desc">Consulta general del catálogo de materiales homologados.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Ver catálogo</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
-        {% elif request.rol == "RESPONSABLE_ALMACEN" %}
+        </ul>
+      </section>
+
+    {% elif request.rol == "ADMIN_PLATAFORMA" %}
+      <!-- Admin Plataforma -->
+      <section class="inicio-seccion" aria-labelledby="grupo-admin-titulo">
+        <div class="inicio-seccion__cabecera">
+          <div class="inicio-seccion__titulo-wrap">
+            <h2 id="grupo-admin-titulo" class="inicio-seccion__titulo">
+              <svg class="icono" aria-hidden="true"><use href="#i-cuentas"></use></svg>
+              Administración de Plataforma y Seguridad
+            </h2>
+            <p class="inicio-seccion__subtitulo">Gobierno de tenants, estructura territorial y cuentas de acceso.</p>
+          </div>
+        </div>
+
+        <ul class="accesos-grid">
           <li>
-            <a class="acceso" href="{% url 'bandeja_almacen' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-bandeja"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Bandeja de despachos</span>
-                <span class="acceso__desc">Solicitudes enviadas por los tenants</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
-            </a>
-          </li>
-          <li>
-            <a class="acceso" href="{% url 'bandeja_traspasos' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-traspaso"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Traspasos del almacén</span>
-                <span class="acceso__desc">Confirmación de movimientos entre técnicos</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
-            </a>
-          </li>
-          <li>
-            <a class="acceso" href="{% url 'listar_materiales' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-material"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Materiales</span>
-                <span class="acceso__desc">Catálogo compartido</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
-            </a>
-          </li>
-        {% elif request.rol == "ADMIN_PLATAFORMA" %}
-          <li>
-            <a class="acceso" href="{% url 'listar_regiones' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-regiones"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Regiones</span>
-                <span class="acceso__desc">Cobertura y almacenes</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'listar_tenants' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-tenants"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--destacado">Contratas</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Tenants</strong>
+                <p class="acceso-card__desc">Gestión de empresas contratistas, activación y configuración.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Administrar tenants</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'listar_tenants' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-tenants"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Tenants</span>
-                <span class="acceso__desc">Cuentas y estado de operación</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'listar_regiones' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-regiones"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--info">Territorio</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Regiones</strong>
+                <p class="acceso-card__desc">Zonas geográficas y vinculación con almacenes centrales.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Ver regiones</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'listar_cuentas' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-cuentas"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Administración de cuentas</span>
-                <span class="acceso__desc">Altas, roles y accesos</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'listar_cuentas' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-cuentas"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--neutro">Seguridad</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Administración de cuentas</strong>
+                <p class="acceso-card__desc">Altas de usuarios, roles operativos y control de 2FA.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Gestionar cuentas</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'auditoria_acceso' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-auditoria"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Auditoría</span>
-                <span class="acceso__desc">Trazabilidad de accesos</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'auditoria_acceso' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-auditoria"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--retorno">Trazabilidad</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Auditoría</strong>
+                <p class="acceso-card__desc">Registro inmutable de accesos, cambios de rol y eventos de seguridad.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Consultar logs</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'listar_materiales' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-material"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Materiales</span>
-                <span class="acceso__desc">Catálogo compartido</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'listar_materiales' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-material"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--info">Catálogo</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Materiales</strong>
+                <p class="acceso-card__desc">Altas, ediciones y estandarización del catálogo global.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Editar catálogo</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
           <li>
-            <a class="acceso" href="{% url 'lista_cortes' %}">
-              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-reportes"></use></svg></span>
-              <span class="acceso__texto">
-                <span class="acceso__titulo">Reportes</span>
-                <span class="acceso__desc">Cortes y exportaciones</span>
-              </span>
-              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            <a class="acceso-card" href="{% url 'lista_cortes' %}">
+              <div class="acceso-card__cabecera">
+                <span class="acceso-card__icono"><svg class="icono" aria-hidden="true"><use href="#i-reportes"></use></svg></span>
+                <span class="acceso-card__tag acceso-card__tag--info">Reportes</span>
+              </div>
+              <div class="acceso-card__cuerpo">
+                <strong class="acceso-card__titulo">Reportes</strong>
+                <p class="acceso-card__desc">Métricas consolidadas a nivel plataforma y auditoría.</p>
+              </div>
+              <div class="acceso-card__pie">
+                <span class="acceso-card__accion-texto">Ver reportes</span>
+                <span class="acceso-card__flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"></use></svg></span>
+              </div>
             </a>
           </li>
-        {% endif %}
-      </ul>
-    </section>
+        </ul>
+      </section>
+    {% endif %}
   </div>
 {% endblock %}

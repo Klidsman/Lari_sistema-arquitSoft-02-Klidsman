@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Órdenes pendientes · Lari{% endblock %}
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'menu_registro_materiales' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver al menú de materiales</span>
+    </a>
+  </div>
   <h1>Órdenes pendientes</h1>
   <form method="get" class="buscador">
     <label>Periodo <input type="month" name="periodo" value="{{ periodo }}"></label>

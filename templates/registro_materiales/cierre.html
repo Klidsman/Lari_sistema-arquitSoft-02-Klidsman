@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Cierre mensual · Lari{% endblock %}
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'menu_registro_materiales' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver al menú de materiales</span>
+    </a>
+  </div>
   <h1>Cierre mensual · {{ periodo }}</h1>
   <p>Estado: {% if estado %}{{ estado.get_estado_display }} (versión {{ estado.version }}){% else %}Abierto{% endif %}</p>
   {% if estado and estado.estado == "CERRADO" %}

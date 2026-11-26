@@ -3,6 +3,12 @@
 {% block title %}Solicitud {{ solicitud.pk }} · Lari{% endblock %}
 
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'lista_asignaciones' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a asignaciones</span>
+    </a>
+  </div>
   <h1>Solicitud {{ solicitud.pk }}</h1>
 
   {% if envio_fallido %}
@@ -70,5 +76,5 @@
     </form>
   {% endif %}
 
-  <p><a href="{% url 'lista_asignaciones' %}">Volver</a></p>
+  
 {% endblock %}

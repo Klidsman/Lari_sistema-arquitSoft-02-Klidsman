@@ -3,6 +3,12 @@
 {% block title %}Técnico {{ tecnico.nif }} · Lari{% endblock %}
 
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'listar_tecnicos' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a técnicos</span>
+    </a>
+  </div>
   <h1>Técnico {{ tecnico.nif }}</h1>
 
   <dl class="detalle">
@@ -69,5 +75,5 @@
     </form>
   {% endif %}
 
-  <p><a href="{% url 'listar_tecnicos' %}">Volver al listado</a></p>
+  
 {% endblock %}

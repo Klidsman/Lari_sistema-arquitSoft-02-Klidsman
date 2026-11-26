@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Conciliación {{ conciliacion.pk }} · Lari{% endblock %}
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'lista_conciliaciones' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a conciliaciones</span>
+    </a>
+  </div>
   <h1>Conciliación {{ conciliacion.pk }}</h1>
   {% if conciliacion.requiere_revision %}
     <p class="mensaje mensaje-aviso">Hubo cambios en el stock. Revise de nuevo antes de aprobar.</p>

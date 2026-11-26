@@ -354,6 +354,9 @@ El movimiento es funcional, breve y con una sola intención por superficie. No h
 
 El sistema cubre el shell autenticado (sidebar, topbar, drawer móvil), los componentes de contenido (tabla, buscador, paginación, botones, formularios, etiquetas, detalle, mensajes y estados vacíos), las dos pantallas compuestas (recojos y asignación) y la superficie de acceso. Lo que aún no tiene regla propia —fragmentos de búsqueda y bloques internos de asignación— se enumera en *Drift conocido*.
 
+### Botón Volver
+`.boton-volver` es el botón de retorno de las pantallas de detalle. Se alinea a la **derecha**, en la esquina superior del contenido, dentro de `.cabecera-volver`; usa forma pill, filete de 1 px, icono `i-volver` y texto «Volver a …». En móvil conserva la alineación derecha y no se solapa con el título.
+
 ### Buttons
 - **Shape:** `0.4rem` de radio y borde de 1 px.
 - **Neutral:** fondo Hoja, texto Grafito, `0.45rem 0.8rem`, altura mínima `2.25rem`. Es el botón por defecto de filtros y acciones secundarias.

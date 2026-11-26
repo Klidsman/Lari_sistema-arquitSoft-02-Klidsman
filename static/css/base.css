@@ -4,16 +4,46 @@
   --texto: #1f2933;
   --borde: #d9dee5;
   --acento: #1f5f8b;
+  --acento-hundido: #18496b;
   --acento-tenue: #e7eff6;
   --error: #a4262c;
   --error-tenue: #fdf3f3;
   --exito: #256b3b;
+  --exito-tenue: #edf7f0;
+  --alerta: #8a5a00;
+  --alerta-tenue: #fdf8ec;
   --superficie: #ffffff;
   --superficie-alt: #f0f2f5;
   --hoja-hover: #fafbfc;
   --texto-tenue: #52606d;
   --sobre-tapa: #ffffff;
   --sobre-tapa-apagado: #7f93a5;
+
+  /* Elevaciones sutiles y profesionales */
+  --sombra-sm: 0 1px 2px 0 rgba(15, 28, 38, 0.04);
+  --sombra-card: 0 1px 3px 0 rgba(15, 28, 38, 0.05), 0 1px 2px -1px rgba(15, 28, 38, 0.03);
+  --sombra-hover: 0 6px 16px -2px rgba(15, 28, 38, 0.08), 0 2px 4px -1px rgba(15, 28, 38, 0.04);
+  --sombra-dropdown: 0 10px 25px -4px rgba(15, 28, 38, 0.12), 0 4px 6px -2px rgba(15, 28, 38, 0.05);
+
+  /* Transiciones fluidas */
+  --trans-rapida: 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  --trans-suave: 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Scrollbars modernos y discretos */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd2d9;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9aa5b1;
 }
 
 ::selection {
@@ -29,8 +59,11 @@ body {
   margin: 0;
   background: var(--fondo);
   color: var(--texto);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 .cabecera {

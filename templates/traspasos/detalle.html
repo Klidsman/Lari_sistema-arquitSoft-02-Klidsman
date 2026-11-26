@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Traspaso {{ traspaso.pk }} · Lari{% endblock %}
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'lista_traspasos' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a traspasos</span>
+    </a>
+  </div>
   <h1>Traspaso {{ traspaso.pk }}</h1>
   <dl class="detalle">
     <dt>Forma</dt><dd>{{ traspaso.forma }}</dd>

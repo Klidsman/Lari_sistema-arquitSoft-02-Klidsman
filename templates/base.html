@@ -8,9 +8,9 @@
   <title>{% block title %}Lari · Control de materiales{% endblock %}</title>
   <link rel="icon" href="{% static 'img/marca.svg' %}" type="image/svg+xml">
   <meta name="theme-color" content="#0f1c26">
-  <link rel="stylesheet" href="{% static 'css/base.css' %}?v=10">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}?v=11">
   {% if request.user.is_authenticated %}
-    <link rel="stylesheet" href="{% static 'css/shell.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/shell.css' %}?v=4">
     <noscript>
       <style>
         .shell-sidebar { position: static !important; transform: none !important; width: auto !important; height: auto !important; }
@@ -18,7 +18,7 @@
       </style>
     </noscript>
   {% endif %}
-  <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=7">
+  <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=10">
   <script src="{% static 'js/htmx.min.js' %}?v=2.0.4" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
@@ -91,18 +91,32 @@
           <span>Menú</span>
         </button>
 
-        <p class="shell-usuario">
-          <span class="shell-email">{{ request.usuario.email }}</span>
-          <span class="shell-rol">{{ request.usuario.get_rol_display }}</span>
-        </p>
+        <div class="shell-migas">
+          <span class="shell-migas__marca">Lari</span>
+          <span class="shell-migas__sep" aria-hidden="true">/</span>
+          <span class="shell-migas__seccion">{% block migas_seccion %}Gestión Operativa{% endblock %}</span>
+        </div>
 
-        <form method="post" action="{% url 'logout' %}" class="shell-salir">
-          {% csrf_token %}
-          <button type="submit" class="shell-boton-salir">
-            <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-salir"></use></svg>
-            <span>Cerrar sesión</span>
-          </button>
-        </form>
+        <div class="shell-topbar__acciones">
+          <div class="shell-usuario">
+            <span class="shell-avatar" aria-hidden="true">{{ request.usuario.email|slice:":2"|upper }}</span>
+            <div class="shell-usuario__info">
+              <span class="shell-email" title="{{ request.usuario.email }}">{{ request.usuario.email }}</span>
+              <span class="shell-rol">
+                <span class="shell-rol__dot" aria-hidden="true"></span>
+                {{ request.usuario.get_rol_display }}
+              </span>
+            </div>
+          </div>
+
+          <form method="post" action="{% url 'logout' %}" class="shell-salir">
+            {% csrf_token %}
+            <button type="submit" class="shell-boton-salir" title="Cerrar sesión">
+              <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-salir"></use></svg>
+              <span>Salir</span>
+            </button>
+          </form>
+        </div>
       </header>
 {% else %}
   <header class="cabecera">

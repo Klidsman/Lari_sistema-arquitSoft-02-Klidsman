@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Corte {{ corte.anio }}-{{ corte.mes }} · Lari{% endblock %}
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'lista_cortes' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a reportes</span>
+    </a>
+  </div>
   <h1>Corte {{ corte.anio }}-{{ corte.mes|stringformat:"02d" }} · {{ detalle.alcance }}</h1>
   <dl class="detalle">
     <dt>Versión</dt><dd>{{ corte.version }}</dd>

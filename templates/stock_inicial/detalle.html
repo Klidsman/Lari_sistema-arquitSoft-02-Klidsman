@@ -3,6 +3,12 @@
 {% block title %}Detalle stock inicial · Lari{% endblock %}
 
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'estado_stock_inicial' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a stock inicial</span>
+    </a>
+  </div>
   <h1>Stock inicial</h1>
 
   <dl class="detalle">
@@ -39,6 +45,6 @@
 
   <p>
     <a href="{% url 'editar_stock_inicial' carga.pk %}">Editar stock inicial</a>
-    <a href="{% url 'estado_stock_inicial' %}">Volver</a>
+    
   </p>
 {% endblock %}

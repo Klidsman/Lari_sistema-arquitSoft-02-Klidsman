@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Devolución {{ devolucion.pk }} · Lari{% endblock %}
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'lista_devoluciones' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a devoluciones</span>
+    </a>
+  </div>
   <h1>Devolución {{ devolucion.pk }}</h1>
   <dl class="detalle">
     <dt>Técnico</dt><dd>{{ devolucion.tecnico.nif }} - {{ devolucion.tecnico.nombre }}</dd>

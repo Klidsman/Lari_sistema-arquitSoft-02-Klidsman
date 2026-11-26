@@ -3,6 +3,12 @@
 {% block title %}Tenant {{ tenant.codigo }} · Lari{% endblock %}
 
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'listar_tenants' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a tenants</span>
+    </a>
+  </div>
   <h1>Tenant {{ tenant.codigo }}</h1>
 
   <dl class="detalle">
@@ -52,5 +58,5 @@
     </form>
   {% endif %}
 
-  <p><a href="{% url 'listar_tenants' %}">Volver al listado</a></p>
+  
 {% endblock %}
