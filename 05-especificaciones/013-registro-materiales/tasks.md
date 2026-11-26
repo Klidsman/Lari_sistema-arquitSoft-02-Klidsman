@@ -95,7 +95,8 @@ Proyecto Django único en la raíz: app `registro_materiales/`, plantillas en
 `templates/registro_materiales/`, pruebas en `tests/{unit,integration,contract}/`. Las apps `acceso`,
 `tenants`, `auditoria`, `materiales` y `tecnicos` son propiedad de sus specs. 013 **no** crea tablas de
 materiales, técnicos, stock, series ni conciliación; **no** modifica `DespachoAlmacen` ni registra
-despachos desde materiales; **no** usa permisos Django por cadena.
+despachos desde materiales; **sí** descuenta `StockTecnico` mediante movimientos `CONSUMO` al registrar
+usos; **no** usa permisos Django por cadena.
 
 ---
 
@@ -284,7 +285,7 @@ motivo.
 - [ ] T069 [P] Ejecutar `pytest --cov=registro_materiales tests/unit tests/integration tests/contract` y revisar cobertura de servicios
 - [X] T070 [P] Probar en `tests/integration/test_concurrencia.py` la concurrencia: doble carga, doble guardado de uso, dos cierres y dos reaperturas
 - [X] T071 Probar en `tests/integration/test_concurrencia.py` el rendimiento: 100 materiales, 1 000 órdenes y 5 000 usos sin N+1
-- [X] T072 [P] Revisar `registro_materiales/services.py` y `registro_materiales/dashboard.py`: sin escrituras a stock, series, asignaciones, traspasos ni conciliaciones
+- [X] T072 [P] Revisar `registro_materiales/services.py` y `registro_materiales/dashboard.py`: escrituras a `StockTecnico` solo mediante movimientos `CONSUMO`; sin tocar `StockGeneral`, asignaciones, traspasos ni conciliaciones
 - [X] T073 [P] Revisar `registro_materiales/models.py` y `registro_materiales/services.py`: no se crea otra tabla de despachos y `DespachoAlmacen` es de solo lectura
 - [X] T074 [P] Revisar `registro_materiales/migrations/`: RLS, restricciones e índices
 - [X] T075 [P] Actualizar `05-especificaciones/013-registro-materiales/quickstart.md` y `03-reglas-de-dominio/registro-materiales.md` con el flujo final
@@ -371,4 +372,4 @@ secuenciarse por ser archivos de alta contención.
 - No se duplica `DespachoAlmacen`.
 - No se acepta `tenant_id` del cliente.
 - No se borran datos, salvo deshacer una carga sin materiales.
-- No se toca stock, series, asignaciones, traspasos ni conciliaciones.
+- El consumo descuenta `StockTecnico` con movimientos `CONSUMO`; no se toca `StockGeneral`, asignaciones, traspasos ni conciliaciones.

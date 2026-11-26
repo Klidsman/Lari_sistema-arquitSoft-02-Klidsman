@@ -8,6 +8,7 @@ from registro_materiales.models import (
     CierreMensual,
     MaterialHabilitado,
     OrdenLiquidacion,
+    UsoMaterialSerie,
 )
 from registro_materiales.services import (
     buscar_orden,
@@ -51,6 +52,7 @@ def test_rls_activa_en_tablas_de_registro():
         OrdenLiquidacion._meta.db_table,
         MaterialHabilitado._meta.db_table,
         CierreMensual._meta.db_table,
+        UsoMaterialSerie._meta.db_table,
     ]
     with connection.cursor() as cursor:
         for tabla in tablas:
