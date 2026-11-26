@@ -59,14 +59,13 @@ erDiagram
         bigint region_id FK "nullable"
         boolean is_active
         int version_sesion
-        varchar secreto_totp
-        boolean segundo_factor_habilitado
         datetime date_joined
         datetime last_login
     }
     INVITACION {
         bigint id PK
         bigint usuario_id FK
+        varchar tipo
         varchar token_hash UK
         varchar correo
         datetime expira_en
@@ -211,8 +210,6 @@ Identidad de acceso con un rol y un alcance.
 | `region` | FK `Region` | Sí | `PROTECT`, `related_name="usuarios"`; solo para `RESPONSABLE_ALMACEN` |
 | `is_active` | `BooleanField` | No | `False` hasta aceptar la invitación |
 | `version_sesion` | `PositiveIntegerField` | No | Por defecto `0`; se incrementa al revocar sesiones |
-| `secreto_totp` | `CharField(255)` | Sí | Secreto TOTP cifrado con Fernet; nunca en auditoría |
-| `segundo_factor_habilitado` | `BooleanField` | No | Por defecto `False` |
 | `date_joined` | `DateTimeField` | No | Heredado de `AbstractUser` |
 | `last_login` | `DateTimeField` | Sí | Heredado de `AbstractUser` |
 
@@ -241,7 +238,7 @@ inactiva ── reactivar_cuenta (Admin) ──▶ activa
 - El correo es único y es el identificador de inicio de sesión.
 - Una cuenta pertenece a un tenant, a una región o a ninguno, nunca a ambos.
 - La cuenta del tenant es única por tenant.
-- Segundo factor obligatorio para `ADMIN_PLATAFORMA` y `RESPONSABLE_ALMACEN`.
+- El acceso usa solo correo y contraseña, sin segundo factor.
 - El Administrador de plataforma no tiene tenant ni región y no opera inventario.
 
 ---
@@ -304,7 +301,7 @@ Libro de auditoría de solo inserción.
 - Solo `INSERT`; nunca `UPDATE` ni `DELETE`.
 - Se escribe en la misma transacción que el cambio; si el cambio falla, no se audita.
 - Un registro por campo modificado.
-- Nunca almacena contraseñas, tokens de invitación ni secretos TOTP.
+- Nunca almacena contraseñas ni tokens de invitación.
 - `tenant` se puebla desde la entidad auditada o el actor; si la acción es global (por ejemplo,
   administración de regiones), queda nulo.
 - Índice recomendado: `(entidad, entidad_id)`, `(usuario, fecha)` y `(tenant, fecha)`.
@@ -325,7 +322,6 @@ Libro de auditoría de solo inserción.
 | Rol permitido | Choices | Sí | Sí | No puedes asignar ese rol |
 | Rol de tenant inmutable | Choices | Sí | — | La cuenta del tenant no cambia de rol |
 | Invitación vigente | Índice | Sí | — | La invitación venció o ya fue usada |
-| Segundo factor | — | Servicio de autenticación | Sí | Debes completar el segundo factor |
 | Cuenta activa | `is_active` | Middleware y servicio | — | La cuenta está desactivada |
 | Tenant activo | `estado` | Middleware y servicio | — | El tenant está suspendido |
 | Buzón válido | `EmailField` | Sí | Sí | El buzón no es válido |

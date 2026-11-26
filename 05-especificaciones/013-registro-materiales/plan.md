@@ -11,17 +11,18 @@ Mejorar el módulo **013 Registro de Materiales** para que el tenant cargue órd
 registre el material usado por orden y controle el saldo mensual:
 
 ```text
-disponible = saldo inicial + despachos del almacén
+disponible = saldo inicial + asignaciones confirmadas del almacén
 saldo final = disponible − material usado en órdenes
 ```
 
-Los despachos ya existen en `DespachoAlmacen` dentro de 013 y son la única fuente de entradas; no se
+Las asignaciones confirmadas por el almacén son la única fuente de entradas; no se
 registran de nuevo desde la pantalla de materiales. El módulo agrega bloqueo de saldos negativos,
 advertencias por cantidades atípicas, panel de pendientes, dashboard, cierre mensual con checklist,
 reapertura con motivo y exportación a Excel/CSV.
 
-Es independiente de la conciliación del Excel del almacén y no modifica stock, series, asignaciones,
-traspasos ni recojos.
+Descuenta el stock del técnico al registrar el consumo mediante movimientos `CONSUMO`; en materiales
+seriados registra las series usadas y las pasa a `INSTALADA`. No modifica `StockGeneral`, no toca
+asignaciones, traspasos ni recojos, y la conciliación del Excel del almacén queda retirada del flujo.
 
 ## Technical Context
 
@@ -32,9 +33,9 @@ traspasos ni recojos.
 | Base de datos | PostgreSQL 16+; sin SQLite, tampoco en pruebas |
 | Interfaz | Django + HTMX; carga masiva, materiales, entradas, dashboard, cierre y exportación |
 | App | `registro_materiales` (013) |
-| Catálogo | `materiales.Material`; habilitación por tenant |
-| Despachos | `DespachoAlmacen` existente en 013; solo lectura para el cálculo |
-| Stock | **No se lee ni se modifica** |
+| Catálogo | `materiales.Material`; los materiales visibles salen de `StockTecnico` |
+| Asignaciones confirmadas | `LineaAsignacion` de solicitudes `CONFIRMADA`; solo lectura para el cálculo |
+| Stock | **Descuenta `StockTecnico`; no toca `StockGeneral`** |
 | Conciliación | **No se lee, genera ni modifica** |
 | Saldo | Inicial manual o heredado del cierre anterior |
 | Bloqueo | Uso que dejaría saldo negativo se rechaza |
@@ -51,7 +52,7 @@ traspasos ni recojos.
   `auditoria.RegistroCambio` con `tenant`.
 - **002**: `materiales.Material` con `codigo`, `descripcion`, `lote` y `es_seriado`.
 - **003**: `tecnicos.Tecnico` con `tenant`, `nif` y `activo`.
-- **013 base**: `MaterialHabilitado`, `SaldoInicialPeriodo`, `DespachoAlmacen`,
+- **013 base histórica**: `MaterialHabilitado`, `SaldoInicialPeriodo`, `DespachoAlmacen`,
   `OrdenLiquidacion` y `UsoMaterialOrden` existentes o creados una sola vez en este módulo.
 - **Infraestructura**: PostgreSQL con rol sin `SUPERUSER` ni `BYPASSRLS`.
 
@@ -73,15 +74,16 @@ Si falta cualquiera, la implementación se detiene y se reporta.
 |---|---|---|
 | I. Aislamiento multitenant (NO NEGOCIABLE) | PASA | Todas las tablas llevan `tenant`; las consultas filtran por la sesión; un dato ajeno se trata como inexistente. RLS como respaldo. |
 | II. Jerarquía Región → Tenant → Técnico | PASA | Solo `USUARIO_TENANT` opera el módulo; técnicos y materiales se validan contra el tenant. Admin y almacén no operan. |
-| III. Invariantes de stock | PASA | 013 no lee ni escribe `StockGeneral`/`StockTecnico`; el saldo es un registro paralelo. |
+| III. Invariantes de stock | PASA | 013 descuenta `StockTecnico` con movimientos `CONSUMO` y no toca `StockGeneral`; nunca deja saldo negativo. |
 | IV. Identidad y unicidad de series | PASA | 013 no crea ni modifica series. |
 | V. Integridad transaccional | PASA | Carga de órdenes, guardado de uso, saldo y cierre son atómicos; un fallo revierte datos y auditoría. |
 | VI. Auditoría inmutable y trazabilidad | PASA | Se auditan órdenes, usos, saldos, catálogo, cierre y reapertura con valor anterior/nuevo. |
 | VII. Autoridad del reporte de Lari | PASA | 013 no procesa el reporte de Lari ni conciliaciones. |
 | VIII. Spec-driven, pruebas y simplicidad | PASA | Cada CA tiene prueba; sin dependencias nuevas; lógica en `services.py`. |
 
-**Post-design re-check**: PASA. Se reutiliza `DespachoAlmacen`, no se duplica el registro de
-despachos, se bloquea el negativo, se agrega cierre auditable y no se toca stock ni conciliación.
+**Post-design re-check**: PASA. Se leen asignaciones confirmadas sin duplicar su registro, se
+bloquea el negativo, se agrega cierre auditable, se descuenta `StockTecnico` y no se toca
+`StockGeneral` ni la conciliación retirada.
 
 ## Project Structure
 
@@ -114,7 +116,6 @@ templates/
     ├── pendientes.html
     ├── registrar_materiales.html
     ├── _catalogo_orden.html
-    ├── entradas.html
     ├── dashboard.html
     ├── cierre.html
     ├── historial.html
@@ -232,7 +233,7 @@ También se modifican:
 | `creado_en` / `actualizado_en` | `DateTimeField` | automáticos |
 
 - `UniqueConstraint(tenant, tecnico, periodo, numero_normalizado)`.
-- `CheckConstraint(numero_normalizado regex ^[A-Z0-9]{1,30}$)`.
+- `CheckConstraint(numero_normalizado regex ^[A-Z0-9]+([-_][A-Z0-9]+)*$)`; el largo máximo de 30 lo impone el `CharField`.
 - `CheckConstraint(periodo regex)`.
 - El mismo número puede existir para otro técnico o en otro mes.
 - La fecha de instalación puede cambiar el periodo; se revalida la clave.
@@ -356,7 +357,7 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 - `TecnicoNoExiste`: “El técnico no pertenece a tu tenant”.
 - `MaterialNoHabilitado` / `MaterialInactivo`.
 - `CantidadInvalida`: “La cantidad debe ser un número entero mayor o igual a 0”.
-- `NumeroOrdenInvalido`: número 1–30 alfanumérico.
+- `NumeroOrdenInvalido`: número 1–30 alfanumérico con guiones o guiones bajos simples.
 - `PeriodoInvalido`: “El periodo debe tener el formato AAAA-MM”.
 - `SaldoInsuficiente`: “El uso supera el disponible del mes”.
 - `PeriodoCerrado`: “El mes está cerrado; solicita reapertura”.
@@ -430,22 +431,22 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
   - `inicial + despachos - usado`; puede ser negativo para alerta, pero el guardado de uso bloquea
     que se genere por uso nuevo.
 
-### Despachos
+### Asignaciones confirmadas
 
-- `despachos_del_periodo(tenant, periodo)`:
-  - Agrega `DespachoAlmacen` por material y mes.
+- `asignaciones_confirmadas_del_periodo(tenant, periodo)`:
+  - Agrega `LineaAsignacion.cantidad` por material y mes de `confirmada_en`.
   - Solo lectura.
-  - No crea, edita ni borra despachos.
+  - No crea, edita ni borra asignaciones.
 - `validar_periodo_abierto(tenant, periodo)`:
-  - Se invoca desde el servicio existente de alta/edición de `DespachoAlmacen`.
+  - Se invoca desde la confirmación de asignaciones.
   - Si el mes está `CERRADO`, lanza `PeriodoCerrado`.
-- Si `DespachoAlmacen` tiene campos adicionales, se ignoran para el cálculo.
+- `DespachoAlmacen` queda como tabla histórica y no participa del cálculo.
 
 ### Dashboard
 
 - `dashboard_mensual(tenant, periodo, tecnico=None, material=None, desde=None, hasta=None)`:
-  - Materiales habilitados activos más los que tengan datos.
-  - Inicial, despachos, usado, final y alerta.
+  - Materiales con stock o asignaciones confirmadas en el periodo.
+  - Inicial, asignaciones confirmadas, usado, final y alerta.
   - Detalle por técnico.
   - Totales de órdenes y técnicos con uso.
   - Sin N+1.
@@ -487,7 +488,7 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 ### Exportación
 
 - `exportar_reporte_mensual(tenant, periodo, formato) -> ArchivoReporte`:
-  - Excel/CSV con inicial, despachos, usado, final y detalle por técnico.
+  - Excel/CSV con inicial, asignaciones confirmadas, usado, final y detalle por técnico.
 - `exportar_detalle_ordenes(tenant, periodo, formato) -> ArchivoReporte`:
   - Excel/CSV con técnico, orden, fecha, materiales y cantidades.
 - `formato` en `xlsx`/`csv`; sin archivos persistidos.
@@ -501,14 +502,11 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 | `/registro-materiales/ordenes/cargar/preview/` | POST | Resumen antes de guardar |
 | `/registro-materiales/ordenes/cargas/<id>/deshacer/` | POST | Deshacer carga |
 | `/registro-materiales/ordenes/pendientes/` | GET | Panel de pendientes |
-| `/registro-materiales/catalogo/` | GET/POST | Catálogo habilitado; activar/desactivar |
 | `/registro-materiales/materiales/` | GET/POST | Buscar orden y registrar materiales |
 | `/registro-materiales/materiales/contexto/` | GET | Fragmento HTMX con orden o catálogo |
 | `/registro-materiales/materiales/guardar/` | POST | Guardar uso |
 | `/registro-materiales/ordenes/<id>/historial/` | GET | Historial |
-| `/registro-materiales/entradas/` | GET | Saldo inicial y despachos del mes |
-| `/registro-materiales/saldo-inicial/guardar/` | POST | Saldo inicial |
-| `/registro-materiales/dashboard/` | GET | Dashboard mensual |
+| `/registro-materiales/dashboard/` | GET | Dashboard mensual y enlaces de exportación |
 | `/registro-materiales/cierre/` | GET | Checklist y estado |
 | `/registro-materiales/cierre/cerrar/` | POST | Cerrar mes |
 | `/registro-materiales/cierre/reabrir/` | POST | Reabrir mes |
@@ -517,21 +515,19 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 | `/registro-materiales/exportar/reporte/` | GET | Excel/CSV del reporte |
 | `/registro-materiales/exportar/ordenes/` | GET | Excel/CSV de órdenes |
 
-- No hay formulario de despacho en este módulo; los despachos se consultan desde
-  `DespachoAlmacen`.
+- No hay formulario de despacho en este módulo; las asignaciones confirmadas se consultan desde
+  `SolicitudAsignacion` y `LineaAsignacion`.
 - No hay `GET` para acciones de escritura.
 - Un recurso ajeno devuelve `404`; un rol incorrecto `403`; un mes cerrado `409`.
 
 ### Pantallas
 
-- **Menú**: Registrar órdenes, Registrar materiales, Catálogo, Pendientes, Entradas, Dashboard,
-  Cierre, Exportar.
-- **Catálogo**: materiales habilitados con activar/desactivar.
+- **Menú**: Cargar órdenes, Registrar materiales, Órdenes pendientes, Dashboard y Cierre.
 - **Cargar órdenes**: técnico, mes, textarea, resumen, confirmar, deshacer.
 - **Registrar materiales**: técnico, mes, búsqueda, fecha, catálogo y cantidades.
 - **Pendientes**: órdenes sin materiales, filtro por antigüedad.
-- **Entradas**: saldo inicial editable y despachos del mes en solo lectura.
-- **Dashboard**: tarjetas, tabla por material, detalle por técnico, filtros y alertas.
+- **Dashboard**: tarjetas, tabla por material, detalle por técnico, filtros, alertas y enlaces de
+  exportación. La pantalla de Entradas y saldos se retiró; el stock inicial se carga en Stock inicial.
 - **Cierre**: checklist, justificaciones, respaldo, cerrar/reabrir.
 - **Historial**: cambios de orden y usos.
 
@@ -540,7 +536,7 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 | Regla | Dónde | Mensaje |
 |---|---|---|
 | Cantidad entera ≥ 0 | Formulario, servicio y check | “La cantidad debe ser un número entero mayor o igual a 0” |
-| Número 1–30 alfanumérico | Servicio y check | “El número de orden es obligatorio y debe tener entre 1 y 30 caracteres alfanuméricos” |
+| Número 1–30 alfanumérico con guiones o guiones bajos simples | Servicio y check | “El número de orden es obligatorio y debe tener entre 1 y 30 caracteres alfanuméricos, guiones y guiones bajos simples” |
 | Periodo `YYYY-MM` | Servicio y check | “El periodo debe tener el formato AAAA-MM” |
 | Orden única por técnico/mes/número | Servicio y unique | Si existe, se abre para editar |
 | Uso no supera disponible | Servicio | “El uso supera el disponible del mes” |
@@ -584,7 +580,7 @@ Un caso por criterio de aceptación, más cálculos, concurrencia y aislamiento.
 | CA | Prueba principal |
 |---|---|
 | CA-01 | `test_menu_y_aislamiento` |
-| CA-02 | `test_catalogo_habilitado_en_orden` |
+| CA-02 | `test_stock_actual_lista_materiales_para_registro` |
 | CA-03 | `test_normalizacion_lista` |
 | CA-04 | `test_carga_idempotente` |
 | CA-05 | `test_orden_otro_tecnico_se_crea` |
@@ -599,7 +595,7 @@ Un caso por criterio de aceptación, más cálculos, concurrencia y aislamiento.
 | CA-14 | `test_saldo_final` |
 | CA-15 | `test_herencia_saldo` |
 | CA-16 | `test_saldo_manual_prevalece` |
-| CA-17 | `test_despachos_desde_despachoalmacen` |
+| CA-17 | `test_dashboard_suma_solo_asignaciones_confirmadas` |
 | CA-18 | `test_historial_edicion` |
 | CA-19 | `test_ordenes_pendientes` |
 | CA-20 | `test_cierre_bloqueado_por_pendientes` |
@@ -634,8 +630,8 @@ Además:
 
 ## Decisiones y riesgos
 
-- **DespachoAlmacen reutilizado**: no hay doble registro. Alternativa descartada: nueva tabla de
-  despachos.
+- **Asignaciones confirmadas como despacho**: no hay doble registro. Alternativa descartada: nueva
+  tabla de despachos.
 - **Orden por técnico/mes/número**: permite el mismo número para otros técnicos y meses.
 - **Carga masiva idempotente**: pegar la lista completa cada día es seguro.
 - **Deshacer solo sin materiales**: protege la integridad; se audita.
@@ -650,9 +646,9 @@ Además:
 
 | Decisión | Por qué no viola la constitución |
 |---|---|
-| Reutilizar `DespachoAlmacen` | No duplica datos ni funciones; solo lee cantidades existentes. |
+| Leer asignaciones confirmadas | No duplica datos ni funciones; solo lee cantidades confirmadas. |
 | Carga masiva con lote | Permite deshacer sin borrar órdenes con materiales; queda auditado. |
-| Cierre con snapshot | No modifica stock ni conciliación; conserva el saldo histórico. |
+| Cierre con snapshot | Congela el periodo y conserva el saldo histórico; no toca `StockGeneral` ni la conciliación retirada. |
 | Advertencia sin bloqueo | La revisión humana decide; el cierre exige resolver o justificar. |
 | Exportación Excel/CSV | Usa `openpyxl` y la librería estándar; no agrega dependencias. |
 
@@ -660,6 +656,6 @@ Además:
 
 - Spec, plan, data-model, contracts, quickstart y tasks actualizados al flujo aprobado.
 - No se crea una segunda tabla de despachos.
-- No se modifica stock, series, asignaciones, traspasos ni conciliaciones.
+- No se modifica `StockGeneral`, asignaciones, traspasos ni conciliaciones; el consumo descuenta `StockTecnico` y las series seriadas pasan a `INSTALADA`.
 - Cada CA tiene al menos una prueba.
 - No se implementa código en esta fase documental.

@@ -631,7 +631,7 @@ contienen lógica de negocio.
 - Todos los registros se escriben en la misma transacción que el cambio. Si la operación falla,
   no se escribe auditoría.
 - La auditoría de stock es responsabilidad de 008; 006 no la duplica.
-- No se auditan contraseñas, tokens, secretos TOTP, `token_hash` ni contenido del Excel; solo
+- No se auditan contraseñas, tokens, secretos, `token_hash` ni contenido del Excel; solo
   nombre, ruta y hash.
 - No se escribe `tenant_id` como campo separado; el tenant se deduce del usuario y de la entidad.
 - La auditoría no revela datos de otros tenants.

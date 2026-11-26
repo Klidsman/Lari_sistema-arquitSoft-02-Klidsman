@@ -344,7 +344,7 @@ cambio.
 - Un registro por alta de recojo y uno por cada material incrementado; no uno por serie.
 - Los valores se guardan como texto legible; fechas en ISO 8601.
 - La serie queda trazada por `Serie.creado_por`, `Serie.creado_en` y su `LineaRecojo → Recojo`.
-- Nunca se auditan contraseñas, `token_hash`, tokens de invitación, secretos TOTP ni claves.
+- Nunca se auditan contraseñas, `token_hash`, tokens de invitación, secretos ni claves.
 - Si la operación falla (validación, serie existente, error de stock), no se escribe auditoría de
   recojo ni de stock.
 - La auditoría no guarda `tenant_id` separado: el alcance se deriva de la entidad y de la cuenta

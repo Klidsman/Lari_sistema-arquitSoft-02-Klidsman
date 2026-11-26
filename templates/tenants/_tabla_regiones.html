@@ -12,7 +12,7 @@
       <th>Buzón</th>
       <th>Estado</th>
       <th>Tenants</th>
-      <th></th>
+      <th>Acciones</th>
     </tr>
   </thead>
   <tbody>
@@ -25,7 +25,7 @@
         <td>{{ region.almacen.buzon }}</td>
         <td>{{ region.activa|yesno:"Activa,Inactiva" }}</td>
         <td>{{ region.num_tenants }}</td>
-        <td><a href="{% url 'editar_region' region.pk %}">Editar</a></td>
+        <td class="acciones"><a class="boton-accion" href="{% url 'editar_region' region.pk %}">Editar</a></td>
       </tr>
     {% empty %}
       <tr>

@@ -4,6 +4,10 @@ description: "Lista de tareas para la implementación de 005 Stock Inicial de T�
 
 # Tareas: 005 Stock Inicial de Técnicos
 
+> **Estado real (2026-11-25):** implementación completa, incluido el comando de reinicio. Las
+> casillas son históricas; quedan T080 (rendimiento), T083 (docs), T086 (cobertura) y T087
+> (recorrido manual). Ver `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
+
 **Entrada**: Documentos de diseño en `05-especificaciones/005-stock-inicial-de-tecnicos/`
 
 **Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`,

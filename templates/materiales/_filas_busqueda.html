@@ -8,7 +8,7 @@
     <span class="codigo">{{ material.codigo }}</span>
     <span class="descripcion">{{ material.descripcion }}</span>
     <span class="lote">{{ material.lote }}</span>
-    <span class="tipo">{{ material.tipo }}</span>
+    <span class="tipo badge-tipo badge-tipo--{{ material.tipo|lower }}"><span class="badge-tipo__dot" aria-hidden="true"></span>{{ material.tipo }}</span>
   </li>
 {% empty %}
   <li class="sin-resultados">No se encontraron materiales</li>

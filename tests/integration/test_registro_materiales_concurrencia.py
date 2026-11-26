@@ -14,10 +14,15 @@ from registro_materiales.models import (
     UsoMaterialOrden,
 )
 from registro_materiales.services import (
+    cerrar_mes,
+    confirmar_carga,
     guardar_uso,
     obtener_o_crear_orden,
+    reabrir_mes,
     registrar_saldo_inicial,
 )
+from stock.models import StockTecnico
+from tecnicos.models import Tecnico
 
 PERIODO = "2026-11"
 
@@ -50,6 +55,12 @@ def test_dos_usos_simultaneos_no_superan_el_disponible(
     registrar_saldo_inicial(
         tenant, material_no_seriado, PERIODO, 10, usuario_tenant
     )
+    StockTecnico.objects.create(
+        tenant=tenant,
+        tecnico=tecnico,
+        material=material_no_seriado,
+        cantidad=10,
+    )
     primera = obtener_o_crear_orden(
         tenant, tecnico, PERIODO, "A1", usuario_tenant
     )
@@ -78,3 +89,119 @@ def test_dos_usos_simultaneos_no_superan_el_disponible(
         ).values_list("cantidad", flat=True)
     )
     assert total == 8
+
+
+def _cargar(tenant_id, tecnico_id, actor_id, barrera):
+    close_old_connections()
+    barrera.wait()
+    try:
+        from tenants.models import Tenant
+
+        tenant = Tenant.objects.get(pk=tenant_id)
+        tecnico = Tecnico.objects.get(pk=tecnico_id)
+        actor = Usuario.objects.get(pk=actor_id)
+        carga = confirmar_carga(
+            tenant, tecnico, PERIODO, "A1", actor
+        )
+        return f"ok:{carga.total_nuevas}"
+    except Exception as exc:
+        return type(exc).__name__
+    finally:
+        connection.close()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_dos_cargas_simultaneas_crean_una_sola_orden(
+    usuario_tenant, tenant, tecnico, almacen
+):
+    barrera = Barrier(2)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        resultados = list(
+            executor.map(
+                lambda _: _cargar(
+                    tenant.pk,
+                    tecnico.pk,
+                    usuario_tenant.pk,
+                    barrera,
+                ),
+                range(2),
+            )
+        )
+
+    assert sorted(resultados) == ["ok:0", "ok:1"]
+    assert OrdenLiquidacion.objects.filter(
+        tenant=tenant, periodo=PERIODO, numero_normalizado="A1"
+    ).count() == 1
+
+
+def _cerrar(tenant_id, actor_id, barrera):
+    close_old_connections()
+    barrera.wait()
+    try:
+        from tenants.models import Tenant
+
+        tenant = Tenant.objects.get(pk=tenant_id)
+        actor = Usuario.objects.get(pk=actor_id)
+        cierre = cerrar_mes(
+            tenant, PERIODO, "backups/lari.sql", actor
+        )
+        return f"ok:{cierre.version}"
+    except Exception as exc:
+        return type(exc).__name__
+    finally:
+        connection.close()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_dos_cierres_simultaneos_cierran_una_sola_vez(
+    usuario_tenant, tenant, almacen
+):
+    barrera = Barrier(2)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        resultados = list(
+            executor.map(
+                lambda _: _cerrar(
+                    tenant.pk, usuario_tenant.pk, barrera
+                ),
+                range(2),
+            )
+        )
+
+    assert sorted(resultados) == ["PeriodoCerrado", "ok:1"]
+
+
+def _reabrir(cierre_id, actor_id, barrera):
+    close_old_connections()
+    barrera.wait()
+    try:
+        from registro_materiales.models import CierreMensual
+
+        cierre = CierreMensual.objects.get(pk=cierre_id)
+        actor = Usuario.objects.get(pk=actor_id)
+        reabierto = reabrir_mes(cierre, "Corrección", actor)
+        return f"ok:{reabierto.version}"
+    except Exception as exc:
+        return type(exc).__name__
+    finally:
+        connection.close()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_dos_reaperturas_simultaneas_reabren_una_sola_vez(
+    usuario_tenant, tenant, almacen
+):
+    cierre = cerrar_mes(
+        tenant, PERIODO, "backups/lari.sql", usuario_tenant
+    )
+    barrera = Barrier(2)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        resultados = list(
+            executor.map(
+                lambda _: _reabrir(
+                    cierre.pk, usuario_tenant.pk, barrera
+                ),
+                range(2),
+            )
+        )
+
+    assert sorted(resultados) == ["PeriodoCerrado", "ok:2"]

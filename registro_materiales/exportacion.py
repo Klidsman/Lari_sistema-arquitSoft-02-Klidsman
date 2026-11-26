@@ -65,7 +65,7 @@ def exportar_reporte_mensual(tenant, periodo, formato):
             fila["material"].codigo,
             fila["material"].descripcion,
             fila["inicial"],
-            fila["despachos"],
+            fila["asignaciones_confirmadas"],
             fila["usado"],
             fila["final"],
         ]
@@ -78,7 +78,7 @@ def exportar_reporte_mensual(tenant, periodo, formato):
             "Código",
             "Descripción",
             "Inicial",
-            "Despachos",
+            "Asignaciones confirmadas",
             "Usado",
             "Final",
         ],

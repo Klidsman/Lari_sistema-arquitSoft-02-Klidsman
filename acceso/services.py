@@ -10,15 +10,11 @@ from django.utils import timezone
 from auditoria.services import registrar_cambio
 from tenants.models import Tenant
 
-from .models import Invitacion, Rol, Usuario
+from .models import Invitacion, Rol, TipoInvitacion, Usuario
 from .tasks import enviar_correo_invitacion
 from .tokens import generar_token, hash_token
-from .totp import verificar_codigo
 
-CLAVE_PENDIENTE_2FA = "pendiente_2fa_usuario_id"
 CLAVE_VERSION_SESION = "version_sesion"
-
-ROLES_CON_2FA = {Rol.ADMIN_PLATAFORMA, Rol.RESPONSABLE_ALMACEN}
 
 
 class CredencialesInvalidas(Exception):
@@ -37,33 +33,7 @@ class SesionPendienteRequerida(Exception):
     mensaje = "Debes iniciar sesión"
 
 
-class SegundoFactorRequerido(Exception):
-    mensaje = "Debes completar el segundo factor"
-
-
-def requiere_segundo_factor(usuario) -> bool:
-    return usuario.rol in ROLES_CON_2FA
-
-
-def estado_sesion_pendiente(request) -> bool:
-    return bool(request.session.get(CLAVE_PENDIENTE_2FA))
-
-
-def usuario_pendiente(request):
-    usuario_id = request.session.get(CLAVE_PENDIENTE_2FA)
-    if not usuario_id:
-        return None
-    return Usuario.objects.filter(pk=usuario_id, is_active=True).first()
-
-
-def _dejar_sesion_pendiente(request, usuario) -> None:
-    request.session.cycle_key()
-    request.session[CLAVE_PENDIENTE_2FA] = usuario.pk
-    request.session[CLAVE_VERSION_SESION] = usuario.version_sesion
-
-
 def _completar_sesion(request, usuario) -> None:
-    request.session.pop(CLAVE_PENDIENTE_2FA, None)
     login(request, usuario)
     request.session[CLAVE_VERSION_SESION] = usuario.version_sesion
 
@@ -82,20 +52,8 @@ def iniciar_sesion(request, correo: str, password: str):
     if usuario.tenant_id and usuario.tenant.estado != Tenant.ESTADO_ACTIVO:
         raise TenantSuspendido
 
-    if requiere_segundo_factor(usuario):
-        _dejar_sesion_pendiente(request, usuario)
-        return usuario
-
     _completar_sesion(request, usuario)
     return usuario
-
-
-def verificar_segundo_factor(request, usuario, codigo: str) -> None:
-    if not usuario.segundo_factor_habilitado or not usuario.secreto_totp:
-        raise SegundoFactorRequerido
-    if not verificar_codigo(usuario, codigo):
-        raise SegundoFactorRequerido
-    _completar_sesion(request, usuario)
 
 
 def renovar_version_sesion(usuario) -> int:
@@ -164,6 +122,10 @@ class CuentaInvalida(Exception):
 
 class InvitacionInvalida(Exception):
     mensaje = "La invitación venció o ya fue usada"
+
+
+class CuentaInactivaRestablecimiento(Exception):
+    mensaje = "Reactiva la cuenta antes de restablecer su contraseña"
 
 
 class CuentaTenantNoCambiaRol(Exception):
@@ -296,6 +258,16 @@ def cambiar_rol(usuario: Usuario, nuevo_rol: str, actor) -> Usuario:
 
 def crear_cuenta_tenant(tenant: Tenant, correo: str, actor) -> Usuario:
     """Crea la cuenta única e inactiva del tenant y su invitación."""
+    usuario, _ = crear_cuenta_tenant_con_enlace(tenant, correo, actor)
+    return usuario
+
+
+def crear_cuenta_tenant_con_enlace(
+    tenant: Tenant,
+    correo: str,
+    actor,
+) -> tuple[Usuario, str]:
+    """Crea la cuenta del tenant y devuelve el token de su invitación."""
     _validar_admin(actor)
 
     correo = (correo or "").strip().lower()
@@ -325,7 +297,7 @@ def crear_cuenta_tenant(tenant: Tenant, correo: str, actor) -> Usuario:
                 actor,
                 tenant=tenant,
             )
-            enviar_invitacion(usuario, actor)
+            _, token = emitir_invitacion(usuario, actor)
     except IntegrityError as exc:
         if Usuario.objects.para_tenant(tenant).exists():
             raise CuentaDuplicada from exc
@@ -333,11 +305,21 @@ def crear_cuenta_tenant(tenant: Tenant, correo: str, actor) -> Usuario:
             raise CorreoDuplicado from exc
         raise
 
-    return usuario
+    return usuario, token
 
 
 def crear_cuenta_almacen(region, correo: str, actor) -> Usuario:
     """Crea una cuenta inactiva de Responsable de almacén con invitación."""
+    usuario, _ = crear_cuenta_almacen_con_enlace(region, correo, actor)
+    return usuario
+
+
+def crear_cuenta_almacen_con_enlace(
+    region,
+    correo: str,
+    actor,
+) -> tuple[Usuario, str]:
+    """Crea la cuenta de almacén y devuelve el token de su invitación."""
     _validar_admin(actor)
 
     correo = (correo or "").strip().lower()
@@ -365,17 +347,22 @@ def crear_cuenta_almacen(region, correo: str, actor) -> Usuario:
                 f"{usuario.email} ({usuario.rol})",
                 actor,
             )
-            enviar_invitacion(usuario, actor)
+            _, token = emitir_invitacion(usuario, actor)
     except IntegrityError as exc:
         if Usuario.objects.filter(email__iexact=correo).exists():
             raise CorreoDuplicado from exc
         raise
 
-    return usuario
+    return usuario, token
 
 
-def enviar_invitacion(usuario, actor) -> Invitacion:
-    """Revoca invitaciones pendientes y emite una nueva de un solo uso."""
+def emitir_invitacion(
+    usuario,
+    actor,
+    tipo: str = TipoInvitacion.ALTA,
+    enviar_correo: bool = True,
+) -> tuple[Invitacion, str]:
+    """Revoca invitaciones pendientes y emite un token nuevo de un solo uso."""
     ahora = timezone.now()
 
     with transaction.atomic():
@@ -388,21 +375,70 @@ def enviar_invitacion(usuario, actor) -> Invitacion:
         token = generar_token()
         invitacion = Invitacion.objects.create(
             usuario=usuario,
+            tipo=tipo,
             token_hash=hash_token(token),
             correo=usuario.email,
             expira_en=ahora + timedelta(hours=72),
             creada_por=actor,
         )
-        transaction.on_commit(
-            lambda: enviar_correo_invitacion.delay(invitacion.pk, token)
-        )
+        if enviar_correo:
+            transaction.on_commit(
+                lambda: enviar_correo_invitacion.delay(invitacion.pk, token)
+            )
 
+    return invitacion, token
+
+
+def enviar_invitacion(
+    usuario,
+    actor,
+    tipo: str = TipoInvitacion.ALTA,
+) -> Invitacion:
+    """Emite una invitación y devuelve el registro persistido."""
+    invitacion, _ = emitir_invitacion(usuario, actor, tipo)
     return invitacion
 
 
-def reenviar_invitacion(usuario, actor) -> Invitacion:
+def reenviar_invitacion(usuario, actor) -> tuple[Invitacion, str]:
     """Reenvía la invitación invalidando el token anterior."""
-    return enviar_invitacion(usuario, actor)
+    return emitir_invitacion(usuario, actor)
+
+
+def solicitar_restablecimiento(
+    usuario,
+    actor,
+    enviar_correo: bool = True,
+) -> tuple[Invitacion, str]:
+    """Emite un enlace de restablecimiento y cierra las sesiones abiertas."""
+    verificar_alcance(actor, usuario)
+
+    with transaction.atomic():
+        bloqueado = Usuario.objects.select_for_update().get(pk=usuario.pk)
+        if not bloqueado.is_active:
+            raise CuentaInactivaRestablecimiento
+
+        invitacion, token = emitir_invitacion(
+            bloqueado,
+            actor,
+            TipoInvitacion.RESTABLECIMIENTO,
+            enviar_correo=enviar_correo,
+        )
+
+        bloqueado.version_sesion += 1
+        bloqueado.save(update_fields=["version_sesion"])
+        usuario.version_sesion = bloqueado.version_sesion
+
+        registrar_cambio(
+            "Usuario",
+            bloqueado.pk,
+            "acceso_cuenta",
+            "",
+            "restablecimiento_solicitado",
+            actor,
+            tenant=bloqueado.tenant,
+        )
+
+    return invitacion, token
 
 
 def _vigente(invitacion, ahora) -> bool:
@@ -427,7 +463,7 @@ def obtener_invitacion_vigente(token: str) -> Invitacion:
 
 
 def aceptar_invitacion(token: str, password: str) -> Usuario:
-    """Activa la cuenta, define la contraseña y consume la invitación."""
+    """Define la contraseña y consume la invitación vigente."""
     ahora = timezone.now()
 
     with transaction.atomic():
@@ -441,26 +477,46 @@ def aceptar_invitacion(token: str, password: str) -> Usuario:
             raise InvitacionInvalida
 
         usuario = invitacion.usuario
-        if usuario.is_active:
+        es_alta = invitacion.tipo == TipoInvitacion.ALTA
+
+        if es_alta:
+            if usuario.is_active:
+                raise InvitacionInvalida
+        elif not usuario.is_active:
             raise InvitacionInvalida
 
         validate_password(password, usuario)
 
         usuario.set_password(password)
-        usuario.is_active = True
-        usuario.save(update_fields=["password", "is_active"])
+        if es_alta:
+            usuario.is_active = True
+            usuario.save(update_fields=["password", "is_active"])
+        else:
+            usuario.version_sesion += 1
+            usuario.save(update_fields=["password", "version_sesion"])
 
         invitacion.usada_en = ahora
         invitacion.save(update_fields=["usada_en"])
 
-        registrar_cambio(
-            "Usuario",
-            usuario.pk,
-            "is_active",
-            False,
-            True,
-            usuario,
-            tenant=usuario.tenant,
-        )
+        if es_alta:
+            registrar_cambio(
+                "Usuario",
+                usuario.pk,
+                "is_active",
+                False,
+                True,
+                usuario,
+                tenant=usuario.tenant,
+            )
+        else:
+            registrar_cambio(
+                "Usuario",
+                usuario.pk,
+                "acceso_cuenta",
+                "restablecimiento_solicitado",
+                "restablecimiento_completado",
+                usuario,
+                tenant=usuario.tenant,
+            )
 
     return usuario

@@ -31,14 +31,7 @@ SECRET_KEY=cambia-esta-clave
 DEBUG=True
 DATABASE_URL=postgresql://lari_app:lari_app@localhost:5434/lari
 REDIS_URL=redis://localhost:6379/0
-TOTP_ENCRYPTION_KEY=<clave Fernet de 32 bytes en base64>
 BASE_URL=http://localhost:8000
-```
-
-Genera la clave TOTP con:
-
-```powershell
-.\.venv\Scripts\python.exe -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
 Aplica migraciones y crea la primera cuenta administradora:

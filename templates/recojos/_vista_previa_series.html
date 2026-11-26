@@ -6,12 +6,16 @@
     <tbody>
       {% for estado in estados %}
         <tr data-serie="{{ estado.numero }}" data-estado="{{ estado.estado }}">
-          <td>{{ estado.numero }}</td>
+          <td><span class="codigo">{{ estado.numero }}</span></td>
           <td>
-            {% if estado.estado == "valida" %}Válida
-            {% elif estado.estado == "invalida" %}Inválida: debe tener 12 caracteres alfanuméricos
-            {% elif estado.estado == "duplicada" %}Duplicada en el recojo
-            {% else %}Ya está registrada en el sistema
+            {% if estado.estado == "valida" %}
+              <span class="etiqueta etiqueta-activo">Válida</span>
+            {% elif estado.estado == "invalida" %}
+              <span class="etiqueta etiqueta-anulado">Inválida: debe tener 12 caracteres alfanuméricos</span>
+            {% elif estado.estado == "duplicada" %}
+              <span class="etiqueta etiqueta-revision">Duplicada en el recojo</span>
+            {% else %}
+              <span class="etiqueta etiqueta-revision">Ya está registrada en el sistema</span>
             {% endif %}
           </td>
         </tr>

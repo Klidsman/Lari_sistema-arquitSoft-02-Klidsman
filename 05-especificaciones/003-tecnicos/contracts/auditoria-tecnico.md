@@ -47,7 +47,7 @@ Se reutiliza la tabla de la spec 001; no se crea una tabla nueva.
    nunca un usuario anónimo.
 4. **Valores como texto**: `activo` se registra como `ACTIVO`/`DESACTIVADO`, nunca como
    `True`/`False`; el alta incluye `nif`, `nombre` y `estado=ACTIVO`.
-5. **Sin secretos**: no se registran contraseñas, hashes, tokens, `token_hash`, secretos TOTP ni
+5. **Sin secretos**: no se registran contraseñas, hashes, tokens, `token_hash`, secretos ni
    claves de cifrado.
 6. **Corrección**: un valor equivocado se corrige con una edición nueva; no se edita el registro
    anterior.

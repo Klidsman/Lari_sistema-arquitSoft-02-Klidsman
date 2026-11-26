@@ -131,7 +131,7 @@ erDiagram
 **Restricciones**
 
 - `UniqueConstraint(tenant, tecnico, periodo, numero_normalizado, name="orden_unica_por_tecnico_mes_numero")`.
-- `CheckConstraint(numero_normalizado regex ^[A-Z0-9]{1,30}$)`.
+- `CheckConstraint(numero_normalizado regex ^[A-Z0-9]+([-_][A-Z0-9]+)*$)`; el largo máximo de 30 lo impone el `CharField`.
 - `CheckConstraint(periodo regex)`.
 - Índices `(tenant, tecnico, periodo)`, `(tenant, periodo)`, `(numero_normalizado)`.
 
@@ -161,6 +161,21 @@ erDiagram
 - `CheckConstraint(cantidad >= 0)`.
 - Una línea existente a 0 se conserva; no se borra.
 - El técnico de la línea debe ser el de la orden.
+
+### `registro_materiales.UsoMaterialSerie`
+
+| Campo | Tipo | Nulo | Regla |
+|---|---|---|---|
+| `id` | `BigAutoField` | No | Clave primaria |
+| `tenant` | FK `Tenant` | No | `PROTECT` |
+| `uso` | FK `UsoMaterialOrden` | No | `CASCADE` |
+| `serie` | OneToOne `Serie` | No | `PROTECT`; una serie solo puede consumirse una vez |
+| `creado_por` | FK `Usuario` | No | `PROTECT` |
+| `creado_en` | `DateTimeField` | No | `auto_now_add` |
+
+- `UniqueConstraint(serie)`.
+- Al crear el uso, la serie pasa de `ASIGNADA` a `INSTALADA` y se descuenta `StockTecnico`.
+- Al retirar la serie del uso, vuelve a `ASIGNADA` al técnico y se incrementa `StockTecnico`.
 
 ### `registro_materiales.AdvertenciaUso`
 
@@ -259,17 +274,18 @@ erDiagram
 periodo = YYYY-MM de fecha_instalacion, o el mes seleccionado en la carga
 ```
 
-### Despachos
+### Asignaciones confirmadas
 
 ```text
-despachos(tenant, material, periodo) =
-    suma de DespachoAlmacen.cantidad
-    donde tenant coincide, material coincide y fecha está en el periodo
+asignaciones_confirmadas(tenant, material, periodo) =
+    suma de LineaAsignacion.cantidad
+    donde tenant coincide, material coincide,
+    solicitud.estado = CONFIRMADA y confirmada_en está en el periodo
 ```
 
 - Solo lectura.
-- Cantidad 0 no suma.
-- Materiales sin despacho: 0.
+- Las solicitudes ENVIADA, RECHAZADA, CANCELADA o BORRADOR no suman.
+- Materiales sin asignación confirmada: 0.
 
 ### Saldo inicial efectivo
 
@@ -289,11 +305,11 @@ si no:
 usado(tenant, material, periodo) =
     suma de UsoMaterialOrden.cantidad de órdenes con periodo
 
-final = inicial + despachos - usado
+final = inicial + asignaciones_confirmadas - usado
 ```
 
 - Para el dashboard se puede mostrar negativo con alerta.
-- Para el guardado de un uso nuevo, el total no puede superar `inicial + despachos`.
+- Para el guardado de un uso nuevo, el total no puede superar el stock actual del técnico.
 - Un uso 0 no suma.
 
 ### Ejemplo
@@ -301,7 +317,7 @@ final = inicial + despachos - usado
 | Concepto | Valor |
 |---|---:|
 | Saldo inicial | 15 |
-| Despachos | 30 |
+| Asignaciones confirmadas | 30 |
 | Disponible | 45 |
 | Técnico A | 10 |
 | Técnico B | 5 |
@@ -410,7 +426,7 @@ ABIERTO → CERRADO (nueva versión)
 | CA-14 | `saldo_final` | 100+20−30=90 |
 | CA-15 | `saldo_inicial_efectivo` | Herencia |
 | CA-16 | `registrar_saldo` | Manual prevalece |
-| CA-17 | `DespachoAlmacen` | Suma sin doble registro |
+| CA-17 | `LineaAsignacion` confirmada | Suma sin doble registro |
 | CA-18 | `RegistroCambio` | Historial |
 | CA-19 | `ordenes_pendientes` | Panel |
 | CA-20 | `lista_chequeo` | Cierre bloqueado |

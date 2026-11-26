@@ -5,6 +5,16 @@ from . import views
 urlpatterns = [
     path("", views.listar_tecnicos, name="listar_tecnicos"),
     path(
+        "stock/",
+        views.stock_actual_tecnicos,
+        name="stock_actual_tecnicos",
+    ),
+    path(
+        "stock/<int:tecnico_id>/",
+        views.detalle_stock_tecnico,
+        name="detalle_stock_tecnico",
+    ),
+    path(
         "buscar/",
         views.buscar_tecnicos_htmx,
         name="buscar_tecnicos_htmx",

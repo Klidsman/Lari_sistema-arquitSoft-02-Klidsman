@@ -7,8 +7,6 @@ from django.shortcuts import redirect
 
 from tenants.models import Tenant
 
-from .services import CLAVE_PENDIENTE_2FA
-
 RUTAS_SIN_BD = ("/static/", "/media/")
 
 
@@ -46,16 +44,6 @@ class ContextoUsuarioMiddleware:
 
         if request.path.startswith(RUTAS_SIN_BD):
             return self.get_response(request)
-
-        if request.session.get(CLAVE_PENDIENTE_2FA):
-            ruta = request.path
-            permitidas = (
-                ruta.startswith("/login/2fa/"),
-                ruta.startswith("/logout/"),
-            )
-            if not any(permitidas):
-                _fijar_variables_bd()
-                return redirect("login_2fa")
 
         usuario = getattr(request, "user", None)
         if usuario is None or not usuario.is_authenticated:

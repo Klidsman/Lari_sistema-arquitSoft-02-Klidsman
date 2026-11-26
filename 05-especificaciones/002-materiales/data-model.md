@@ -148,7 +148,7 @@ transacción que el cambio.
 
 - Un registro por campo modificado.
 - Los valores se guardan como texto legible; fechas en ISO 8601 cuando correspondan.
-- Nunca se auditan contraseñas, `token_hash`, tokens de invitación, secretos TOTP ni claves.
+- Nunca se auditan contraseñas, `token_hash`, tokens de invitación, secretos ni claves.
 - Si la operación falla (permiso, duplicado, tipo inmutable), no se escribe auditoría.
 - La consulta de estos registros pertenece a la auditoría administrativa; esta spec no expone
   una ruta de consulta.

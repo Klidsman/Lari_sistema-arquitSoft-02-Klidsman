@@ -55,7 +55,7 @@
   var pagina = "{{ pagina.number|default:'1' }}";
   var botonSilencio = document.getElementById("silenciar-aviso");
   var toast = document.getElementById("toast-alerta");
-  var ultimaSolicitud = null;
+  var ultimoEvento = null;
   var audioCtx = null;
   var temporizadorToast = null;
 
@@ -107,14 +107,24 @@
     toast.innerHTML = "";
     var enlace = document.createElement("a");
     enlace.href = datos.url || "/almacen/bandeja/";
-    enlace.textContent =
-      "Nueva solicitud #" +
-      datos.solicitud_id +
-      " · " +
-      (datos.tenant || "") +
-      (datos.tecnicos && datos.tecnicos.length
-        ? " · " + datos.tecnicos.join(", ")
-        : "");
+    if (datos.tipo === "cambio_estado") {
+      enlace.textContent =
+        "Solicitud #" +
+        datos.solicitud_id +
+        " · " +
+        (datos.estado || "") +
+        " · " +
+        (datos.tenant || "");
+    } else {
+      enlace.textContent =
+        "Nueva solicitud #" +
+        datos.solicitud_id +
+        " · " +
+        (datos.tenant || "") +
+        (datos.tecnicos && datos.tecnicos.length
+          ? " · " + datos.tecnicos.join(", ")
+          : "");
+    }
     toast.appendChild(enlace);
     toast.hidden = false;
     if (temporizadorToast) clearTimeout(temporizadorToast);
@@ -163,8 +173,15 @@
   }
 
   function tratarEvento(datos) {
-    if (!datos || datos.solicitud_id === ultimaSolicitud) return;
-    ultimaSolicitud = datos.solicitud_id;
+    if (!datos) return;
+    var clave =
+      (datos.tipo || "evento") +
+      ":" +
+      datos.solicitud_id +
+      ":" +
+      (datos.estado || "");
+    if (clave === ultimoEvento) return;
+    ultimoEvento = clave;
     actualizarBadge(datos.pendientes);
     refrescarTabla();
     mostrarToast(datos);

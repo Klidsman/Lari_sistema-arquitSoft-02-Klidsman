@@ -14,7 +14,7 @@ spec 001. 006 no crea una tabla de auditoría propia.
 - El actor es siempre `request.usuario`; nunca se acepta `creado_por` ni `usuario_id` del cliente.
 - El tenant se deduce del actor y de la entidad auditada; no se guarda un `tenant_id` separado.
 - `valor_anterior` y `valor_nuevo` son texto o JSON serializado estable, sin objetos de modelo.
-- No se auditan contraseñas, tokens, secretos TOTP ni `token_hash`.
+- No se auditan contraseñas, tokens, secretos ni `token_hash`.
 - No se audita el contenido binario del Excel; solo ruta relativa y hash.
 - La auditoría de movimientos de stock es responsabilidad de 008; 006 no la duplica.
 - Los registros de un tenant no son visibles para otro tenant.
@@ -75,6 +75,6 @@ spec 001. 006 no crea una tabla de auditoría propia.
 - El hash auditado coincide con `SolicitudAsignacion.excel_hash`.
 - La cancelación deja un registro `BORRADOR→CANCELADA`.
 - Un envío fallido no deja registros de estado, reserva ni Excel.
-- Ningún registro contiene contraseñas, tokens, secretos TOTP ni contenido del Excel.
+- Ningún registro contiene contraseñas, tokens, secretos ni contenido del Excel.
 - Ningún registro contiene `tenant_id` separado ni datos de otro tenant.
 - La auditoría se conserva al desactivar la cuenta o suspender el tenant.

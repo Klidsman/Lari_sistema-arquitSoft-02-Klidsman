@@ -45,7 +45,7 @@ Se reutiliza la tabla de la spec 001; no se crea una tabla nueva.
    nunca un usuario anónimo.
 4. **Valores como texto**: `tipo` se registra como `SERIADO`/`NO_SERIADO`, nunca como `True` /
    `False`; `lote` vacío se registra como cadena vacía.
-5. **Sin secretos**: no se registran contraseñas, hashes, tokens, `token_hash`, secretos TOTP ni
+5. **Sin secretos**: no se registran contraseñas, hashes, tokens, `token_hash`, secretos ni
    claves de cifrado.
 6. **Corrección**: un valor equivocado se corrige con una edición nueva; no se edita el registro
    anterior.

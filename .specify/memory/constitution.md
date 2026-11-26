@@ -1,7 +1,20 @@
 <!--
 Sync Impact Report
 ==================
-Change type: enmienda 1.3.0 → 1.4.0 (MINOR): la sección «Formularios» permite una solicitud de
+Change type: enmienda 1.4.0 → 2.0.0 (MAJOR): se retira el segundo factor obligatorio. El acceso
+  queda solo con correo y contraseña para todos los roles; se eliminan TOTP, sus pantallas,
+  dependencias y campos de base de datos. Aprobada por el responsable del proyecto el
+  2026-11-26.
+Version change: 1.4.0 → 2.0.0
+Modified sections:
+  - «Restricciones Técnicas y de Dominio» → el Administrador de plataforma y el Responsable
+    de almacén ya no requieren segundo factor.
+  - «Formularios» (1.4.0) se conserva sin cambios.
+Removed sections: ninguno.
+Follow-up TODOs:
+  - Actualizar la spec 001, su plan, contratos, quickstart, reglas de dominio y tareas en la
+    misma iniciativa (hecho).
+Previous change: enmienda 1.3.0 → 1.4.0 (MINOR): la sección «Formularios» permite una solicitud de
   asignación con varios técnicos del mismo tenant, cada uno con su NIF en el Excel. Los
   traspasos siguen con un origen y un destino. Aprobada por el responsable del proyecto el
   2026-11-19.
@@ -159,9 +172,9 @@ implementación sin spec son los principales riesgos de entrega.
 - **Acceso**: no existe autoregistro; el correo electrónico es único y es el identificador
   de inicio de sesión. Toda cuenta nueva se crea inactiva y recibe una invitación de un solo
   uso, con vencimiento. Una cuenta desactivada no puede iniciar sesión ni conservar una
-  sesión activa. El Administrador de plataforma y el Responsable de almacén requieren
-  segundo factor. Cada tenant tiene exactamente una cuenta y no crea subcuentas. El tenant y
-  la región se obtienen de la sesión autenticada, nunca de un parámetro del cliente.
+  sesión activa. El acceso usa solo correo y contraseña; no hay segundo factor. Cada tenant
+  tiene exactamente una cuenta y no crea subcuentas. El tenant y la región se obtienen de la
+  sesión autenticada, nunca de un parámetro del cliente.
 - **Formularios**: cada formulario de asignación pertenece a una solicitud que puede incluir
   uno o más técnicos del mismo tenant; cada línea indica su técnico, y cada técnico tiene su
   propio NIF en el Excel, completado desde la lista de técnicos y no escrito. Cada formulario
@@ -240,4 +253,4 @@ este documento y se corrige el artefacto afectado.
 - La guía operativa de detalle vive en `03-reglas-de-dominio/`, `04-contratos/` y las ADR;
   este documento fija los límites que esas fuentes no pueden contradecir.
 
-**Version**: 1.4.0 | **Ratified**: TODO(RATIFICATION_DATE) | **Last Amended**: 2026-11-19
+**Version**: 2.0.0 | **Ratified**: TODO(RATIFICATION_DATE) | **Last Amended**: 2026-11-26

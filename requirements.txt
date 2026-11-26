@@ -12,8 +12,6 @@ billiard==4.3.2
     # via celery
 celery==5.7.0
     # via -r requirements.in
-cffi==2.1.1
-    # via cryptography
 click==8.5.1
     # via
     #   celery
@@ -26,8 +24,6 @@ click-plugins==1.1.1.2
     # via celery
 click-repl==0.4.1
     # via celery
-cryptography==45.0.7
-    # via -r requirements.in
 dj-database-url==2.3.0
     # via -r requirements.in
 django==5.2.19
@@ -50,10 +46,6 @@ psycopg[binary]==3.3.9
     # via -r requirements.in
 psycopg-binary==3.3.9
     # via psycopg
-pycparser==3.12
-    # via cffi
-pyotp==2.12.1
-    # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via celery
 python-dotenv==1.2.4

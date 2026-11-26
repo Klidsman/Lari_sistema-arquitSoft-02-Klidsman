@@ -24,19 +24,19 @@
   </form>
 
   <table class="tabla">
-    <thead><tr><th>ID</th><th>Fecha</th><th>Técnico</th><th>Estado</th><th>Líneas</th><th></th></tr></thead>
+    <thead><tr><th>ID</th><th>Fecha</th><th>Técnico</th><th>Estado</th><th>Líneas</th><th>Acciones</th></tr></thead>
     <tbody>
       {% for solicitud in solicitudes %}
         <tr>
           <td>{{ solicitud.pk }}</td>
           <td>{{ solicitud.fecha|date:"Y-m-d" }}</td>
           <td>{{ solicitud.nifs_tecnicos }}</td>
-          <td>{{ solicitud.get_estado_display }}</td>
+          <td><span class="etiqueta etiqueta-{{ solicitud.estado|lower }}">{{ solicitud.get_estado_display }}</span></td>
           <td>{{ solicitud.lineas.count }}</td>
-          <td>
-            <a href="{% url 'detalle_asignacion' solicitud.pk %}">Ver</a>
+          <td class="acciones">
+            <a class="boton-accion" href="{% url 'detalle_asignacion' solicitud.pk %}">Ver</a>
             {% if solicitud.estado == "BORRADOR" %}
-              · <a href="{% url 'editar_asignacion' solicitud.pk %}">Editar</a>
+              <a class="boton-accion" href="{% url 'editar_asignacion' solicitud.pk %}">Editar</a>
             {% endif %}
           </td>
         </tr>

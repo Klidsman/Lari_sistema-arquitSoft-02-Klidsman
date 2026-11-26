@@ -36,21 +36,26 @@
     <tbody>
       {% for material in materiales %}
         <tr>
-          <td>{{ material.codigo }}</td>
-          <td>{{ material.descripcion }}</td>
-          <td>{{ material.lote }}</td>
-          <td>{{ material.tipo }}</td>
+          <td><span class="codigo">{{ material.codigo }}</span></td>
+          <td><strong>{{ material.descripcion }}</strong></td>
+          <td>{{ material.lote|default:"—" }}</td>
+          <td>
+            <span class="badge-tipo badge-tipo--{{ material.tipo|lower }}">
+              <span class="badge-tipo__dot" aria-hidden="true"></span>
+              {{ material.tipo }}
+            </span>
+          </td>
           <td>{{ material.creado_por.email }}</td>
           <td>{{ material.creado_en|date:"Y-m-d H:i:s" }}</td>
           <td class="acciones">
-            <a href="{% url 'editar_material' material.pk %}">Editar</a>
+            <a class="boton-accion" href="{% url 'editar_material' material.pk %}">Editar</a>
             {% if request.rol == "RESPONSABLE_ALMACEN" %}
               <form method="post"
                     action="{% url 'dar_de_baja_material' material.pk %}"
                     class="en-linea"
                     data-confirmar="¿Estás seguro de dar de baja este material? Dejará de aparecer en el catálogo.">
                 {% csrf_token %}
-                <button type="submit">Dar de baja</button>
+                <button class="boton-accion boton-accion--peligro" type="submit">Dar de baja</button>
               </form>
             {% endif %}
           </td>

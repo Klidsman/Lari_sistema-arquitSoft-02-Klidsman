@@ -85,5 +85,5 @@ Nunca se guardan en `RegistroCambio`:
 - Un alta con una serie inválida, duplicada o existente no deja ningún `RegistroCambio` de recojo ni
   de stock.
 - Un fallo del servicio de stock revierte el recojo y no deja auditoría.
-- Ningún registro contiene contraseñas, tokens, secretos TOTP ni `tenant_id` separado.
+- Ningún registro contiene contraseñas, tokens, secretos ni `tenant_id` separado.
 - La auditoría del recojo se conserva si se desactiva la cuenta o se suspende el tenant.

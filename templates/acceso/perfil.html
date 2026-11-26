@@ -6,8 +6,6 @@
   <h1>Mi perfil</h1>
   <p>Correo: {{ request.usuario.email }}</p>
   <p>Rol: {{ request.rol }}</p>
-  <p>Segundo factor: {{ request.usuario.segundo_factor_habilitado|yesno:"Activo,Inactivo" }}</p>
-  <p><a href="{% url 'configurar_2fa' %}">Configurar segundo factor</a></p>
   <form method="post" action="{% url 'logout' %}">
     {% csrf_token %}
     <button type="submit">Cerrar sesión</button>

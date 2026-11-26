@@ -32,7 +32,7 @@
         <th>Líneas</th>
         <th>Series</th>
         <th>Cantidad</th>
-        <th></th>
+        <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
@@ -51,8 +51,8 @@
           <td>{{ recojo.total_lineas }}</td>
           <td>{{ recojo.total_series }}</td>
           <td>{{ recojo.total_cantidad|default:0 }}</td>
-          <td>
-            <a href="{% url 'detalle_recojo' recojo.pk %}">Ver detalle</a>
+          <td class="acciones">
+            <a class="boton-accion" href="{% url 'detalle_recojo' recojo.pk %}">Ver detalle</a>
           </td>
         </tr>
       {% empty %}

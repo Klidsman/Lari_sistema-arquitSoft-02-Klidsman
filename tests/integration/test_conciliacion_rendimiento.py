@@ -26,3 +26,26 @@ def test_reporte_de_mil_filas_en_menos_de_diez_segundos(
     assert conciliacion.estado == EstadoConciliacion.EN_REVISION
     assert conciliacion.diferencias_cantidades.count() == 1
     assert duracion < 10
+
+
+@pytest.mark.django_db
+def test_reporte_de_diez_mil_filas_sin_n_mas_uno(
+    usuario_tenant, tenant, tecnico, material_no_seriado, almacen,
+    django_assert_max_num_queries,
+):
+    filas = [
+        fila_no_seriada(material_no_seriado, tecnico.nif, 1)
+        for _ in range(10000)
+    ]
+    archivo = archivo_xlsx(filas)
+
+    inicio = time.perf_counter()
+    with django_assert_max_num_queries(40):
+        conciliacion = crear_conciliacion(usuario_tenant, archivo)
+    duracion = time.perf_counter() - inicio
+
+    assert conciliacion.estado == EstadoConciliacion.EN_REVISION
+    assert conciliacion.diferencias_cantidades.count() == 1
+    diferencia = conciliacion.diferencias_cantidades.get()
+    assert diferencia.cantidad_reporte == 10000
+    assert duracion < 60

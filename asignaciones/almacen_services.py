@@ -1,13 +1,16 @@
 """Servicios del almacén sobre solicitudes de asignación (007)."""
 
 import hashlib
+import hmac
 import logging
 from pathlib import Path
 
 from django.conf import settings
 from django.core.mail import EmailMessage, send_mail
 from django.db import IntegrityError, transaction
+from django.db.models import OuterRef, Subquery
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from acceso.models import Rol, Usuario
 from auditoria.services import registrar_cambio
@@ -165,6 +168,16 @@ def confirmar_solicitud(solicitud, actor):
             actor,
             tenant=bloqueada.tenant,
         )
+        transaction.on_commit(
+            lambda: __import__(
+                "asignaciones.notificaciones",
+                fromlist=["publicar_cambio_estado"],
+            ).publicar_cambio_estado(
+                bloqueada,
+                EstadoSolicitud.ENVIADA,
+                EstadoSolicitud.CONFIRMADA,
+            )
+        )
 
     return bloqueada
 
@@ -279,12 +292,24 @@ def rechazar_solicitud(solicitud, motivo, actor):
         transaction.on_commit(
             lambda: _notificar_tenant_rechazo(bloqueada)
         )
+        transaction.on_commit(
+            lambda: __import__(
+                "asignaciones.notificaciones",
+                fromlist=["publicar_cambio_estado"],
+            ).publicar_cambio_estado(
+                bloqueada,
+                EstadoSolicitud.ENVIADA,
+                EstadoSolicitud.RECHAZADA,
+            )
+        )
 
     return bloqueada
 
 
 def ruta_absoluta_solicitud(solicitud):
     if not solicitud.excel_ruta:
+        raise SolicitudNoExiste
+    if Path(solicitud.excel_ruta).is_absolute():
         raise SolicitudNoExiste
     raiz = Path(settings.MEDIA_ROOT).resolve()
     ruta = (raiz / solicitud.excel_ruta).resolve()
@@ -298,7 +323,7 @@ def verificar_archivo(solicitud):
     if not ruta.exists():
         raise SolicitudNoExiste
     hash_actual = hashlib.sha256(ruta.read_bytes()).hexdigest()
-    if hash_actual != solicitud.excel_hash:
+    if not hmac.compare_digest(hash_actual, solicitud.excel_hash or ""):
         raise ArchivoAlterado
     return ruta
 
@@ -618,5 +643,20 @@ def historicos(actor, filtros=None):
     if filtros.get("tenant"):
         solicitudes = solicitudes.filter(tenant_id=filtros["tenant"])
     if filtros.get("tecnico"):
-        solicitudes = solicitudes.filter(lineas__tecnico_id=filtros["tecnico"]).distinct()
-    return solicitudes.order_by("-fecha", "-id")
+        solicitudes = solicitudes.filter(
+            lineas__tecnico_id=filtros["tecnico"]
+        ).distinct()
+    desde = parse_date(filtros.get("fecha_desde") or "")
+    if desde:
+        solicitudes = solicitudes.filter(fecha__gte=desde)
+    hasta = parse_date(filtros.get("fecha_hasta") or "")
+    if hasta:
+        solicitudes = solicitudes.filter(fecha__lte=hasta)
+    ultimo = (
+        EnvioCorreo.objects.filter(solicitud=OuterRef("pk"))
+        .order_by("-numero_intento")
+        .values("estado")[:1]
+    )
+    return solicitudes.annotate(
+        ultimo_envio_estado=Subquery(ultimo)
+    ).select_related("tenant").order_by("-fecha", "-id")

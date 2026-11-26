@@ -14,8 +14,10 @@ def test_alta_cuenta_tenant(cliente_autenticado, tenant, django_capture_on_commi
             {"email": "cuenta@lari.local"},
         )
 
-    assert respuesta.status_code == 302
-    assert respuesta.url == reverse("detalle_tenant", args=[tenant.pk])
+    assert respuesta.status_code == 200
+    contenido = respuesta.content.decode()
+    assert "/invitacion/" in contenido
+    assert "Cuenta del tenant creada" in contenido
 
     usuario = Usuario.objects.get(email="cuenta@lari.local")
     assert usuario.rol == Rol.USUARIO_TENANT
@@ -23,6 +25,7 @@ def test_alta_cuenta_tenant(cliente_autenticado, tenant, django_capture_on_commi
     assert usuario.is_active is False
     assert usuario.has_usable_password() is False
     assert Invitacion.objects.filter(usuario=usuario).count() == 1
+    assert Invitacion.objects.get(usuario=usuario).tipo == "ALTA"
 
 
 @pytest.mark.django_db

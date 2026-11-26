@@ -25,31 +25,6 @@ class LoginForm(forms.Form):
     )
 
 
-class SegundoFactorForm(forms.Form):
-    codigo = forms.RegexField(
-        regex=r"^\d{6}$",
-        label="Código de 6 dígitos",
-        error_messages={
-            "invalid": "Debes completar el segundo factor",
-            "required": "Debes completar el segundo factor",
-        },
-        widget=forms.TextInput(
-            attrs={
-                "inputmode": "numeric",
-                "pattern": "[0-9]*",
-                "maxlength": "6",
-                "autocomplete": "one-time-code",
-                "autocapitalize": "none",
-                "spellcheck": "false",
-            }
-        ),
-    )
-
-
-class ConfigurarTotpForm(SegundoFactorForm):
-    pass
-
-
 class CuentaTenantForm(forms.Form):
     email = forms.EmailField(
         label="Correo",

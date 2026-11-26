@@ -53,7 +53,7 @@ No se crea un superusuario de Django. La primera cuenta se crea con
 |---|---|
 | Región | `REG-01`, almacén con `centro="PR05"` y `codigo_almacen="BE03"` |
 | Tenant | `TEN-01`, estado `ACTIVO` |
-| Cuenta | `tenant01@example.com`, rol `USUARIO_TENANT`, tenant `TEN-01`, 2FA no requerido |
+| Cuenta | `tenant01@example.com`, rol `USUARIO_TENANT`, tenant `TEN-01`, sin segundo factor |
 | Cuenta almacén | `almacen@example.com`, rol `RESPONSABLE_ALMACEN` |
 | Técnico activo | `LA0001`, nombre "Técnico Uno" |
 | Técnico inactivo | `LA0002` |
@@ -278,7 +278,7 @@ revalida. Una solicitud enviada no se puede editar.
 - Envío con totales y hash.
 - Una reserva `Serie/estado` por serie.
 - Cancelación.
-- Ningún registro con contraseña, token, secreto TOTP ni contenido del Excel.
+- Ningún registro con contraseña, token ni contenido del Excel.
 
 ## 5. Criterios de salida
 

@@ -1,16 +1,34 @@
 {% extends "base.html" %}
 {% block title %}Dashboard mensual · Lari{% endblock %}
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'menu_registro_materiales' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver al menú de materiales</span>
+    </a>
+  </div>
   <h1>Dashboard {{ datos.periodo }}</h1>
   <p>Órdenes: {{ datos.ordenes }} · Técnicos con uso: {{ datos.tecnicos }}</p>
+  <p class="ayuda">
+    Saldo del registro mensual de materiales. El detalle por técnico está en
+    Stock actual.
+  </p>
+  <p class="acciones-cabecera">
+    <a class="boton boton-secundario" href="{% url 'exportar_reporte_mensual' %}?periodo={{ datos.periodo }}&formato=xlsx">
+      Exportar reporte mensual
+    </a>
+    <a class="boton boton-secundario" href="{% url 'exportar_detalle_ordenes' %}?periodo={{ datos.periodo }}&formato=csv">
+      Exportar detalle de órdenes
+    </a>
+  </p>
   <table class="tabla">
-    <thead><tr><th>Material</th><th>Inicial</th><th>Despachos</th><th>Usado</th><th>Final</th></tr></thead>
+    <thead><tr><th>Material</th><th>Inicial</th><th>Asignaciones confirmadas</th><th>Usado</th><th>Final</th></tr></thead>
     <tbody>
       {% for fila in datos.filas %}
         <tr class="{% if fila.alerta %}fila-alerta{% endif %}">
           <td>{{ fila.material.codigo }} - {{ fila.material.descripcion }}</td>
           <td>{{ fila.inicial }}</td>
-          <td>{{ fila.despachos }}</td>
+          <td>{{ fila.asignaciones_confirmadas }}</td>
           <td>{{ fila.usado }}</td>
           <td>{{ fila.final }}{% if fila.alerta %} (negativo){% endif %}</td>
         </tr>

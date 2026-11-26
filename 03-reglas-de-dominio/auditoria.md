@@ -41,7 +41,7 @@ Cada registro contiene:
 - El registro se guarda en la misma transacción que el cambio.
 - Si el cambio falla, no se guarda la auditoría.
 - Los valores se guardan como texto legible.
-- No se registran contraseñas, tokens de invitación, secretos de segundo factor ni datos sensibles equivalentes.
+- No se registran contraseñas, tokens de invitación ni datos sensibles equivalentes.
 - La auditoría no reemplaza el historial de movimientos de stock; lo complementa.
 
 ## 5. Consulta

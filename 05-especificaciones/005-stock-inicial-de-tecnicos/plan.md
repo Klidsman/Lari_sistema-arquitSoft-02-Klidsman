@@ -731,7 +731,7 @@ Se reutiliza `auditoria.RegistroCambio` (001). Eventos propios de esta spec:
 - La auditoría de stock es responsabilidad de 008; 005 no la duplica.
 - La serie tiene además `creado_por` y `creado_en` en `series.Serie`, lo que permite rastrear su
   alta aunque se consulte el registro central.
-- No se auditan contraseñas, tokens, secretos TOTP, `token_hash` ni datos sensibles.
+- No se auditan contraseñas, tokens, secretos, `token_hash` ni datos sensibles.
 - No se escribe `tenant_id` como campo separado en la auditoría; el tenant se deduce del usuario y
   de la entidad. Los valores de auditoría no revelan datos de otros tenants.
 

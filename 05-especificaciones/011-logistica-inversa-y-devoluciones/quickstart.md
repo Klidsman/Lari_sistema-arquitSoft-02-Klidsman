@@ -42,11 +42,11 @@ flujo normal de 005/008/009.
 ## Pruebas automatizadas
 
 ```powershell
-# Acta
-pytest tests/unit/test_logistica_inversa_acta.py
+# Unitarias: acta, restricciones y validadores
+pytest tests/unit/test_logistica_inversa_acta.py tests/unit/test_logistica_inversa_servicios.py
 
-# Integración: devoluciones y bajas
-pytest tests/integration/test_devolucion_registro.py tests/integration/test_baja_registro.py
+# Integración: devolución, baja, stock, auditoría, acta y concurrencia
+pytest tests/integration/test_devolucion_registro.py tests/integration/test_baja_registro.py tests/integration/test_devolucion_stock.py tests/integration/test_baja_stock.py tests/integration/test_logistica_inversa_auditoria.py tests/integration/test_logistica_inversa_acta.py tests/integration/test_logistica_inversa_concurrencia.py
 
 # Contrato HTTP
 pytest tests/contract/test_logistica_inversa_http.py
@@ -210,5 +210,13 @@ completa en verde**.
 
 Complementarios cubiertos: fecha futura, sin series, serie de otro técnico/tenant, serie reservada
 en traspaso, causa obligatoria/inválida, estados no admitidos, hash alterado y contrato HTTP.
-Concurrencia de devoluciones cubierta por `test_dos_devoluciones_simultaneas_de_la_misma_serie`. Pendiente de validación manual: rendimiento y RLS de `logistica_inversa` (implementada en `0002_rls.py`).
+Restricciones de modelos y validadores en `test_logistica_inversa_servicios.py`; stock por material
+en `test_devolucion_stock.py` y `test_baja_stock.py`; auditoría completa y ausencia de secretos en
+`test_logistica_inversa_auditoria.py`; descarga segura del acta en `test_logistica_inversa_acta.py`.
+
+Concurrencia cubierta por `test_dos_devoluciones_simultaneas_de_la_misma_serie` y
+`test_dos_bajas_simultaneas_de_la_misma_serie`. Aislamiento y RLS en
+`test_aislamiento_y_rls_de_logistica_inversa`. Rendimiento de 100 series en
+`test_devolucion_de_cien_series_en_menos_de_dos_segundos`. Queda pendiente solo el recorrido manual
+de los escenarios.
 

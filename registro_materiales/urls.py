@@ -25,7 +25,6 @@ urlpatterns = [
         views.historial,
         name="historial_orden",
     ),
-    path("catalogo/", views.catalogo, name="catalogo_materiales"),
     path("materiales/", views.materiales, name="registrar_materiales"),
     path(
         "materiales/contexto/",
@@ -36,12 +35,6 @@ urlpatterns = [
         "materiales/guardar/",
         views.guardar_materiales,
         name="guardar_materiales",
-    ),
-    path("entradas/", views.entradas, name="entradas_materiales"),
-    path(
-        "saldo-inicial/guardar/",
-        views.guardar_saldo,
-        name="guardar_saldo_inicial",
     ),
     path("dashboard/", views.dashboard, name="dashboard_materiales"),
     path("cierre/", views.cierre, name="cierre_mensual"),

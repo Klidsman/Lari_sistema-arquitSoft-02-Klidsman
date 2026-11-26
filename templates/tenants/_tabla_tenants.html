@@ -9,7 +9,7 @@
       <th>Nombre</th>
       <th>Región</th>
       <th>Estado</th>
-      <th></th>
+      <th>Acciones</th>
     </tr>
   </thead>
   <tbody>
@@ -19,7 +19,7 @@
         <td>{{ tenant.nombre }}</td>
         <td>{{ tenant.region.codigo }} - {{ tenant.region.nombre }}</td>
         <td>{{ tenant.get_estado_display }}</td>
-        <td><a href="{% url 'detalle_tenant' tenant.pk %}">Ver detalle</a></td>
+        <td class="acciones"><a class="boton-accion" href="{% url 'detalle_tenant' tenant.pk %}">Ver detalle</a></td>
       </tr>
     {% empty %}
       <tr>

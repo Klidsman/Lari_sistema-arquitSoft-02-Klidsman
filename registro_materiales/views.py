@@ -10,10 +10,13 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from materiales.models import Material
+from series.models import EstadoSerie, Serie
+from stock.models import StockTecnico
+from stock.services import obtener_stock_tecnico
 from tecnicos.models import Tecnico
 
 from . import exportacion, services
-from .models import CierreMensual, MaterialHabilitado
+from .models import CierreMensual
 
 
 def _respuesta(mensaje, status):
@@ -60,6 +63,20 @@ def _cantidades(request):
         coincidencia = patron.match(clave)
         if coincidencia:
             datos[int(coincidencia.group(1))] = valor
+    return datos
+
+
+def _series(request):
+    datos = {}
+    patron = re.compile(r"^series\[(\d+)\]$")
+    for clave in request.POST.keys():
+        coincidencia = patron.match(clave)
+        if coincidencia:
+            datos[int(coincidencia.group(1))] = [
+                int(valor)
+                for valor in request.POST.getlist(clave)
+                if valor
+            ]
     return datos
 
 
@@ -181,42 +198,6 @@ def pendientes(request):
     )
 
 
-@login_required
-@require_http_methods(["GET", "POST"])
-def catalogo(request):
-    tenant, error = _tenant_o_error(request)
-    if error is not None:
-        return error
-    if request.method == "POST":
-        try:
-            material = Material.objects.filter(
-                pk=request.POST.get("material")
-            ).first()
-            services.habilitar_material(
-                tenant,
-                material,
-                request.POST.get("activo") == "1",
-                request.usuario,
-                int(request.POST.get("orden") or 0),
-            )
-        except services.ErrorRegistro as exc:
-            return _error(exc)
-        messages.success(request, "Catálogo actualizado")
-        return redirect("catalogo_materiales")
-    return render(
-        request,
-        "registro_materiales/catalogo.html",
-        {
-            "habilitados": MaterialHabilitado.objects.filter(
-                tenant=tenant
-            ).select_related("material"),
-            "materiales": Material.objects.filter(activo=True).order_by(
-                "codigo"
-            ),
-        },
-    )
-
-
 def _contexto_materiales(tenant, tecnico, periodo, numero):
     orden = None
     if tecnico is not None and numero:
@@ -224,18 +205,67 @@ def _contexto_materiales(tenant, tecnico, periodo, numero):
     usos = {}
     if orden is not None:
         usos = {
-            uso.material_id: uso.cantidad
-            for uso in orden.usos.all()
+            uso.material_id: uso
+            for uso in orden.usos.prefetch_related(
+                "series_usadas__serie__material"
+            )
         }
+
+    series_por_material = {}
+    if tecnico is not None:
+        for serie in (
+            Serie.objects.filter(
+                tenant=tenant,
+                tecnico=tecnico,
+                estado=EstadoSerie.ASIGNADA,
+            )
+            .select_related("material")
+            .order_by("material__codigo", "numero")
+        ):
+            series_por_material.setdefault(
+                serie.material_id, []
+            ).append(serie)
+
+    usadas = set()
+    for uso in usos.values():
+        for enlace in uso.series_usadas.all():
+            serie = enlace.serie
+            usadas.add(serie.pk)
+            opciones_material = series_por_material.setdefault(
+                serie.material_id, []
+            )
+            if all(opcion.pk != serie.pk for opcion in opciones_material):
+                opciones_material.append(serie)
+
+    ids_materiales = set(series_por_material) | set(usos)
+    if tecnico is not None:
+        ids_materiales.update(
+            StockTecnico.objects.filter(
+                tenant=tenant,
+                tecnico=tecnico,
+                cantidad__gt=0,
+            ).values_list("material_id", flat=True)
+        )
+
     filas = []
-    for habilitado in services.materiales_habilitados(tenant):
+    for material in Material.objects.filter(
+        pk__in=ids_materiales
+    ).order_by("codigo"):
+        uso = usos.get(material.pk)
+        opciones = [
+            {"serie": serie, "usada": serie.pk in usadas}
+            for serie in series_por_material.get(material.pk, [])
+        ]
         filas.append(
             {
-                "material": habilitado.material,
-                "cantidad": usos.get(habilitado.material_id, 0),
-                "disponible": services.saldo_final(
-                    tenant, habilitado.material, periodo
+                "material": material,
+                "cantidad": uso.cantidad if uso is not None else 0,
+                "disponible": (
+                    obtener_stock_tecnico(tecnico, material)
+                    if tecnico is not None
+                    else 0
                 ),
+                "series": opciones,
             }
         )
     return orden, filas
@@ -253,6 +283,11 @@ def materiales(request):
     ).first()
     numero = request.GET.get("numero_orden", "")
     orden, filas = _contexto_materiales(tenant, tecnico, periodo, numero)
+    ordenes = []
+    if tecnico is not None and orden is None:
+        ordenes = services.ordenes_pendientes(
+            tenant, periodo, tecnico=tecnico
+        )
     return render(
         request,
         "registro_materiales/materiales.html",
@@ -262,6 +297,7 @@ def materiales(request):
             "tecnico": tecnico,
             "numero": numero,
             "orden": orden,
+            "ordenes": ordenes,
             "filas": filas,
         },
     )
@@ -319,6 +355,7 @@ def guardar_materiales(request):
             ),
             _cantidades(request),
             request.usuario,
+            series_por_material=_series(request),
         )
     except (services.ErrorRegistro, ValueError) as exc:
         return _error(exc if isinstance(exc, services.ErrorRegistro) else services.PeriodoInvalido())
@@ -340,56 +377,6 @@ def historial(request, orden_id):
         request,
         "registro_materiales/historial.html",
         {"registros": registros, "orden_id": orden_id},
-    )
-
-
-@login_required
-@require_GET
-def entradas(request):
-    tenant, error = _tenant_o_error(request)
-    if error is not None:
-        return error
-    periodo = _periodo(request)
-    despachos = services.despachos_del_periodo(tenant, periodo)
-    filas = [
-        {
-            "material": habilitado.material,
-            "saldo": services.saldo_inicial_efectivo(
-                tenant, habilitado.material, periodo
-            ),
-            "despachos": despachos.get(habilitado.material_id, 0),
-        }
-        for habilitado in services.materiales_habilitados(tenant)
-    ]
-    return render(
-        request,
-        "registro_materiales/entradas.html",
-        {"periodo": periodo, "filas": filas},
-    )
-
-
-@login_required
-@require_POST
-def guardar_saldo(request):
-    tenant, error = _tenant_o_error(request)
-    if error is not None:
-        return error
-    try:
-        material = Material.objects.filter(
-            pk=request.POST.get("material")
-        ).first()
-        services.registrar_saldo_inicial(
-            tenant,
-            material,
-            request.POST.get("periodo") or services.periodo_actual(),
-            request.POST.get("cantidad", ""),
-            request.usuario,
-        )
-    except services.ErrorRegistro as exc:
-        return _error(exc)
-    messages.success(request, "Saldo inicial registrado")
-    return redirect(
-        f"/registro-materiales/entradas/?periodo={request.POST.get('periodo', '')}"
     )
 
 

@@ -3,6 +3,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
@@ -66,6 +67,59 @@ def listar_tecnicos(request):
             "tecnicos": pagina.object_list,
             "q": request.GET.get("q", ""),
             "estado": estado,
+        },
+    )
+
+
+@login_required
+@require_GET
+def stock_actual_tecnicos(request):
+    tenant, error = _tenant_o_error(request)
+    if error is not None:
+        return error
+
+    q = request.GET.get("q", "")
+    tecnicos = services.listar_tecnicos_con_stock(tenant, q=q)
+    resumen = services.resumen_stock_actual(tenant, q=q)
+    pagina = Paginator(tecnicos, 50).get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "tecnicos/stock_actual.html",
+        {
+            "pagina": pagina,
+            "tecnicos": pagina.object_list,
+            "q": q,
+            "resumen": resumen,
+        },
+    )
+
+
+@login_required
+@require_GET
+def detalle_stock_tecnico(request, tecnico_id):
+    tenant, error = _tenant_o_error(request)
+    if error is not None:
+        return error
+
+    tecnico, error = _tecnico_o_error(tenant, tecnico_id)
+    if error is not None:
+        return error
+
+    filas = services.stock_actual_tecnico(tecnico, solo_con_stock=True)
+    resumen = filas.aggregate(
+        materiales=Count("material", distinct=True),
+        unidades=Sum("cantidad", default=0),
+    )
+    series = services.series_en_custodia(tecnico)
+    return render(
+        request,
+        "tecnicos/stock_tecnico.html",
+        {
+            "tecnico": tecnico,
+            "filas": filas,
+            "resumen": resumen,
+            "series": series,
         },
     )
 

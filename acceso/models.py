@@ -32,9 +32,6 @@ class Usuario(AbstractUser):
         related_name="usuarios",
     )
     version_sesion = models.PositiveIntegerField(default=0)
-    # El token Fernet de un secreto TOTP supera 64 caracteres.
-    secreto_totp = models.CharField(max_length=255, blank=True)
-    segundo_factor_habilitado = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -74,11 +71,21 @@ class Usuario(AbstractUser):
         return self.email
 
 
+class TipoInvitacion(models.TextChoices):
+    ALTA = "ALTA", "Alta de cuenta"
+    RESTABLECIMIENTO = "RESTABLECIMIENTO", "Restablecimiento de contraseña"
+
+
 class Invitacion(models.Model):
     usuario = models.ForeignKey(
         Usuario,
         on_delete=models.CASCADE,
         related_name="invitaciones",
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TipoInvitacion.choices,
+        default=TipoInvitacion.ALTA,
     )
     token_hash = models.CharField(max_length=64, unique=True)
     correo = models.EmailField()

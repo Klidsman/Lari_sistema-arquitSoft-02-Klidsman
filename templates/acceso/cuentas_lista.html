@@ -39,18 +39,32 @@
           <td>{{ cuenta.is_active|yesno:"Activa,Inactiva" }}</td>
           <td class="acciones">
             {% if cuenta.is_active %}
+              {% if cuenta.pk != request.user.pk %}
+                <form method="post"
+                      action="{% url 'restablecer_password' cuenta.pk %}"
+                      data-confirmar="Se generará un enlace de un solo uso y se cerrarán las sesiones abiertas de esta cuenta. ¿Continuar?">
+                  {% csrf_token %}
+                  <button class="boton-accion" type="submit">Restablecer contraseña</button>
+                </form>
+              {% endif %}
               <form method="post"
                     action="{% url 'desactivar_cuenta' cuenta.pk %}"
                     data-confirmar="¿Estás seguro de desactivar esta cuenta? La sesión abierta se cerrará.">
                 {% csrf_token %}
-                <button type="submit">Desactivar</button>
+                <button class="boton-accion boton-accion--peligro" type="submit">Desactivar</button>
               </form>
             {% else %}
+              <form method="post"
+                    action="{% url 'reenviar_invitacion_cuenta' cuenta.pk %}"
+                    data-confirmar="Se generará un enlace de invitación nuevo y el anterior quedará invalidado. ¿Continuar?">
+                {% csrf_token %}
+                <button class="boton-accion" type="submit">Reenviar invitación</button>
+              </form>
               <form method="post"
                     action="{% url 'reactivar_cuenta' cuenta.pk %}"
                     data-confirmar="¿Estás seguro de reactivar esta cuenta?">
                 {% csrf_token %}
-                <button type="submit">Reactivar</button>
+                <button class="boton-accion" type="submit">Reactivar</button>
               </form>
             {% endif %}
 
@@ -65,7 +79,7 @@
                     Responsable de almacén
                   </option>
                 </select>
-                <button type="submit">Cambiar rol</button>
+                <button class="boton-accion" type="submit">Cambiar rol</button>
               </form>
             {% endif %}
           </td>

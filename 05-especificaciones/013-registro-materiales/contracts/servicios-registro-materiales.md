@@ -89,22 +89,24 @@ class ArchivoReporte:
 - Filtra por tenant, técnico y periodo.
 - Búsqueda exacta, sin distinguir mayúsculas/minúsculas.
 
-### `guardar_uso(orden, fecha_instalacion, cantidades, actor) -> OrdenLiquidacion`
+### `guardar_uso(orden, fecha_instalacion, cantidades, actor, series_por_material=None) -> OrdenLiquidacion`
 
 1. Exige mes abierto (`CierreMensual.estado != CERRADO`).
 2. Valida fecha, técnico, materiales habilitados/activos y cantidades.
 3. Calcula el periodo de la fecha; si cambia, revalida `(tenant, tecnico, periodo, numero)`.
-4. Calcula por material:
-   - `disponible = saldo_inicial + despachos`.
-   - `uso_total` del periodo, excluyendo el uso actual de la orden.
-   - `uso_nuevo = uso_total + cantidad_nueva`.
-5. Si `uso_nuevo > disponible`, lanza `SaldoInsuficiente` con disponible, usado y faltante.
-6. Si `cantidad > factor * promedio_mensual_ultimos_3_cierres`, crea `AdvertenciaUso`
+4. Para materiales no seriados calcula el delta contra el uso actual y valida contra
+   `obtener_stock_tecnico(tecnico, material)`.
+5. Aplica el delta al stock del técnico con un movimiento `CONSUMO`; si el resultado sería negativo,
+   lanza `SaldoInsuficiente`.
+6. Para materiales seriados recibe `series_por_material` con los IDs seleccionados, valida que estén
+   `ASIGNADA` al técnico, las pasa a `INSTALADA` y crea `UsoMaterialSerie`; las series retiradas
+   vuelven a `ASIGNADA`. `UsoMaterialOrden.cantidad` es el número de series.
+7. Si la cantidad supera `factor * promedio_mensual_ultimos_3_cierres`, crea `AdvertenciaUso`
    (`CANTIDAD_ATIPICA`). El promedio usa el total mensual usado por material, no el promedio por
    orden. Sin historial no advierte.
-7. Crea/actualiza `UsoMaterialOrden`; las líneas existentes que pasan a 0 se conservan.
-8. Actualiza `fecha_instalacion` y `periodo` de la orden; audita.
-9. No toca stock.
+8. Crea/actualiza `UsoMaterialOrden`; las líneas existentes que pasan a 0 se conservan.
+9. Actualiza `fecha_instalacion` y `periodo` de la orden; audita.
+10. No modifica `StockGeneral` ni conciliaciones.
 
 ### `resolver_advertencia(advertencia, justificacion, actor) -> AdvertenciaUso`
 

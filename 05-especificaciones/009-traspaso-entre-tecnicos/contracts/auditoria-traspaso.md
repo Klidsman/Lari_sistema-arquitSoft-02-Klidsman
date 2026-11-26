@@ -138,7 +138,7 @@ No hay series reservadas ni stock que auditar.
 - El valor anterior se toma de la fila bajo bloqueo.
 - El actor es siempre el usuario de la sesión; nunca `None` ni un usuario inventado.
 - Los registros son inmutables: no se editan ni se eliminan desde 009.
-- No se auditan contraseñas, tokens, secretos TOTP, credenciales, cuerpos de correo, contenido
+- No se auditan contraseñas, tokens, secretos, credenciales, cuerpos de correo, contenido
   binario del Excel, rutas absolutas ni datos de otro tenant.
 - La auditoría no sustituye al dato: `SolicitudTraspaso.estado`, `Serie.tecnico` y
   `StockTecnico.cantidad` siguen siendo la fuente actual.

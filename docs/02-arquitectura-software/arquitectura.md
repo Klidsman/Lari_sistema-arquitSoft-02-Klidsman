@@ -11,7 +11,7 @@ flowchart TB
 
     subgraph Monolito["Monolito Modular — Django"]
         subgraph Aplicacion["Capa de aplicación"]
-            C1["Acceso y sesión<br/>(cookie + 2FA TOTP)"]
+            C1["Acceso y sesión<br/>(cookie)"]
             C2["Vistas y formularios<br/>(renderizado en servidor)"]
             C3["Servicios de dominio<br/>(services.py)"]
             C4["Tareas Celery<br/>(correo, reintentos)"]
@@ -22,7 +22,7 @@ flowchart TB
             M1["Tenants y acceso"]
             M2["Materiales y técnicos"]
             M3["Series, stock y asignaciones"]
-            M4["Recojos, traspasos y conciliaciones"]
+            M4["Recojos, traspasos y devoluciones"]
             M5["Logística inversa"]
             M6["Registro de materiales y reportes"]
         end

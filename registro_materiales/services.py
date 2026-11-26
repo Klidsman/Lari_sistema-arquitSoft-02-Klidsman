@@ -2,6 +2,7 @@
 
 import hashlib
 import re
+import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
@@ -14,6 +15,14 @@ from acceso.models import Rol
 from auditoria.models import RegistroCambio
 from auditoria.services import registrar_cambio
 from materiales.models import Material
+from series.models import EstadoSerie, Serie
+from stock.models import StockTecnico, TipoMovimientoTecnico
+from stock.services import (
+    StockInsuficiente,
+    decrementar_stock_tecnico,
+    incrementar_stock_tecnico,
+    obtener_stock_tecnico,
+)
 from tecnicos.models import Tecnico
 from tenants.models import Tenant
 
@@ -21,16 +30,16 @@ from .models import (
     AdvertenciaUso,
     CargaOrdenes,
     CierreMensual,
-    DespachoAlmacen,
     JustificacionCierre,
     MaterialHabilitado,
     OrdenLiquidacion,
     SaldoInicialPeriodo,
     SaldoMensualMaterial,
     UsoMaterialOrden,
+    UsoMaterialSerie,
 )
 
-ORDEN_RE = re.compile(r"^[A-Z0-9]{1,30}$")
+ORDEN_RE = re.compile(r"^[A-Z0-9]+(?:[-_][A-Z0-9]+)*$")
 PERIODO_RE = re.compile(r"^[0-9]{4}-(0[1-9]|1[0-2])$")
 
 
@@ -67,7 +76,7 @@ class CantidadInvalida(ErrorRegistro):
 class NumeroOrdenInvalido(ErrorRegistro):
     mensaje = (
         "El número de orden es obligatorio y debe tener entre 1 y 30 "
-        "caracteres alfanuméricos"
+        "caracteres alfanuméricos, guiones y guiones bajos simples"
     )
 
 
@@ -81,6 +90,10 @@ class OrdenDuplicada(ErrorRegistro):
 
 class SaldoInsuficiente(ErrorRegistro):
     mensaje = "El uso supera el disponible del mes"
+
+
+class SerieNoDisponible(ErrorRegistro):
+    mensaje = "La serie seleccionada no está disponible en la custodia"
 
 
 class PeriodoCerrado(ErrorRegistro):
@@ -173,7 +186,7 @@ def validar_tecnico(tenant, tecnico):
 
 def normalizar_numero(numero):
     texto = str(numero or "").strip().upper()
-    if not ORDEN_RE.match(texto):
+    if len(texto) > 30 or not ORDEN_RE.match(texto):
         raise NumeroOrdenInvalido
     return texto
 
@@ -275,6 +288,9 @@ def procesar_lista(texto):
             rechazadas.append(limpia)
             continue
         normalizada = limpia.upper()
+        if len(normalizada) > 30 or not ORDEN_RE.match(normalizada):
+            rechazadas.append(limpia)
+            continue
         if normalizada in vistos:
             continue
         vistos.add(normalizada)
@@ -325,6 +341,15 @@ def confirmar_carga(tenant, tecnico, periodo, texto, actor):
     if not lista.ordenes:
         raise NumeroOrdenInvalido
     with transaction.atomic():
+        # Serializa cargas concurrentes del mismo tenant y recalcula el
+        # resumen con el estado ya confirmado para no chocar con la
+        # restricción única de órdenes.
+        Tenant.objects.select_for_update().get(pk=tenant.pk)
+        lista, resumen, nuevas = _resumen(
+            tenant, tecnico, periodo, texto
+        )
+        if lista.rechazadas or not lista.ordenes:
+            raise NumeroOrdenInvalido
         carga = CargaOrdenes.objects.create(
             tenant=tenant,
             tecnico=tecnico,
@@ -443,13 +468,27 @@ def obtener_o_crear_orden(tenant, tecnico, periodo, numero, actor):
     return orden
 
 
-def despachos_del_periodo(tenant, periodo, material=None):
+def asignaciones_confirmadas_del_periodo(
+    tenant, periodo, material=None
+):
+    """Cantidad confirmada por el almacén en el mes, agrupada por material."""
     validar_periodo(periodo)
+    from asignaciones.models import EstadoSolicitud, LineaAsignacion
+
     anio, mes = (int(parte) for parte in periodo.split("-"))
     inicio = date(anio, mes, 1)
     fin = date(anio + (mes == 12), (mes % 12) + 1, 1)
-    qs = DespachoAlmacen.objects.filter(
-        tenant=tenant, fecha__gte=inicio, fecha__lt=fin
+    desde = timezone.make_aware(
+        datetime.combine(inicio, datetime.min.time())
+    )
+    hasta = timezone.make_aware(
+        datetime.combine(fin, datetime.min.time())
+    )
+    qs = LineaAsignacion.objects.filter(
+        tenant=tenant,
+        solicitud__estado=EstadoSolicitud.CONFIRMADA,
+        solicitud__confirmada_en__gte=desde,
+        solicitud__confirmada_en__lt=hasta,
     )
     if material is not None:
         qs = qs.filter(material=material)
@@ -457,6 +496,10 @@ def despachos_del_periodo(tenant, periodo, material=None):
         fila["material_id"]: fila["total"]
         for fila in qs.values("material_id").annotate(total=Sum("cantidad"))
     }
+
+
+# Alias de compatibilidad para código interno heredado.
+despachos_del_periodo = asignaciones_confirmadas_del_periodo
 
 
 def usado_del_periodo(tenant, periodo, material=None, tecnico=None):
@@ -505,6 +548,15 @@ def saldo_inicial_efectivo(tenant, material, periodo, _vistos=None):
     heredado = _saldo_cierre_anterior(tenant, material, periodo)
     if heredado is not None:
         return heredado
+    stock_actual = (
+        StockTecnico.objects.filter(tenant=tenant, material=material)
+        .aggregate(total=Sum("cantidad"))["total"]
+        or 0
+    )
+    usado = usado_del_periodo(tenant, periodo, material)
+    despachos = despachos_del_periodo(tenant, periodo).get(material.pk, 0)
+    if stock_actual or usado or despachos:
+        return stock_actual + usado - despachos
     vistos = set(_vistos or [])
     if periodo in vistos or len(vistos) > 120:
         return 0
@@ -540,7 +592,165 @@ def saldo_final(tenant, material, periodo):
     return inicial + despachos - usado
 
 
-def guardar_uso(orden, fecha_instalacion, cantidades, actor):
+def _mover_stock_consumo(tecnico, material, delta, actor, uso):
+    """Aplica el delta de consumo al libro de stock del técnico."""
+    if delta == 0:
+        return
+    referencia = f"USO:{uso.pk}:{uuid.uuid4().hex[:12]}"
+    try:
+        if delta > 0:
+            decrementar_stock_tecnico(
+                tecnico,
+                material,
+                delta,
+                actor,
+                tipo=TipoMovimientoTecnico.CONSUMO,
+                referencia=referencia,
+            )
+        else:
+            incrementar_stock_tecnico(
+                tecnico,
+                material,
+                -delta,
+                actor,
+                tipo=TipoMovimientoTecnico.CONSUMO,
+                referencia=referencia,
+            )
+    except StockInsuficiente as exc:
+        raise SaldoInsuficiente(
+            "El consumo supera el stock actual del técnico: "
+            f"{exc}"
+        ) from exc
+
+
+def _auditar_custodia_serie(
+    serie, anterior_estado, anterior_tecnico, anterior_fecha, actor, tenant
+):
+    registrar_cambio(
+        "Serie",
+        serie.pk,
+        "estado",
+        anterior_estado,
+        serie.estado,
+        actor,
+        tenant=tenant,
+    )
+    registrar_cambio(
+        "Serie",
+        serie.pk,
+        "tecnico",
+        anterior_tecnico,
+        serie.tecnico_id or "",
+        actor,
+        tenant=tenant,
+    )
+    registrar_cambio(
+        "Serie",
+        serie.pk,
+        "asignada_en",
+        anterior_fecha,
+        serie.asignada_en,
+        actor,
+        tenant=tenant,
+    )
+
+
+def _sincronizar_series_uso(uso, material, seleccionadas, orden, actor, tenant):
+    """Sincroniza las series consumidas y el stock del técnico."""
+    seleccionadas = {int(pk) for pk in seleccionadas}
+    enlaces = {
+        enlace.serie_id: enlace
+        for enlace in uso.series_usadas.select_related("serie")
+    }
+    series = {
+        serie.pk: serie
+        for serie in Serie.objects.select_for_update().filter(
+            tenant=tenant,
+            pk__in=seleccionadas,
+        )
+    }
+    if len(series) != len(seleccionadas):
+        raise SerieNoDisponible
+    for serie_id in seleccionadas - set(enlaces):
+        serie = series[serie_id]
+        if (
+            serie.estado != EstadoSerie.ASIGNADA
+            or serie.tecnico_id != orden.tecnico_id
+        ):
+            raise SerieNoDisponible
+
+    for serie_id in set(enlaces) - seleccionadas:
+        enlace = enlaces[serie_id]
+        serie = enlace.serie
+        anterior_estado = serie.estado
+        anterior_tecnico = serie.tecnico_id
+        anterior_fecha = serie.asignada_en
+        serie.estado = EstadoSerie.ASIGNADA
+        serie.tecnico = orden.tecnico
+        serie.asignada_en = timezone.now()
+        serie.actualizado_por = actor
+        serie.save(
+            update_fields=[
+                "estado",
+                "tecnico",
+                "asignada_en",
+                "actualizado_por",
+                "actualizado_en",
+            ]
+        )
+        _mover_stock_consumo(
+            orden.tecnico, material, -1, actor, uso
+        )
+        enlace.delete()
+        _auditar_custodia_serie(
+            serie,
+            anterior_estado,
+            anterior_tecnico,
+            anterior_fecha,
+            actor,
+            tenant,
+        )
+
+    for serie_id in seleccionadas - set(enlaces):
+        serie = series[serie_id]
+        anterior_estado = serie.estado
+        anterior_tecnico = serie.tecnico_id
+        anterior_fecha = serie.asignada_en
+        serie.estado = EstadoSerie.INSTALADA
+        serie.tecnico = None
+        serie.asignada_en = None
+        serie.actualizado_por = actor
+        serie.save(
+            update_fields=[
+                "estado",
+                "tecnico",
+                "asignada_en",
+                "actualizado_por",
+                "actualizado_en",
+            ]
+        )
+        _mover_stock_consumo(
+            orden.tecnico, material, 1, actor, uso
+        )
+        UsoMaterialSerie.objects.create(
+            tenant=tenant,
+            uso=uso,
+            serie=serie,
+            creado_por=actor,
+        )
+        _auditar_custodia_serie(
+            serie,
+            anterior_estado,
+            anterior_tecnico,
+            anterior_fecha,
+            actor,
+            tenant,
+        )
+
+
+def guardar_uso(
+    orden, fecha_instalacion, cantidades, actor, series_por_material=None
+):
     tenant = validar_cuenta_tenant(actor)
     if orden.tenant_id != tenant.pk:
         raise NoEncontrado
@@ -550,18 +760,35 @@ def guardar_uso(orden, fecha_instalacion, cantidades, actor):
     _validar_mes_abierto(tenant, orden.periodo)
     _validar_mes_abierto(tenant, nuevo_periodo)
 
-    datos = {}
-    for material_id, valor in (cantidades or {}).items():
-        cantidad = _cantidad(valor)
-        material = Material.objects.filter(pk=material_id).first()
-        if material is None:
-            raise MaterialNoHabilitado
-        obtener_habilitado(tenant, material)
-        datos[material.pk] = (material, cantidad)
+    cantidades = cantidades or {}
+    series_por_material = series_por_material or {}
+    ids_materiales = {int(pk) for pk in cantidades}
+    ids_materiales.update(int(pk) for pk in series_por_material)
 
     with transaction.atomic():
         Tenant.objects.select_for_update().get(pk=tenant.pk)
         orden = OrdenLiquidacion.objects.select_for_update().get(pk=orden.pk)
+        usos_actuales = {
+            uso.material_id: uso
+            for uso in orden.usos.select_related("material").prefetch_related(
+                "series_usadas"
+            )
+        }
+        ids_materiales.update(
+            material_id
+            for material_id, uso in usos_actuales.items()
+            if uso.material.es_seriado
+        )
+
+        materiales = {
+            material.pk: material
+            for material in Material.objects.filter(pk__in=ids_materiales)
+        }
+        for material_id in ids_materiales:
+            material = materiales.get(material_id)
+            if material is None:
+                raise MaterialNoHabilitado
+
         anterior_periodo = orden.periodo
         anterior_fecha = orden.fecha_instalacion
         if nuevo_periodo != orden.periodo:
@@ -578,42 +805,58 @@ def guardar_uso(orden, fecha_instalacion, cantidades, actor):
                 raise OrdenDuplicada
             orden.periodo = nuevo_periodo
 
-        for material, cantidad in datos.values():
-            disponible = saldo_inicial_efectivo(
-                tenant, material, nuevo_periodo
-            ) + despachos_del_periodo(tenant, nuevo_periodo).get(
-                material.pk, 0
-            )
-            uso_actual = (
-                UsoMaterialOrden.objects.filter(
-                    orden=orden, material=material
-                ).values_list("cantidad", flat=True).first()
-                or 0
-            )
-            uso_total = (
-                usado_del_periodo(
-                    tenant, nuevo_periodo, material
+        for material_id in sorted(ids_materiales):
+            material = materiales[material_id]
+            uso = usos_actuales.get(material_id)
+            if material.es_seriado:
+                seleccionadas = series_por_material.get(
+                    material_id, series_por_material.get(str(material_id), [])
                 )
-                - uso_actual
-            )
-            if uso_total + cantidad > disponible:
-                faltante = uso_total + cantidad - disponible
-                raise SaldoInsuficiente(
-                    f"El uso supera el disponible del mes: disponible="
-                    f"{disponible}, usado={uso_total}, faltante={faltante}"
+                if uso is None and not seleccionadas:
+                    continue
+                if uso is None:
+                    uso = UsoMaterialOrden.objects.create(
+                        tenant=tenant,
+                        orden=orden,
+                        tecnico=orden.tecnico,
+                        material=material,
+                        cantidad=0,
+                        creado_por=actor,
+                    )
+                    usos_actuales[material_id] = uso
+                anterior = uso.cantidad
+                _sincronizar_series_uso(
+                    uso, material, seleccionadas, orden, actor, tenant
+                )
+                cantidad = len(set(int(pk) for pk in seleccionadas))
+            else:
+                cantidad = _cantidad(cantidades.get(material_id, 0))
+                if uso is None:
+                    uso = UsoMaterialOrden.objects.create(
+                        tenant=tenant,
+                        orden=orden,
+                        tecnico=orden.tecnico,
+                        material=material,
+                        cantidad=0,
+                        creado_por=actor,
+                    )
+                    usos_actuales[material_id] = uso
+                anterior = uso.cantidad
+                delta = cantidad - anterior
+                if delta > 0:
+                    disponible = obtener_stock_tecnico(
+                        orden.tecnico, material
+                    )
+                    if delta > disponible:
+                        raise SaldoInsuficiente(
+                            "El uso supera el stock actual del técnico: "
+                            f"disponible={disponible}, usado={anterior}, "
+                            f"faltante={delta - disponible}"
+                        )
+                _mover_stock_consumo(
+                    orden.tecnico, material, delta, actor, uso
                 )
 
-            uso, creado = UsoMaterialOrden.objects.get_or_create(
-                orden=orden,
-                material=material,
-                defaults={
-                    "tenant": tenant,
-                    "tecnico": orden.tecnico,
-                    "cantidad": 0,
-                    "creado_por": actor,
-                },
-            )
-            anterior = uso.cantidad
             uso.cantidad = cantidad
             uso.actualizado_por = actor
             uso.save(
@@ -626,7 +869,7 @@ def guardar_uso(orden, fecha_instalacion, cantidades, actor):
             registrar_cambio(
                 "UsoMaterialOrden",
                 uso.pk,
-                "alta" if creado else "cantidad",
+                "cantidad",
                 anterior,
                 cantidad,
                 actor,
@@ -825,13 +1068,11 @@ def _materiales_con_datos(tenant, periodo):
             tenant=tenant, orden__periodo=periodo
         ).values_list("material_id", flat=True)
     )
-    anio, mes = (int(parte) for parte in periodo.split("-"))
+    ids.update(asignaciones_confirmadas_del_periodo(tenant, periodo))
     ids.update(
-        DespachoAlmacen.objects.filter(
-            tenant=tenant,
-            fecha__gte=date(anio, mes, 1),
-            fecha__lt=date(anio + (mes == 12), (mes % 12) + 1, 1),
-        ).values_list("material_id", flat=True)
+        StockTecnico.objects.filter(tenant=tenant).values_list(
+            "material_id", flat=True
+        )
     )
     return Material.objects.filter(pk__in=ids).order_by("codigo")
 
@@ -840,22 +1081,42 @@ def dashboard_mensual(
     tenant, periodo, tecnico=None, material=None, desde=None, hasta=None
 ):
     validar_periodo(periodo)
-    materiales = _materiales_con_datos(tenant, periodo)
+    materiales = list(_materiales_con_datos(tenant, periodo))
     if material is not None:
-        materiales = materiales.filter(pk=material.pk)
-    despachos = despachos_del_periodo(tenant, periodo)
+        materiales = [m for m in materiales if m.pk == material.pk]
+    ids = [mat.pk for mat in materiales]
+    # Resuelve los saldos en bloque para evitar una consulta por material.
+    manuales = dict(
+        SaldoInicialPeriodo.objects.filter(
+            tenant=tenant, periodo=periodo, material_id__in=ids
+        ).values_list("material_id", "cantidad")
+    )
+    heredados = dict(
+        SaldoMensualMaterial.objects.filter(
+            tenant=tenant,
+            material_id__in=ids,
+            cierre__periodo=periodo_anterior(periodo),
+            cierre__estado=CierreMensual.CERRADO,
+        ).values_list("material_id", "saldo_final")
+    )
+    asignaciones = asignaciones_confirmadas_del_periodo(tenant, periodo)
     usos = usado_del_periodo(tenant, periodo, tecnico=tecnico)
     filas = []
     for mat in materiales:
         usado = usos.get(mat.pk, 0)
-        inicial = saldo_inicial_efectivo(tenant, mat, periodo)
-        despacho = despachos.get(mat.pk, 0)
-        final = inicial + despacho - usado
+        if mat.pk in manuales:
+            inicial = manuales[mat.pk]
+        elif mat.pk in heredados:
+            inicial = heredados[mat.pk]
+        else:
+            inicial = saldo_inicial_efectivo(tenant, mat, periodo)
+        asignacion = asignaciones.get(mat.pk, 0)
+        final = inicial + asignacion - usado
         filas.append(
             {
                 "material": mat,
                 "inicial": inicial,
-                "despachos": despacho,
+                "asignaciones_confirmadas": asignacion,
                 "usado": usado,
                 "final": final,
                 "alerta": final < 0,
@@ -1046,7 +1307,11 @@ def cerrar_mes(tenant, periodo, backup_ref, actor):
         raise CierreBloqueado
     with transaction.atomic():
         cierre = _obtener_cierre(tenant, periodo)
-        CierreMensual.objects.select_for_update().get(pk=cierre.pk)
+        cierre = CierreMensual.objects.select_for_update().get(
+            pk=cierre.pk
+        )
+        if cierre.estado == CierreMensual.CERRADO:
+            raise PeriodoCerrado("El mes ya está cerrado")
         datos = []
         for fila in dashboard_mensual(tenant, periodo)["filas"]:
             datos.append(
@@ -1055,7 +1320,7 @@ def cerrar_mes(tenant, periodo, backup_ref, actor):
                     tenant=tenant,
                     material=fila["material"],
                     saldo_inicial=fila["inicial"],
-                    despachos=fila["despachos"],
+                    despachos=fila["asignaciones_confirmadas"],
                     usado=fila["usado"],
                     saldo_final=fila["final"],
                 )

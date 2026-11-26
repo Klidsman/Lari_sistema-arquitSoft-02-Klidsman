@@ -3,7 +3,7 @@
 import re
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Count, Q, Sum
 
 from acceso.models import Rol
 from auditoria.services import registrar_cambio
@@ -107,17 +107,77 @@ def obtener_tecnico_por_nif(tenant, nif) -> Tecnico:
     return tecnico
 
 
-def stock_actual_tecnico(tecnico):
+def stock_actual_tecnico(tecnico, solo_con_stock=False):
     """Stock por material del técnico; solo lectura y acotado a su tenant."""
     from stock.models import StockTecnico
 
+    filas = StockTecnico.objects.filter(
+        tenant=tecnico.tenant,
+        tecnico=tecnico,
+    )
+    if solo_con_stock:
+        filas = filas.filter(cantidad__gt=0)
+    return filas.select_related("material").order_by("material__codigo")
+
+
+def series_en_custodia(tecnico):
+    """Series ASIGNADA que el técnico tiene físicamente en custodia."""
+    from series.models import EstadoSerie, Serie
+
     return (
-        StockTecnico.objects.filter(
+        Serie.objects.filter(
             tenant=tecnico.tenant,
             tecnico=tecnico,
+            estado=EstadoSerie.ASIGNADA,
         )
         .select_related("material")
-        .order_by("material__codigo")
+        .order_by("material__codigo", "numero")
+    )
+
+
+def _tecnicos_filtrados(tenant, q=""):
+    tecnicos = Tecnico.objects.filter(tenant=tenant)
+    texto = " ".join((q or "").split())
+    if texto:
+        tecnicos = tecnicos.filter(
+            Q(nif__icontains=texto) | Q(nombre__icontains=texto)
+        )
+    return tecnicos
+
+
+def listar_tecnicos_con_stock(tenant, q=""):
+    """Índice de técnicos con el total de materiales y unidades en custodia."""
+    return (
+        _tecnicos_filtrados(tenant, q)
+        .annotate(
+            materiales=Count(
+                "stock_tecnico",
+                filter=Q(stock_tecnico__cantidad__gt=0),
+                distinct=True,
+            ),
+            unidades=Sum(
+                "stock_tecnico__cantidad",
+                filter=Q(stock_tecnico__cantidad__gt=0),
+                default=0,
+            ),
+        )
+        .order_by("nombre", "nif")
+    )
+
+
+def resumen_stock_actual(tenant, q=""):
+    """Totales del stock en custodia para los técnicos filtrados."""
+    from stock.models import StockTecnico
+
+    tecnicos = _tecnicos_filtrados(tenant, q)
+    return StockTecnico.objects.filter(
+        tenant=tenant,
+        cantidad__gt=0,
+        tecnico__in=tecnicos,
+    ).aggregate(
+        tecnicos=Count("tecnico", distinct=True),
+        materiales=Count("material", distinct=True),
+        unidades=Sum("cantidad", default=0),
     )
 
 

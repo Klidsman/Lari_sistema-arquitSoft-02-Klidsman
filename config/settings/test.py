@@ -20,11 +20,6 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
-TOTP_ENCRYPTION_KEY = os.getenv(
-    "TOTP_ENCRYPTION_KEY",
-    "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
-)
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

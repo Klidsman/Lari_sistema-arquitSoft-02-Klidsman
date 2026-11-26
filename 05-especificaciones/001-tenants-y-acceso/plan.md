@@ -8,7 +8,7 @@
 
 Implementar la base de identidad y alcance del sistema: regiones con su almacén central,
 tenants con una única cuenta operativa, cuentas de Administrador de plataforma y de
-Responsable de almacén, invitación por correo, autenticación de dos factores y auditoría
+Responsable de almacén, invitación por enlace de un solo uso y auditoría
 inmutable. El diseño usa un modelo de usuario personalizado con rol y referencias opcionales
 a tenant o región, aislamiento derivado de la sesión (nunca del cliente), revocación
 inmediata mediante versión de sesión y restricciones de base de datos como fuente de verdad
@@ -18,8 +18,7 @@ ante altas concurrentes.
 
 **Language/Version**: Python 3.12+ (fijado por la constitución y ADR-015)
 
-**Primary Dependencies**: Django LTS 5.x, HTMX, Celery con Redis, `pyotp` (TOTP) y
-`cryptography` (cifrado del secreto TOTP). Dependencias adicionales justificadas en
+**Primary Dependencies**: Django LTS 5.x, HTMX, Celery con Redis. Dependencias adicionales justificadas en
 `research.md`.
 
 **Storage**: PostgreSQL 16+ con seguridad por fila (RLS) como respaldo del filtrado de
@@ -39,9 +38,8 @@ listados administrativos paginados (50 filas); envío de invitaciones asíncrono
 bloquear el alta.
 
 **Constraints**: aislamiento multitenant no negociable; tenant y región solo desde la sesión;
-revocación de sesiones inmediata; auditoría de solo inserción; segundo factor obligatorio
-para Administrador de plataforma y Responsable de almacén; sin eliminación física de
-regiones, tenants ni cuentas.
+revocación de sesiones inmediata; auditoría de solo inserción; acceso con correo y
+contraseña, sin segundo factor; sin eliminación física de regiones, tenants ni cuentas.
 
 **Scale/Scope**: ~100 tenants con una cuenta cada uno; 3 roles; 16 rutas HTTP; 6 entidades
 (`Region`, `Almacen`, `Tenant`, `Usuario`, `Invitacion`, `RegistroCambio`).
@@ -280,9 +278,6 @@ class Usuario(AbstractUser):
         "tenants.Region", null=True, blank=True, on_delete=models.PROTECT, related_name="usuarios"
     )
     version_sesion = models.PositiveIntegerField(default=0)
-    # El token Fernet de un secreto TOTP supera 64 caracteres.
-    secreto_totp = models.CharField(max_length=255, blank=True)
-    segundo_factor_habilitado = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -313,6 +308,7 @@ class Usuario(AbstractUser):
 ```python
 class Invitacion(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="invitaciones")
+    tipo = models.CharField(max_length=20, choices=TipoInvitacion.choices, default=TipoInvitacion.ALTA)
     token_hash = models.CharField(max_length=64, unique=True)
     correo = models.EmailField()
     expira_en = models.DateTimeField()
@@ -329,9 +325,10 @@ class Invitacion(models.Model):
         ]
 ```
 
-- `token_hash` guarda el hash del token; el token original solo viaja en el correo.
+- `tipo` distingue el alta de cuenta del restablecimiento de contraseña.
+- `token_hash` guarda el hash del token; el token original se muestra una sola vez en la interfaz y, si el correo está configurado, también viaja por correo.
 - Una cuenta nueva se crea con `is_active=False` hasta aceptar la invitación.
-- `version_sesion` se incrementa al cambiar rol, desactivar la cuenta o suspender el tenant.
+- `version_sesion` se incrementa al cambiar rol, desactivar la cuenta, restablecer la contraseña o suspender el tenant.
 
 ### App `auditoria`
 
@@ -391,13 +388,12 @@ Viven en `tenants/services.py` y `acceso/services.py`, no en las vistas.
   - Solo Administrador de plataforma.
   - Verifica correo único y que el tenant no tenga ya una cuenta, activa o desactivada.
   - Crea la cuenta inactiva con rol `USUARIO_TENANT` y su tenant.
-  - Genera y envía la invitación.
-  - Audita el alta.
+  - Genera la invitación, audita y devuelve el token mediante `crear_cuenta_tenant_con_enlace`.
   - Si el tenant ya tiene cuenta, devuelve “El tenant ya tiene una cuenta”; no crea subcuentas.
 - `crear_cuenta_almacen(region, correo, actor)`:
   - Solo Administrador de plataforma.
   - Crea la cuenta inactiva con rol `RESPONSABLE_ALMACEN`, sin tenant.
-  - Genera la invitación y audita.
+  - Genera la invitación, audita y devuelve el token mediante `crear_cuenta_almacen_con_enlace`.
 - `cambiar_rol(usuario, nuevo_rol, actor)`:
   - Solo Administrador de plataforma.
   - Rechaza el cambio de rol de una cuenta de tenant; esa cuenta solo se desactiva o reactiva.
@@ -415,22 +411,28 @@ Viven en `tenants/services.py` y `acceso/services.py`, no en las vistas.
   - Responsable de almacén: no administra cuentas de tenant.
   - Un usuario común no administra cuentas.
 
-### Invitaciones y autenticación
-- `enviar_invitacion(usuario, actor)`:
+### Invitaciones, restablecimiento y autenticación
+- `emitir_invitacion(usuario, actor, tipo, enviar_correo=True)`:
   - Revoca invitaciones pendientes anteriores.
   - Genera un token aleatorio, guarda solo su hash y fija `expira_en = ahora + 72 h`.
-  - Envía el correo mediante una tarea con reintentos.
-  - Registra `enviada_en` o `ultimo_error`.
+  - Envía el correo mediante una tarea con reintentos cuando `enviar_correo` es verdadero.
+  - Devuelve la invitación y el token en memoria para mostrarlo una sola vez.
+- `enviar_invitacion(usuario, actor, tipo)`:
+  - Emite una invitación y devuelve solo el registro persistido.
+- `solicitar_restablecimiento(usuario, actor)`:
+  - Solo Administrador de plataforma y solo cuentas activas.
+  - Emite una invitación de tipo `RESTABLECIMIENTO`.
+  - Incrementa `version_sesion` para cerrar las sesiones abiertas.
+  - Audita `acceso_cuenta` sin guardar el token.
 - `aceptar_invitacion(token, password)`:
   - Busca por hash, verifica vigencia, que no esté usada ni revocada.
   - Valida la política de contraseña.
-  - Activa la cuenta, guarda la contraseña, marca la invitación como usada y audita.
+  - Para `ALTA`: exige cuenta inactiva, la activa y audita `is_active`.
+  - Para `RESTABLECIMIENTO`: exige cuenta activa, incrementa `version_sesion` y audita `acceso_cuenta`.
+  - En ambos casos marca la invitación como usada.
 - `iniciar_sesion(correo, password)`:
   - Rechaza cuentas inactivas y tenants suspendidos.
-  - Si el rol exige segundo factor, deja la sesión en estado pendiente.
-- `verificar_segundo_factor(usuario, codigo)`:
-  - Valida el código TOTP.
-  - Solo entonces abre la sesión definitiva.
+  - Abre la sesión directamente con las credenciales válidas.
 - `renovar_version_sesion(usuario)`:
   - Incrementa el contador para invalidar sesiones abiertas.
 
@@ -452,8 +454,8 @@ Viven en `tenants/services.py` y `acceso/services.py`, no en las vistas.
 - No se acepta `tenant_id` ni `region_id` desde formularios, URLs o archivos.
 - Se recomienda RLS en PostgreSQL como respaldo del filtrado de aplicación.
 
-## Autenticación y segundo factor
-- Inicio de sesión con correo y contraseña.
+## Autenticación
+- Inicio de sesión con correo y contraseña, sin segundo factor.
 - Cuentas nuevas: `is_active=False` hasta aceptar la invitación.
 - Invitación:
   - Token aleatorio de alta entropía.
@@ -461,23 +463,17 @@ Viven en `tenants/services.py` y `acceso/services.py`, no en las vistas.
   - Vence a las 72 horas.
   - Un solo uso.
   - Reenviar invalida la anterior.
-- Segundo factor:
-  - Obligatorio para Administrador de plataforma y Responsable de almacén.
-  - TOTP con secreto por usuario.
-  - El secreto se guarda cifrado o en un campo protegido; nunca en texto plano en la auditoría.
-  - Sin segundo factor válido no se abre la sesión.
 - Revocación:
-  - `version_sesion` se incrementa al cambiar rol, desactivar cuenta o suspender tenant.
+  - `version_sesion` se incrementa al cambiar rol, desactivar cuenta, restablecer contraseña o suspender tenant.
   - El middleware compara la versión de la sesión con la de la base de datos.
   - Si no coincide, cierra la sesión.
-- Recuperación de contraseña y de segundo factor: fuera de alcance.
+- El restablecimiento de contraseña se hace con un enlace de un solo uso; la recuperación automática por correo queda fuera de alcance.
 
 ## Interfaz y endpoints
 
 | Ruta | Método | Función |
 |---|---|---|
 | `/login/` | GET / POST | Inicio de sesión con correo y contraseña |
-| `/login/2fa/` | GET / POST | Verificación del segundo factor |
 | `/logout/` | POST | Cierre de sesión |
 | `/invitacion/<token>/` | GET / POST | Definir contraseña desde la invitación |
 | `/plataforma/regiones/` | GET | Listado de regiones |
@@ -492,14 +488,17 @@ Viven en `tenants/services.py` y `acceso/services.py`, no en las vistas.
 | `/plataforma/cuentas/<id>/desactivar/` | POST | Desactivar cuenta |
 | `/plataforma/cuentas/<id>/reactivar/` | POST | Reactivar cuenta |
 | `/plataforma/cuentas/<id>/rol/` | POST | Cambiar rol administrativo |
+| `/plataforma/cuentas/<id>/restablecer/` | POST | Generar enlace de restablecimiento de contraseña |
+| `/plataforma/cuentas/<id>/invitacion/` | POST | Reenviar invitación a una cuenta inactiva |
 | `/auditoria/acceso/` | GET | Consulta de altas, cambios y desactivaciones |
 
 ### Pantallas
 - **Administrador de plataforma:** regiones, tenants, cuenta única del tenant, cuentas de almacén y auditoría de acceso.
 - **Cuenta del tenant:** todas las funciones del tenant, sin pantalla de gestión de usuarios.
 - **Responsable de almacén:** solo su perfil y su región; no administra cuentas.
-- **Invitación:** formulario de contraseña con token.
-- **Segundo factor:** verificación y configuración inicial.
+- **Invitación y restablecimiento:** formulario de contraseña con token y pantalla de enlace mostrado una sola vez.
+- **Cuentas:** acciones de restablecer contraseña y reenviar invitación, con confirmación.
+- **Perfil:** datos de la cuenta y cierre de sesión.
 
 ## Validaciones (dónde vive cada una)
 
@@ -515,7 +514,6 @@ Viven en `tenants/services.py` y `acceso/services.py`, no en las vistas.
 | Rol permitido | Servicio | “No puedes asignar ese rol” |
 | Rol de cuenta del tenant inmutable | Servicio | “La cuenta del tenant no cambia de rol” |
 | Invitación vigente | Servicio | “La invitación venció o ya fue usada” |
-| Segundo factor | Servicio de autenticación | “Debes completar el segundo factor” |
 | Cuenta activa | Middleware y servicio | “La cuenta está desactivada” |
 | Tenant activo | Middleware y servicio | “El tenant está suspendido” |
 | Permiso de administración | Servicio y decorador | “No tienes permiso para administrar esta cuenta” |
@@ -545,6 +543,12 @@ Un caso por criterio de aceptación. Nombres propuestos:
 - `test_cuenta_de_tenant_puede_cargar_y_aprobar_conciliacion`
 - `test_invitacion_vencida_usada_o_revocada_se_rechaza`
 - `test_reenvio_de_invitacion_invalida_la_anterior`
+- `test_admin_genera_enlace_de_restablecimiento`
+- `test_restablecimiento_invalida_sesion_abierta`
+- `test_restablecimiento_conserva_rol_alcance_y_segundo_factor`
+- `test_cuenta_inactiva_no_se_restablece`
+- `test_admin_no_se_restablece_a_si_mismo`
+- `test_comando_restablece_admin_e_invalida_sesiones`
 - `test_usuario_de_tenant_no_ve_datos_de_otro_tenant`
 - `test_responsable_almacen_no_ve_otra_region`
 - `test_admin_plataforma_no_opera_inventario_ni_aprueba_conciliacion`
@@ -573,7 +577,7 @@ Además, pruebas de base de datos:
 - **RF-05, RF-51, RF-55 y RES-18:** se interpretan como alta centralizada. ACT-02 crea la cuenta única del tenant y las cuentas de Almacén; el tenant no crea cuentas.
 - **Región inmutable:** se asume que un tenant no cambia de región. Si el negocio lo requiere, se define un flujo de traslado con validación de stock y auditoría.
 - **Invitación por correo:** el envío puede fallar. Se registra el error y se permite reenviar; el alta no depende del éxito inmediato del correo.
-- **Segundo factor:** se implementa con TOTP. La recuperación de códigos queda fuera de alcance y se resuelve desactivando la cuenta y creando otra.
+- **Sin segundo factor:** el acceso usa correo y contraseña. Esta decisión se registra en ADR-022 y en la constitución 2.0.0.
 - **Revocación inmediata:** se usa `version_sesion` porque la cookie de sesión de Django no invalida por sí sola las sesiones abiertas.
 - **Suspensión de tenant:** bloquea el acceso y las operaciones, pero no borra ni modifica datos. El stock se conserva.
 - **Sin eliminación:** no se borran regiones, tenants ni cuentas; se desactivan o suspenden. Esto preserva la trazabilidad.
@@ -594,7 +598,7 @@ Además, pruebas de base de datos:
 
 | Artefacto | Contenido |
 |---|---|
-| `research.md` | Decisiones técnicas y alternativas: usuario personalizado, TOTP, invitaciones, revocación de sesión, RLS, correo asíncrono y concurrencia |
+| `research.md` | Decisiones técnicas y alternativas: usuario personalizado, invitaciones, revocación de sesión, RLS, correo asíncrono y concurrencia |
 | `data-model.md` | Entidades, campos, relaciones, restricciones, índices y transiciones de estado |
 | `contracts/http-endpoints.md` | Contrato de las rutas, roles, peticiones, respuestas y errores |
 | `contracts/auditoria-registro.md` | Contrato del registro de auditoría y datos que nunca se almacenan |

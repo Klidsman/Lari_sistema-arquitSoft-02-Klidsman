@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Baja {{ baja.pk }} · Lari{% endblock %}
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'lista_bajas' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a bajas</span>
+    </a>
+  </div>
   <h1>Baja {{ baja.pk }}</h1>
   <dl class="detalle">
     <dt>Serie</dt><dd>{{ baja.serie.numero }}</dd>

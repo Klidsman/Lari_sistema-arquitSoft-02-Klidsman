@@ -44,6 +44,8 @@ def _error(exc):
             services.EstadoConciliacionInvalido,
             services.AprobacionBloqueada,
             services.HuboCambios,
+            services.SerieInactiva,
+            services.SerieReservada,
         ),
     ):
         return _respuesta(str(exc), 409)
@@ -101,6 +103,8 @@ def cargar_conciliacion(request):
             services.SerieFormatoInvalido,
             services.SerieDuplicada,
             services.SerieInstalada,
+            services.SerieInactiva,
+            services.SerieReservada,
             services.SerieFueraTenant,
             services.MaterialSerieIncoherente,
             services.ConciliacionEnRevision,

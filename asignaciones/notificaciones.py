@@ -85,6 +85,36 @@ def publicar_solicitud_enviada(solicitud) -> bool:
     return publicar_evento_region(solicitud.region, evento)
 
 
+def evento_cambio_estado(
+    solicitud, estado_anterior, estado_nuevo
+) -> dict:
+    return {
+        "tipo": "cambio_estado",
+        "solicitud_id": solicitud.pk,
+        "tenant": solicitud.tenant.codigo,
+        "estado_anterior": estado_anterior,
+        "estado": estado_nuevo,
+        "pendientes": contar_pendientes(solicitud.region),
+        "url": f"/almacen/solicitudes/{solicitud.pk}/",
+    }
+
+
+def publicar_cambio_estado(
+    solicitud, estado_anterior, estado_nuevo
+) -> bool:
+    try:
+        evento = evento_cambio_estado(
+            solicitud, estado_anterior, estado_nuevo
+        )
+    except Exception:
+        logger.warning(
+            "No se pudo construir el evento de cambio de estado",
+            exc_info=True,
+        )
+        return False
+    return publicar_evento_region(solicitud.region, evento)
+
+
 def suscribir_region(region, heartbeat_segundos=None):
     """Genera eventos SSE para la región y heartbeats cuando no hay novedades."""
     if heartbeat_segundos is None:

@@ -105,7 +105,7 @@ La normalización ocurre antes de validar y antes de escribir.
 - Un registro por campo modificado.
 - Una operación rechazada (permiso, duplicado, tipo inmutable, validación) **no** escribe
   auditoría.
-- Nunca se auditan contraseñas, tokens, secretos TOTP ni claves.
+- Nunca se auditan contraseñas, tokens ni claves.
 
 ## Fragmento de búsqueda
 

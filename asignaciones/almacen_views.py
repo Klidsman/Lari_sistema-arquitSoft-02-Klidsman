@@ -184,7 +184,7 @@ def descargar_excel(request, solicitud_id):
         return _respuesta("La solicitud no existe", 404)
     except services.ArchivoAlterado as exc:
         return _respuesta(str(exc), 409)
-    return FileResponse(
+    respuesta = FileResponse(
         open(ruta, "rb"),
         as_attachment=True,
         filename=f"asignacion-{solicitud.pk}.xlsx",
@@ -192,6 +192,8 @@ def descargar_excel(request, solicitud_id):
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         ),
     )
+    respuesta["Cache-Control"] = "private, no-store"
+    return respuesta
 
 
 @login_required
@@ -235,7 +237,7 @@ def descargar_historico(request, solicitud_id):
         return _respuesta("La solicitud no existe", 404)
     except services.ArchivoAlterado as exc:
         return _respuesta(str(exc), 409)
-    return FileResponse(
+    respuesta = FileResponse(
         open(ruta, "rb"),
         as_attachment=True,
         filename=f"asignacion-{solicitud.pk}.xlsx",
@@ -243,6 +245,8 @@ def descargar_historico(request, solicitud_id):
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         ),
     )
+    respuesta["Cache-Control"] = "private, no-store"
+    return respuesta
 
 
 @login_required

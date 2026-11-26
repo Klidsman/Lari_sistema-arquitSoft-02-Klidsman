@@ -53,7 +53,7 @@ Datos mínimos para las pruebas manuales (crear desde la interfaz de la spec 001
 1. Una región con su almacén.
 2. Un tenant y su cuenta activa.
 3. Una segunda cuenta de otro tenant para comprobar el catálogo compartido.
-4. Un Administrador de plataforma con segundo factor.
+4. Un Administrador de plataforma con sesión iniciada.
 5. Al menos una cuenta de **Responsable de almacén** activa, que es la única que crea
    materiales y la que puede darlos de baja.
 

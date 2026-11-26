@@ -82,7 +82,7 @@ datos empiezan en la fila 2.
 
 ## Datos que nunca se escriben en el Excel
 
-- Contraseñas, tokens, secretos TOTP ni credenciales.
+- Contraseñas, tokens, secretos ni credenciales.
 - Datos de otro tenant o región.
 - Series de otro técnico o material.
 - Rutas absolutas o hashes en celdas.

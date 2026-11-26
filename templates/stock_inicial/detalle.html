@@ -3,6 +3,12 @@
 {% block title %}Detalle stock inicial · Lari{% endblock %}
 
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'estado_stock_inicial' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a stock inicial</span>
+    </a>
+  </div>
   <h1>Stock inicial</h1>
 
   <dl class="detalle">
@@ -26,11 +32,11 @@
       <tbody>
         {% for linea in lineas %}
           <tr>
-            <td>{{ linea.material.codigo }}</td>
+            <td><span class="codigo">{{ linea.material.codigo }}</span></td>
             <td>{{ linea.material.descripcion }}</td>
-            <td>{{ linea.lote }}</td>
-            <td>{{ linea.serie.numero|default:"—" }}</td>
-            <td>{{ linea.cantidad }}</td>
+            <td><span class="lote">{{ linea.lote }}</span></td>
+            <td>{% if linea.serie %}<span class="badge-serie">{{ linea.serie.numero }}</span>{% else %}—{% endif %}</td>
+            <td class="columna-numero"><strong>{{ linea.cantidad }}</strong></td>
           </tr>
         {% endfor %}
       </tbody>
@@ -38,7 +44,9 @@
   {% endfor %}
 
   <p>
-    <a href="{% url 'editar_stock_inicial' carga.pk %}">Editar stock inicial</a>
-    <a href="{% url 'estado_stock_inicial' %}">Volver</a>
+    <a class="boton" href="{% url 'editar_stock_inicial' carga.pk %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-editar"></use></svg>
+      Editar stock inicial
+    </a>
   </p>
 {% endblock %}

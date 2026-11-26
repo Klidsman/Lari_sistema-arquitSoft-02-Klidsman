@@ -28,7 +28,7 @@ El sistema es un instrumento de control y conciliación, no un ERP ni un sustitu
 - Operación real de almacén: el recojo se registra por formulario; las series se escanean con lector de código de barras que se comporta como teclado. Los materiales no seriados se digitan por cantidad; los seriados generan una fila por serie con Cantidad 1.
 - Circulación de documentos: Excel de asignación, traspaso, stock inicial, conciliación y reportes; actas de devolución; envío por correo al buzón de la región. Los formatos viven en `04-contratos/` como configuración, no como constantes del código.
 - Parámetros por región: Centro, Almacén y buzón son datos de la región. Movimiento es Z31 para asignación y Z32 para desasignación. La longitud y el formato de la serie son configurables.
-- Acceso: login por correo electrónico, invitación de un solo uso con vencimiento, 2FA TOTP obligatorio para Administrador de plataforma y Responsable de almacén. No hay autoregistro ni recuperación de contraseña o de códigos.
+- Acceso: login por correo electrónico y contraseña, invitación de un solo uso con vencimiento y restablecimiento asistido por el Administrador. No hay autoregistro ni segundo factor.
 - Trabajo de escritorio en navegador, en español, con conexión a PostgreSQL y un worker Celery separado para tareas de correo y procesos de fondo.
 - Contexto de curso: el repositorio es también evidencia de arquitectura (docs de análisis, C4 y ADR); la spec y la constitución son la autoridad del comportamiento.
 
@@ -38,7 +38,7 @@ El sistema es un instrumento de control y conciliación, no un ERP ni un sustitu
 - Stack fijado por la constitución y las ADR: Python 3.12+, Django LTS 5.x, PostgreSQL 16+ (RLS como respaldo), Celery + Redis, HTMX, `openpyxl`, `pyotp`, `cryptography`. Sin SQLite, ni en pruebas. Monolito modular; la lógica de negocio vive en `services.py` de cada app.
 - Aislamiento: tenant y región se derivan solo de la sesión (`request.usuario`), nunca de parámetros del cliente. Acceso ajeno responde 404, sin revelar existencia ni propietario. El catálogo de materiales es global, sin `tenant_id`; su código es único global.
 - Invariantes de stock: dos niveles (general del tenant y por técnico); solo una asignación confirmada mueve material del general al técnico; los traspasos nunca cambian el stock general ni el total del tenant; no se asigna más de lo disponible descontando reservas; el lote es informativo y no separa stock; una baja no se reasigna.
-- No se eliminan regiones, tenants, cuentas ni materiales: se desactivan o suspenden. Toda alta o cambio se audita en `auditoria.RegistroCambio`, en la misma transacción; la auditoría es de solo inserción y nunca guarda contraseñas, tokens ni secretos TOTP.
+- No se eliminan regiones, tenants, cuentas ni materiales: se desactivan o suspenden. Toda alta o cambio se audita en `auditoria.RegistroCambio`, en la misma transacción; la auditoría es de solo inserción y nunca guarda contraseñas ni tokens.
 - Idioma: interfaz, documentación y nombres de código en español.
 - Decisión abierta (no inventar): no hay requisito de accesibilidad específico declarado en la documentación del producto.
 - Decisión abierta (no inventar): no hay dominio público, licencia ni destino de despliegue definidos.
@@ -46,7 +46,7 @@ El sistema es un instrumento de control y conciliación, no un ERP ni un sustitu
 ## Brand Commitments
 
 - Nombre de producto: «Lari», usado en la interfaz como «Lari · Control de materiales». Es lo único vinculante según la persona responsable.
-- No existe logo, manual de marca ni paleta corporativa. La apariencia actual de `templates/` y `static/css/base.css` es un punto de partida, no una identidad confirmada.
+- La interfaz incorpora una marca gráfica de trabajo (monograma «L» con renglones de inventario) y un sistema de iconos SVG de trazo único. Es una propuesta provisional, no un manual de marca confirmado; puede reemplazarse sin cambiar la estructura ni los flujos.
 - Tono confirmado por la documentación: español directo y operativo, sin marketing ni promesas comerciales.
 
 ## Evidence on Hand

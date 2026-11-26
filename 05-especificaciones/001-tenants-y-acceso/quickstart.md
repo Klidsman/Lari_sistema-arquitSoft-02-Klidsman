@@ -3,7 +3,7 @@
 **Fase**: 1 | **Fecha**: 2026-11-11 | **Spec**: `05-especificaciones/001-tenants-y-acceso/spec.md`
 
 Guía para levantar el proyecto y validar de extremo a extremo las regiones, tenants, cuentas,
-invitaciones, segundo factor, revocación de sesiones y auditoría. Los detalles de datos están
+invitaciones, restablecimiento de contraseña, revocación de sesiones y auditoría. Los detalles de datos están
 en `data-model.md` y los contratos en `contracts/`.
 
 ## Prerrequisitos
@@ -46,15 +46,8 @@ DJANGO_SETTINGS_MODULE=config.settings.dev
 SECRET_KEY=dev-solo-local
 DATABASE_URL=postgresql://lari_app:cambiar-en-local@localhost:5432/lari
 REDIS_URL=redis://localhost:6379/0
-TOTP_ENCRYPTION_KEY=<clave-Fernet-generada-localmente>
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 DEFAULT_FROM_EMAIL=no-reply@lari.local
-```
-
-Generar una clave Fernet local (guardarla solo en `.env`):
-
-```powershell
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
 ## Puesta en marcha
@@ -65,17 +58,29 @@ python manage.py crear_admin_plataforma --email admin@lari.local
 python manage.py runserver
 ```
 
-En otra terminal, para el envío de invitaciones:
+El enlace de invitación se muestra una sola vez en la interfaz, así que el correo no es
+obligatorio para operar. Si quieres envío automático, define `EMAIL_BACKEND` y las variables
+`EMAIL_*` en `.env` y arranca el worker:
 
 ```powershell
 celery -A config worker -l info
 ```
 
-Con `EMAIL_BACKEND` de consola, la invitación aparece en la salida del worker: copiar el
-enlace `/invitacion/<token>/` para continuar.
+Con `EMAIL_BACKEND` de consola, la invitación también aparece en la salida del worker.
 
-`crear_admin_plataforma` crea una cuenta `ADMIN_PLATAFORMA` con invitación; no crea
-superusuario de Django ni de base de datos.
+`crear_admin_plataforma` crea una cuenta `ADMIN_PLATAFORMA` con invitación y muestra el enlace
+en la terminal; no crea superusuario de Django ni de base de datos.
+
+### Recuperación del Administrador de plataforma
+
+Si el único Administrador perdió su contraseña, ejecutar en el servidor:
+
+```powershell
+python manage.py restablecer_admin_plataforma --email admin@lari.local
+```
+
+El comando muestra una sola vez el enlace `/invitacion/<token>/` e invalida las sesiones
+abiertas.
 
 ## Pruebas automatizadas
 
@@ -97,7 +102,7 @@ concurrencia real.
 
 ### 1. Alta de región y almacén
 
-1. Iniciar sesión como Administrador con segundo factor.
+1. Iniciar sesión como Administrador con correo y contraseña.
 2. Ir a `/plataforma/regiones/nueva/`.
 3. Registrar código `LIM`, nombre `Lima`, Centro `PR05`, Almacén `BE03` y un buzón válido.
 4. **Esperado**: la región y su almacén aparecen en `/plataforma/regiones/`; la auditoría
@@ -123,8 +128,8 @@ concurrencia real.
 
 1. En el detalle del tenant, abrir `/plataforma/tenants/<id>/cuenta/nueva/`.
 2. Registrar `tenant1@lari.local`.
-3. **Esperado**: cuenta inactiva con rol `USUARIO_TENANT`; invitación generada; correo visible
-   en la consola del worker; auditoría de alta.
+3. **Esperado**: cuenta inactiva con rol `USUARIO_TENANT`; invitación generada; el enlace se
+   muestra una sola vez en pantalla; auditoría de alta.
 4. Intentar crear una segunda cuenta para el mismo tenant.
 5. **Esperado**: `"El tenant ya tiene una cuenta"`.
 6. Intentar registrar un correo ya usado por otra cuenta.
@@ -137,23 +142,36 @@ concurrencia real.
 ### 4. Invitación vencida, revocada y reenvío
 
 1. Crear una cuenta de almacén y no aceptar la invitación.
-2. Reenviar la invitación desde el detalle de la cuenta.
-3. **Esperado**: el enlace anterior deja de funcionar (`410`); el nuevo enlace funciona.
+2. Pulsar **«Reenviar invitación»** en `/plataforma/cuentas/`.
+3. **Esperado**: el enlace anterior deja de funcionar (`410`); el nuevo enlace se muestra una
+   sola vez y funciona.
 4. Forzar en base de datos `expira_en` al pasado y abrir el enlace.
 5. **Esperado**: `"La invitación venció o ya fue usada"`.
 
-### 5. Inicio de sesión y segundo factor
+### 5. Restablecimiento de contraseña
 
-1. Iniciar sesión como Administrador sin completar el TOTP.
-2. **Esperado**: no se abre la sesión; solo se accede a `/login/2fa/`.
-3. Completar el TOTP.
-4. **Esperado**: sesión abierta con alcance global.
-5. Repetir con un Responsable de almacén.
-6. **Esperado**: también exige segundo factor.
-7. Iniciar sesión con la cuenta del tenant.
-8. **Esperado**: no exige segundo factor y el alcance es solo su tenant.
+1. Con una cuenta de tenant activa, pulsar **«Restablecer contraseña»** en
+   `/plataforma/cuentas/`.
+2. **Esperado**: se muestra un enlace de un solo uso; la cuenta sigue activa y sus sesiones
+   abiertas se cierran.
+3. Abrir el enlace en otro navegador y definir una contraseña nueva.
+4. **Esperado**: la contraseña anterior deja de funcionar, la nueva funciona, el rol y el
+   alcance no cambian.
+5. Intentar restablecer una cuenta inactiva.
+6. **Esperado**: `"Reactiva la cuenta antes de restablecer su contraseña"`.
+7. Intentar restablecer la propia cuenta del Administrador desde la interfaz.
+8. **Esperado**: se rechaza y se indica usar el comando de consola.
 
-### 6. Aislamiento entre tenants y regiones
+### 6. Inicio de sesión
+
+1. Iniciar sesión como Administrador con correo y contraseña.
+2. **Esperado**: sesión abierta con alcance global.
+3. Repetir con un Responsable de almacén.
+4. **Esperado**: sesión abierta con alcance de su región.
+5. Iniciar sesión con la cuenta del tenant.
+6. **Esperado**: sesión abierta con alcance solo de su tenant.
+
+### 7. Aislamiento entre tenants y regiones
 
 1. Crear dos tenants (`TEN-001`, `TEN-002`) con sus cuentas activas.
 2. Iniciar sesión con la cuenta de `TEN-001` e intentar abrir un recurso de `TEN-002` por URL
@@ -167,7 +185,7 @@ concurrencia real.
 8. Con la cuenta del tenant, intentar crear una cuenta o subcuenta.
 9. **Esperado**: la ruta no existe y el servicio rechaza la operación.
 
-### 7. Desactivación, reactivación y suspensión
+### 8. Desactivación, reactivación y suspensión
 
 1. Con una cuenta de tenant con sesión abierta, desactivarla desde
    `/plataforma/cuentas/<id>/desactivar/`.
@@ -180,7 +198,7 @@ concurrencia real.
    de suspensión.
 7. Reactivar el tenant y verificar que la cuenta vuelve a operar.
 
-### 8. Cambio de rol
+### 9. Cambio de rol
 
 1. Crear una cuenta de Responsable de almacén y activarla.
 2. Cambiar su rol a Administrador de plataforma desde
@@ -191,13 +209,13 @@ concurrencia real.
 5. **Esperado**: `"La cuenta del tenant no cambia de rol"`; solo se permite desactivarla o
    reactivarla.
 
-### 9. Sin eliminación
+### 10. Sin eliminación
 
 1. Intentar `DELETE` sobre una región, un tenant o una cuenta.
 2. **Esperado**: `405` o ruta inexistente; la interfaz solo ofrece desactivar o suspender.
 3. Verificar que los registros y su auditoría siguen existiendo.
 
-### 10. Auditoría
+### 11. Auditoría
 
 1. Abrir `/auditoria/acceso/` como Administrador.
 2. **Esperado**: se ven altas, cambios de rol, desactivaciones y suspensiones con usuario,
@@ -205,9 +223,9 @@ concurrencia real.
 3. Abrir la misma ruta como cuenta de tenant.
 4. **Esperado**: solo se ven registros de su tenant.
 5. Inspeccionar los registros.
-6. **Esperado**: no contienen contraseñas, tokens ni secretos TOTP.
+6. **Esperado**: no contienen contraseñas ni tokens.
 
-### 11. Concurrencia
+### 12. Concurrencia
 
 1. En dos sesiones simultáneas, intentar crear la misma región o el mismo tenant con el mismo
    código.
@@ -229,15 +247,16 @@ Django 5.2 y Python 3.12.
 | 2 | Alta de tenant | OK |
 | 3 | Cuenta única e invitación | OK |
 | 4 | Invitación vencida y reenvío | OK |
-| 5 | Inicio de sesión y segundo factor | OK |
-| 6 | Aislamiento entre tenants y regiones | OK |
-| 7 | Desactivación, reactivación y suspensión | OK |
-| 8 | Cambio de rol | OK |
-| 9 | Sin eliminación | OK |
-| 10 | Auditoría | OK |
-| 11 | Concurrencia | OK |
+| 5 | Restablecimiento de contraseña | OK |
+| 6 | Inicio de sesión | OK |
+| 7 | Aislamiento entre tenants y regiones | OK |
+| 8 | Desactivación, reactivación y suspensión | OK |
+| 9 | Cambio de rol | OK |
+| 10 | Sin eliminación | OK |
+| 11 | Auditoría | OK |
+| 12 | Concurrencia | OK |
 
-Los 11 escenarios se completaron con los resultados esperados. No se detectaron secretos en la
+Los 12 escenarios se completaron con los resultados esperados. No se detectaron secretos en la
 auditoría ni accesos cruzados entre tenants o regiones.
 
 ## Criterios de salida

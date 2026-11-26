@@ -4,6 +4,7 @@ description: Sistema visual de la operación diaria de materiales, documentado d
 colors:
   sello: "#1f5f8b"
   sello-hundido: "#18496b"
+  sello-tenue: "#e7eff6"
   grafito: "#1f2933"
   grafito-medio: "#3e4c59"
   grafito-tenue: "#52606d"
@@ -12,6 +13,7 @@ colors:
   papel: "#f6f7f9"
   hoja: "#ffffff"
   superficie-alt: "#f0f2f5"
+  hoja-hover: "#fafbfc"
   tapa-activa: "#172a38"
   filete: "#d9dee5"
   filete-tenue: "#eef1f4"
@@ -179,6 +181,19 @@ components:
   marca:
     textColor: "{colors.sello}"
     padding: "0"
+  marca-lari:
+    backgroundColor: "transparent"
+    textColor: "{colors.sobre-tapa}"
+    padding: "0"
+  icono:
+    backgroundColor: "transparent"
+    textColor: "{colors.acento}"
+    padding: "0"
+  acceso:
+    backgroundColor: "{colors.hoja}"
+    textColor: "{colors.grafito}"
+    rounded: "{rounded.md}"
+    padding: "0.8rem 1.25rem"
 ---
 
 # Design System: Lari · Control de materiales
@@ -191,14 +206,16 @@ Lari se lee como un libro de inventario abierto sobre una mesa: una hoja blanca 
 
 El sistema nace de una aplicación operativa real: sesión única por tenant, series que se rastrean una por una, conciliaciones que se aprueban o rechazan completas, y un registro inmutable detrás de cada movimiento. La pantalla no persuade a nadie; permite que una persona con prisa haga un trabajo exacto y a prueba de error. Por eso la densidad es media-alta, la tabla es el ciudadano de primera y cada estado (error, aviso, conformidad) tiene color propio en lugar de un icono decorativo.
 
-**Estado de este documento.** PRODUCT.md es explícito: no hay logo, manual de marca ni paleta corporativa, y la apariencia actual de `templates/` y `static/css/` es un punto de partida, no una identidad confirmada. Este DESIGN.md fotografía lo que hoy existe para que las pantallas nuevas no diverjan mientras esa identidad se decide. Los tokens de aquí son **normativos**; el carácter y el mundo visual son **provisionales** y se reemplazan cuando exista una dirección de marca confirmada. Desde la última revisión, el sistema ya cubre el shell autenticado, los formularios, las tablas, los botones, los buscadores, la paginación y los estados; lo que sigue sin regla propia se enumera en *Drift conocido*, no se presenta como inexistente.
+**Estado de este documento.** La interfaz ya tiene una **marca gráfica de trabajo** —monograma «L» con renglones de inventario— y un **sistema de iconos SVG** de trazo único. No es un manual de marca confirmado ni una identidad corporativa cerrada: es una propuesta coherente con «El libro de inventario» que puede reemplazarse sin tocar la estructura. Los tokens de aquí son **normativos**; el carácter visual sigue siendo **provisional** hasta que exista una dirección de marca definitiva. Desde la última revisión, el sistema cubre el shell autenticado, el inicio con accesos por rol, los formularios, las tablas, los botones, los buscadores, la paginación y los estados; lo que sigue sin regla propia se enumera en *Drift conocido*, no se presenta como inexistente.
 
 **Key Characteristics:**
+- Marca gráfica propia: monograma «L» dentro de un sello de esquina suave, con dos renglones que evocan el libro de inventario.
+- Iconografía SVG de trazo único (`1.75px`), sin emoji, sin fuentes de iconos y sin rellenos.
 - Hoja blanca sobre papel gris; el fondo nunca compite con el contenido.
 - Shell autenticado con barra lateral en Tapa, topbar blanca y contenido sobre Papel.
 - Separación por filete de 1 px (`--borde`), no por sombra ni por relleno de color.
 - Un único acento, el Azul sello, usado solo en acción, enlace, foco y estado activo.
-- Monoespaciada para todo lo que es un identificador: series, códigos de material, TOTP, URIs.
+- Monoespaciada para todo lo que es un identificador: series, códigos de material, URIs.
 - Densidad de mesa de trabajo: celdas de `0.65rem 0.75rem`, sin aire decorativo.
 - Semántica de color explícita: corrección (rojo), conformidad (verde), nota (ámbar).
 
@@ -227,7 +244,7 @@ Paleta de instrumento: un azul de sello sobre una escala de grafito y papel, má
 - **Rojo pálido** (`#fdf3f3`) con **filete rojo** (`#e3b6b9`): fondo y borde del banner de error de acceso.
 - **Verde conformidad** (`#256b3b`): éxito, confirmación de copia, mensajes `mensaje-success`.
 - **Ámbar de nota** (`#8a5a00`): notas operativas y auroras de advertencia dentro de una línea.
-- **Ámbar pálido** (`#fdf8ec`) con **filete ámbar** (`#e6d6a8`): bloque de aviso del flujo TOTP.
+- **Ámbar pálido** (`#fdf8ec`) con **filete ámbar** (`#e6d6a8`): bloque de aviso.
 
 ### On-dark (Tapa: acceso y barra lateral)
 - **Sobre tapa** (`#ffffff`): el logotipo, el título y el enlace activo de la sidebar.
@@ -245,6 +262,27 @@ Paleta de instrumento: un azul de sello sobre una escala de grafito y papel, má
 
 **La regla del papel.** El gris (`--fondo`) es la mesa y nunca contiene texto de lectura; el blanco (`--superficie`) es la página y todo contenido vive encima. No inviertas los papeles.
 
+## Marca e iconografía
+
+### Marca gráfica
+
+El símbolo es un cuadrado de esquina suave (`8px` sobre una caja de `32px`) con un trazo de `1.5px` al `40 %` de opacidad; dentro, una «L» de `2.25px` y dos renglones cortos al `55 %`. Se lee como una letra inicial sellada sobre una ficha de inventario, no como un isotipo tecnológico. El wordmark «Lari» va en `700`, `0.05em` de interletraje, con «Control de materiales» en versalitas de `0.625rem` y `0.12em`.
+
+- **Shell:** símbolo blanco sobre Tapa, subtítulo en `--sobre-tapa-apagado`.
+- **Acceso:** símbolo blanco a `2.5rem`, subtítulo en `--sobre-tapa-apagado`.
+- **Cabecera pública:** símbolo en Grafito, subtítulo en Grafito tenue.
+- **Favicon:** `static/img/marca.svg`, fondo Tapa y «L» blanca.
+- **Regla:** la marca no se rellena con Azul sello, no se inclina, no se le añaden sombras ni se usa como patrón de fondo.
+
+### Iconos
+
+Un solo sprite inline en `templates/parciales/iconos.html`, con símbolos de `24px` y trazo `1.75px`, `currentColor`, extremos y uniones redondeados. Se usan en la navegación lateral, en los accesos rápidos, en los hechos del acceso y en los botones de menú y salida.
+
+- **Tamaño:** `1.05rem` en navegación; `1rem` en botones y hechos; `2rem` de caja para los iconos de acceso.
+- **Color:** heredan el texto; el icono activo de la sidebar usa `#9cc3df` como acento sobre Tapa.
+- **Accesibilidad:** decorativos con `aria-hidden="true"` y `focusable="false"`; si un botón no lleva texto visible, conserva `aria-label`.
+- **Regla:** no se usan emoji, glifos Unicode ni una librería externa como sustituto. Un icono nuevo se dibuja en el sprite y se documenta aquí en el mismo cambio.
+
 ## Typography
 
 **Display Font:** — (no hay fuente de display; el sistema no tiene jerarquía de marca que la justifique)
@@ -254,20 +292,20 @@ Paleta de instrumento: un azul de sello sobre una escala de grafito y papel, má
 **Character:** Tipografía de instrumento, no de marca: la del sistema operativo, sin descargas, sin licencias y sin latencia. La única inflexión expresiva es el monoespaciado con interletraje amplio para identificadores y códigos de un solo uso, que se lee como un número sellado en el libro.
 
 ### Hierarchy
-- **Headline** (600, `1.75rem`, 1.15, `-0.02em`): título de la tarjeta de acceso y de la tarjeta de configuración 2FA. Es el techo real del sistema; no hay escala de display.
+- **Headline** (600, `1.75rem`, 1.15, `-0.02em`): título de la tarjeta de acceso y de la tarjeta de acceso. Es el techo real del sistema; no hay escala de display.
 - **Content heading** (600, `1.6rem`, 1.2, `-0.02em`): `h1` de las pantallas de trabajo. No compite con el headline de acceso.
 - **Title** (700, `1.5rem`, 1.2, `0.06em`): solo la marca «Lari» en la tapa de acceso y en la sidebar. El enlace de cabecera usa el mismo peso con interletraje reducido.
 - **Body** (400, `1rem`, 1.5): todo el contenido. En prosa instructiva se limita a `62ch`.
 - **Label** (600, `0.875rem`): etiquetas de formulario, `legend` de bloque, encabezados de columna.
 - **Table head** (700, `0.75rem`, mayúsculas, `0.05em`): cabecera de tabla; se lee como el encabezado impreso de una columna de inventario.
 - **Small** (400, `0.85rem`): metadatos, cantidades, notas y mensajes auxiliares.
-- **Mono** (`0.85rem`, `0.08em`): series, códigos, URIs `otpauth://`. El campo de código TOTP sube a `1.15rem` con `0.3em` de interletraje y se centra.
+- **Mono** (`0.85rem`, `0.08em`): series, códigos y URIs.
 
 ### Named Rules
 
-**La regla de la serie en mono.** Todo lo que un humano podría confundir al dictar —serie, código de material, secreto TOTP, URI— va en monoespaciada con interletraje y `overflow-wrap: anywhere`. No hay excepciones por estética.
+**La regla de la serie en mono.** Todo lo que un humano podría confundir al dictar —serie, código de material y URI— va en monoespaciada con interletraje y `overflow-wrap: anywhere`. No hay excepciones por estética.
 
-**La regla de los 62ch.** La prosa instructiva no pasa de `62ch`. Es la razón por la que los pasos del flujo TOTP se leen sin perder el renglón; aplícala a cualquier ayuda o introducción nueva.
+**La regla de los 62ch.** La prosa instructiva no pasa de `62ch`. Es la razón por la que los pasos del flujo de acceso se leen sin perder el renglón; aplícala a cualquier ayuda o introducción nueva.
 
 ## Layout
 
@@ -277,7 +315,7 @@ Las pantallas de trabajo usan dos columnas: contenido principal flexible (`minma
 
 Densidad media-alta: `0.65rem 0.75rem` en celdas, `0.85rem 1rem` en buscadores, `0.75rem` de padding en paneles, `1rem` entre bloques, `1.25rem` de separación entre columnas. La escala de espaciado (`0.35 / 0.5 / 0.75 / 1 / 1.5 / 2rem`) sigue siendo una escala de facto; los tokens viven en `:root` para color y radio, no para espaciado.
 
-Puntos de quiebre reales: `900px` (la sidebar pasa a drawer y la asignación deja de ser dos columnas), `700px` (el recojo apila el raíl bajo el formulario), `480px` (ajustes de padding y de tamaño en acceso y TOTP).
+Puntos de quiebre reales: `900px` (la sidebar pasa a drawer y la asignación deja de ser dos columnas), `700px` (el recojo apila el raíl bajo el formulario), `480px` (ajustes de padding y de tamaño en acceso).
 
 ## Elevation & Depth
 
@@ -295,13 +333,29 @@ El drawer móvil no añade sombra: se separa con el overlay `rgba(15, 28, 38, 0.
 
 ## Shapes
 
-Lenguaje de esquina suave y contenido: `0.4rem` en controles (botones, buscadores, enlaces con borde, campos), `0.5rem` en superficies —paneles, raíles, bloques de técnico, `dl.detalle`, banners—, `0.75rem` en la tarjeta de configuración 2FA y `1rem` en la tarjeta de acceso de escritorio. Las etiquetas de estado usan `999px` y son la única forma completamente redondeada del sistema. En móvil, la tarjeta de acceso pierde radio y borde y se convierte en pantalla completa.
+Lenguaje de esquina suave y contenido: `0.4rem` en controles (botones, buscadores, enlaces con borde, campos), `0.5rem` en superficies —paneles, raíles, bloques de técnico, `dl.detalle`, banners—, `0.75rem` en la tarjeta de acceso y `1rem` en la tarjeta de acceso de escritorio. Las etiquetas de estado usan `999px` y son la única forma completamente redondeada del sistema. En móvil, la tarjeta de acceso pierde radio y borde y se convierte en pantalla completa.
 
 Los bordes son siempre de `1px`; el grosor no se usa para jerarquía. El único círculo del sistema es el punto de `0.4rem` que precede a cada hecho en el panel de tapa del acceso, dibujado con borde `1px` y sin relleno. No hay recortes en diagonal, ni esquinas mixtas, ni pestañas.
+
+## Motion
+
+El movimiento es funcional, breve y con una sola intención por superficie. No hay bucles, parallax ni animaciones decorativas permanentes.
+
+- **Entrada de acceso:** `.auth` aparece con `auth-entrada` (`420ms`, `translateY(10px)`, `scale(0.995)`, ease-out exponencial). Es el único gesto de bienvenida.
+- **Entrada de accesos:** cada `.acceso` entra con `acceso-entrada` (`260ms`, `translateY(6px)`) y un retardo escalonado de `22ms` por fila, limitado a 7 pasos para que la última fila no supere `~414ms`.
+- **Hover:** `160–180ms ease` para color, fondo y borde; el icono del acceso sube `1px`, el botón decorativo se desplaza `2px` y adopta Azul sello.
+- **Pulsación:** `transform: translateY(1px)` durante `120ms` en botones y controles del shell.
+- **Aviso flotante:** `aviso-entrada` (`220ms`, `translateY(8px)`).
+- **Reduced motion:** con `prefers-reduced-motion: reduce` se desactivan todas las animaciones y transiciones anteriores; los estados y el foco siguen visibles.
+
+**Reglas:** una entrada por vista; nada supera `420ms`; no se animan `width`, `height`, `top` ni `left`; el foco nunca depende del movimiento.
 
 ## Components
 
 El sistema cubre el shell autenticado (sidebar, topbar, drawer móvil), los componentes de contenido (tabla, buscador, paginación, botones, formularios, etiquetas, detalle, mensajes y estados vacíos), las dos pantallas compuestas (recojos y asignación) y la superficie de acceso. Lo que aún no tiene regla propia —fragmentos de búsqueda y bloques internos de asignación— se enumera en *Drift conocido*.
+
+### Botón Volver
+`.boton-volver` es el botón de retorno de las pantallas de detalle. Se alinea a la **derecha**, en la esquina superior del contenido, dentro de `.cabecera-volver`; usa forma pill, filete de 1 px, icono `i-volver` y texto «Volver a …». En móvil conserva la alineación derecha y no se solapa con el título.
 
 ### Buttons
 - **Shape:** `0.4rem` de radio y borde de 1 px.
@@ -310,7 +364,7 @@ El sistema cubre el shell autenticado (sidebar, topbar, drawer móvil), los comp
 - **Hover / Focus:** el hover del primario oscurece a Azul sello hundido (`#18496b`); el neutro cambia borde y texto a Azul sello. En acceso se añade `translateY(1px)` al pulsar. El foco es siempre `outline: 3px solid var(--acento)` con `outline-offset: 2px`.
 - **Secondary:** blanco con filete, texto Grafito, hover Azul sello.
 - **Ghost / enlace:** `.boton-enlace`, sin fondo ni borde, Azul sello subrayado, `padding: 0`. Se usa para «Cancelar», que nunca debe parecer primario.
-- **En tabla:** las acciones son enlaces de texto en Azul sello; los formularios de baja se leen como enlace, no como botón relleno.
+- **En tabla:** `.boton-accion` es el botón compacto de las celdas de acción: altura mínima `1.9rem`, `0.22rem 0.6rem`, texto `0.8125rem`, filete de 1 px y radio `0.4rem`. En reposo es neutro; en hover toma borde y texto Azul sello con fondo Azul sello tenue. La acción destructiva añade `.boton-accion--peligro`: texto Rojo corrección y hover con fondo Rojo pálido. Nunca se usa el botón primario dentro de una fila.
 
 ### Chips / Badges
 Implementados como etiquetas de estado. `.etiqueta` y `.estado` usan fondo Superficie alterna, texto Grafito tenue, radio `999px` y `0.15rem 0.5rem`; `.etiqueta-anulado` cambia a fondo Rojo pálido, filete rojo y texto Rojo corrección. Son la única forma completamente redondeada y el único relleno de color fuera de los banners; no se usan para decorar encabezados ni para sustituir texto.
@@ -342,6 +396,8 @@ El shell autenticado es la navegación principal: sidebar en Tapa, grupos por ro
 ### Tables
 El componente más usado: fondo Hoja, borde de 1 px, `border-collapse: separate`, filas separadas por Filete tenue y celdas `0.65rem 0.75rem` alineadas a la izquierda. La cabecera usa Superficie alterna, texto Grafito tenue, mayúsculas y `0.75rem`. No hay cebra ni bordes verticales; el hover de fila es `#fafbfc`. Las celdas numéricas usan `font-variant-numeric: tabular-nums`. El estado vacío ocupa la fila con `colspan` y se centra en Grafito tenue. En móvil, un contenedor `.tabla-scroll` permite scroll horizontal; la tabla no se corta.
 
+Toda tabla con operaciones por fila reserva una última columna «Acciones» alineada a la izquierda, con `.boton-accion` (y `.boton-accion--peligro` para la baja). Los botones se separan `0.35rem`, caben en una sola línea y comparten la altura de la fila; la acción de lectura usa el mismo peso que las demás para no competir con la navegación.
+
 ### Detail list
 `dl.detalle` en rejilla de dos columnas (`minmax(7rem, max-content)` y `minmax(0, 1fr)`), fondo Hoja, filete y padding `1rem 1.25rem`. Los `dt` van en versalitas de `0.75rem` y Grafito tenue; los `dd` en `0.9375rem` con `overflow-wrap: anywhere` para hashes y códigos largos.
 
@@ -351,16 +407,27 @@ El componente más usado: fondo Hoja, borde de 1 px, `border-collapse: separate`
 ### Menu and summaries
 `.menu-modulo` es una rejilla de enlaces/tarjetas para el módulo de registro de materiales; `.resumen-carga` es una rejilla de totales en Hoja con filete. `.fila-alerta` tiñe la fila de Rojo pálido para negativos del dashboard.
 
+### Inicio y accesos rápidos
+`templates/inicio.html` deja de ser una bienvenida y pasa a ser un panel de trabajo: `h1` «Inicio», una línea de sesión con correo y rol, y un único panel blanco con filete. Dentro, `.accesos` es una lista en dos columnas separada por filetes tenues, sin tarjetas repetidas ni sombras. Cada `.acceso` alinea un icono en caja de `2rem`, título y descripción breve, y un botón decorativo `.acceso__accion` de `2rem` con chevron al final. En hover la fila se tiñe con `--hoja-hover`, el icono toma borde y fondo de acento, y el botón decorativo se rellena de Azul sello y avanza `2px`. Si el rol tiene un número impar de accesos, el último ocupa las dos columnas. En móvil la lista pasa a una columna. Los enlaces se generan por rol: el tenant ve operación; el almacén, bandeja y traspasos; el administrador, plataforma y catálogo.
+
+### Stock actual
+`tecnicos/stock_actual.html` es el índice de custodia por técnico: `h1` «Stock actual», subtítulo de `62ch`, un `.buscador` por NIF o nombre y `.resumen-linea` con técnicos con stock, materiales y unidades. La tabla usa Técnico (enlazado a su detalle de stock), NIF, Estado, Materiales, Unidades y Acciones con el botón `Ver stock`. No muestra códigos de material: para eso se entra al técnico.
+
+`tecnicos/stock_tecnico.html` es el detalle: cabecera con nombre, NIF y estado; botones «Volver a Stock actual» y «Ver ficha»; resumen de materiales y unidades; y tabla de Material, Descripción, Lote, Tipo y Cantidad. Debajo, la sección **«Series en custodia»** lista las series `ASIGNADA` del técnico con Material, Descripción, Lote, Serie y fecha de asignación; el número de serie va en monoespaciada. Los códigos van en monoespaciada y la cantidad se alinea a la derecha con `font-variant-numeric: tabular-nums`. Solo se listan filas con cantidad mayor que cero; si no hay, se muestra el estado vacío. La entrada vive en Operación como «Stock actual» y también como botón secundario en la lista de Técnicos.
+
+### Registro de materiales
+`registro_materiales/materiales.html` usa un `.buscador` con selector de técnico y periodo; al enviarlo muestra la tabla **«Órdenes por cargar»** con las órdenes pendientes de ese técnico y periodo, su fecha de creación y el botón `Registrar` de cada fila. El formulario de materiales solo aparece después de elegir una orden y ofrece «Volver a las órdenes». No se escribe el número de orden a mano en el flujo principal: la lista es la fuente de selección.
+
+El módulo lleva la cuenta del periodo y **descuenta `StockTecnico`** mediante movimientos `CONSUMO`; para materiales seriados se seleccionan las series concretas, que pasan a `INSTALADA`. El stock general no se toca. El detalle por técnico se consulta en «Stock actual».
+
 ### Signature: shell autenticado
-La estructura de todas las pantallas privadas. Sidebar de `15rem` en Tapa con marca, grupos por rol y «Mi perfil» al pie; topbar blanca de `3.5rem` con correo, rol y «Cerrar sesión»; contenido sobre Papel con máximo `1100px`. No hay sombras: sidebar y topbar se separan del contenido por el cambio de superficie y el filete. En móvil la sidebar se convierte en drawer con overlay y el botón «Menú» queda en la topbar.
+La estructura de todas las pantallas privadas. Sidebar de `15rem` en Tapa con la marca gráfica, grupos por rol, iconos de trazo único y «Mi perfil» al pie; topbar blanca de `3.5rem` con correo, rol y «Cerrar sesión» con icono; contenido sobre Papel con máximo `1100px`. No hay sombras: sidebar y topbar se separan del contenido por el cambio de superficie y el filete. En móvil la sidebar se convierte en drawer con overlay y el botón «Menú» queda en la topbar.
 
 ### Signature: raíl de contexto
 El patrón que define las pantallas de trabajo. Una columna fija a la derecha (`340px` / `310px`), pegajosa, con scroll propio y altura máxima `80vh`, que muestra el estado vivo de lo que se está capturando —series escaneadas y su estado, materiales disponibles con cantidades—. En escritorio nunca se apila; por debajo de `700px`/`900px` pasa a bloque estático sobre el formulario porque el formulario es lo primero.
 
 ### Signature: tarjeta de acceso partida
 `62rem` de ancho, dos columnas `0.92fr / 1.08fr`, radio `1rem`, sombra difusa. A la izquierda, el panel de tapa oscuro con la marca, tres hechos operativos y el pie «Uso interno · Operación diaria». A la derecha, la tarjeta blanca con un único título, un subtítulo de `36ch` y un formulario de una columna. En móvil se convierte en pantalla completa: el panel de tapa se reduce a una franja con el logotipo y los hechos desaparecen.
-
-**Variante de alta del segundo factor.** Cuando el contenido es una guía de tres pasos, la misma tarjeta pasa a una sola columna: la tapa se reduce a franja superior y el cuerpo reparte la guía en dos columnas, pasos 1 y 3 a la izquierda y el bloque de clave del paso 2 a la derecha (`19rem`), con una sola columna por debajo de `900px`. El orden del DOM sigue siendo 1 → 2 → 3; la rejilla solo mueve el paso 2 a la derecha para que la clave y el formulario de confirmación quepan en el primer viewport.
 
 ## Flujo de traspaso en tres columnas
 
@@ -378,14 +445,21 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - **Do** construir sobre la hoja blanca: cualquier contenido nuevo va en una superficie blanca con filete de `1px var(--borde)`, sobre el papel `var(--fondo)`.
 - **Do** usar `--acento` solo en acción, enlace, foco y estado activo, y comprobar que no supera el 10 % de la pantalla.
 - **Do** mantener el foco visible de `3px` con `offset 2px` en todo control interactivo; es la garantía de teclado del sistema y no se negocia por estética.
-- **Do** poner en monoespaciada, con `overflow-wrap: anywhere`, toda serie, código, secreto TOTP y URI.
+- **Do** poner en monoespaciada, con `overflow-wrap: anywhere`, toda serie, código y URI.
 - **Do** limitar la prosa instructiva a `62ch` y apoyarla en el Grafito medio, no en el Grafito.
 - **Do** usar los tres estados con su pareja pálido/filete ya existente (rojo, verde, ámbar) en lugar de introducir un cuarto color.
 - **Do** conservar la densidad de tabla (`0.65rem 0.75rem`) y la cabecera de Superficie alterna; es lo que permite comparar series y discrepancias de un vistazo.
 - **Do** usar el botón primario (`.boton`) para la acción principal y el neutro para filtros y acciones secundarias.
 - **Do** usar `.buscador`, `.paginacion`, `.tabla`, `.detalle` y `.etiqueta` antes de inventar una variante local.
+- **Do** resolver las acciones de fila con `.boton-accion` y reservar `.boton-accion--peligro` para lo que desactiva, da de baja o anula; nunca dejes un enlace suelto en la columna «Acciones».
 - **Do** tratar el raíl de contexto como parte del patrón de pantalla de trabajo: fijo, pegajoso, con scroll propio y apilado solo en móvil.
 - **Do** envolver las tablas nuevas en `.tabla-scroll` o confiar en la envoltura automática del shell para que el móvil no las corte.
+- **Do** usar el sprite `parciales/iconos.html` y la marca `parciales/marca.html` antes de dibujar un símbolo nuevo.
+- **Do** mantener el trazo de `1.75px`, `currentColor` y `stroke-linecap="round"` en cualquier icono nuevo.
+- **Do** dar al último acceso de una lista impar el ancho completo para no dejar una celda vacía.
+- **Do** usar `.resumen-linea` y `.columna-numero` en vistas de inventario en lugar de métricas grandes o tarjetas de totales.
+- **Do** usar el botón decorativo `.acceso__accion` como affordance, no como acción independiente: toda la fila sigue siendo el enlace.
+- **Do** respetar `prefers-reduced-motion` en cualquier animación nueva y mantenerla por debajo de `420ms`.
 
 ### Don't:
 - **Don't** crear un botón, campo, chip o paginación nuevos sin CSS y sin documentarlos aquí en el mismo cambio. El sistema ya existe; extiéndelo, no lo reinventes.
@@ -394,17 +468,21 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - **Don't** usar relleno de color de marca para separar secciones, ni cebra en tablas, ni cabeceras de columna oscuras.
 - **Don't** usar las etiquetas de estado como decoración: solo describen un estado real.
 - **Don't** introducir una segunda tipografía, una fuente de display descargada ni una escala tipográfica más allá de los roles documentados.
-- **Don't** dar el mismo peso visual a una acción primaria y a «Cancelar»; la jerarquía primario / secundario / enlace es lo que evita el clic erróneo en el flujo 2FA.
+- **Don't** dar el mismo peso visual a una acción primaria y a «Cancelar»; la jerarquía primario / secundario / enlace es lo que evita el clic erróneo en el flujo de acceso.
 - **Don't** repetir valores literales (`#fff`, `#eef1f4`, `rgba(...)`) en reglas nuevas: usa los tokens de `:root` y, si falta uno, añádelo al token set.
 - **Don't** volver a introducir `style="..."` en plantillas; si una pantalla necesita una excepción, se resuelve con una clase.
-- **Don't** tratar el carácter visual como identidad confirmada. PRODUCT.md dice que no hay marca: este documento es una foto del punto de partida y se reescribe cuando exista dirección de identidad.
+- **Don't** tratar el carácter visual como identidad confirmada. La marca y los iconos son una propuesta de trabajo: este documento se reescribe cuando exista dirección de identidad definitiva.
+- **Don't** usar emoji, glifos Unicode, iconos rellenos o una fuente de iconos externa.
+- **Don't** dejar un botón que solo lleva icono sin `aria-label`.
+- **Don't** rellenar la marca con Azul sello ni usarla como patrón de fondo.
+- **Don't** animar propiedades de layout ni encadenar más de una entrada por vista.
+- **Don't** usar animaciones en bucle, parallax o movimiento que compita con la lectura de una tabla.
 
 ### Drift conocido
 - Los fragmentos de búsqueda `.resultado-material` y `.resultado-tecnico` aún no tienen regla propia; heredan el estilo básico de lista. Es la siguiente pieza de UI pendiente.
 - Los bloques internos del constructor de asignaciones y del recojo (`.constructor-bloque`, `.filas-bloque`, `.serie-opcion`, `.series-seleccionadas`, `.material-seleccionado`, `.resumen-series`, `.titulo-bloque`, `.material-fila`, `.agregar-fila`, `.quitar-fila`, `.quitar-bloque`) usan controles globales pero no un componente documentado. Funcionan; no están pulidos.
-- `templates/inicio.html` sigue siendo una pantalla de bienvenida, no un dashboard. Un panel de accesos rápidos por rol es el siguiente paso.
-- La configuración 2FA no tiene QR; usa clave manual copiable. Añadirlo requiere una dependencia de generación de QR.
+- `templates/inicio.html` ya es un panel de accesos por rol; un resumen de pendientes por rol sería el siguiente paso.
 - `.impeccable/design.json` se generó antes del shell y de `componentes.css`; hay que regenerarlo cuando se cierre esta fase.
 - Quedan literales por tokenizar: `#fafbfc` (hover de fila), `#f2f8f4` (fondo de éxito) y `#6b4e00` (texto de aviso). No introduzcas nuevos: formalízalos en `:root` cuando toques esas reglas.
 - No hay tema oscuro. El sistema es claro por decisión; `color-scheme: light` es explícito.
-- La única transición del sistema es el drawer móvil (`180ms`, desactivada con `prefers-reduced-motion`). No hay animaciones decorativas.
+- El sistema tiene microtransiciones de `160–180ms`, entradas de `220–420ms` en acceso e inicio, y el drawer móvil de `180ms`; todas se desactivan con `prefers-reduced-motion`. No hay animaciones en bucle ni decorativas permanentes.

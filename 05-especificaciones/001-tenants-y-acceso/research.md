@@ -65,34 +65,29 @@ rol de prueba sin RLS o desactivan la política solo dentro de la transacción d
 
 ---
 
-## 4. Autenticación de dos factores (TOTP)
+## 4. Acceso sin segundo factor
 
-**Decision**: usar `pyotp` para generar y verificar códigos TOTP, y `cryptography`
-(`Fernet`) para cifrar el secreto en `Usuario.secreto_totp` con una clave tomada de variables
-de entorno (`TOTP_ENCRYPTION_KEY`). La provisión se muestra como URI `otpauth://` y QR
-generado en el servidor.
+**Decision**: el inicio de sesión usa solo correo y contraseña para todos los roles. Se
+retiran TOTP, `pyotp`, `cryptography`, `TOTP_ENCRYPTION_KEY`, los campos `secreto_totp` y
+`segundo_factor_habilitado`, sus pantallas y sus rutas (ADR-022, constitución 2.0.0).
 
-**Rationale**: `pyotp` es pequeño, sin dependencias pesadas y suficiente para TOTP. Cifrar el
-secreto cumple la regla de no almacenar secretos en claro y evita filtrarlos en auditoría. No
-se requiere un framework completo de OTP para tres roles y un solo factor adicional.
+**Rationale**: el sistema opera con correos ficticios y sin SMTP; el TOTP agregaba una
+dependencia y un punto de bloqueo sin mejorar la entrega. La revocación de sesión por
+`version_sesion` se conserva.
 
 **Alternatives considered**:
-- `django-otp`: robusto, pero agrega su propio modelo de dispositivos y duplica el campo
-  `secreto_totp` ya definido en el plan; mayor superficie para una necesidad acotada.
-- TOTP en texto plano: incumple la constitución y la regla de auditoría.
-
-**Rotación de clave**: `Fernet` permite `MultiFernet` para rotar claves sin invalidar todos
-los secretos; se documenta en configuración de producción.
+- Mantenerlo opcional: se descartó para no conservar código y campos sin uso.
+- `django-otp`: descartado por la misma razón y por mayor superficie.
 
 ---
 
 ## 5. Flujo de sesión y revocación inmediata
 
 **Decision**: autenticación con cookie de sesión de Django. Al superar correo y contraseña,
-si el rol exige segundo factor, la sesión queda en estado `pendiente_2fa` y no se marca como
-autenticada hasta verificar el TOTP. Cada sesión guarda `version_sesion`; el middleware la
-compara con la de la base y cierra la sesión si difieren. `version_sesion` se incrementa al
-cambiar rol, desactivar la cuenta o suspender/activar el tenant.
+la sesión se abre directamente, sin segundo factor. Cada sesión guarda `version_sesion`; el
+middleware la compara con la de la base y cierra la sesión si difieren. `version_sesion` se
+incrementa al cambiar rol, desactivar la cuenta, restablecer la contraseña o
+suspender/activar el tenant.
 
 **Rationale**: ADR-008 elige cookie de sesión para una interfaz HTMX, pero la cookie de
 Django por sí sola no invalida sesiones abiertas. La versión de sesión da revocación inmediata
@@ -161,7 +156,7 @@ la validación académica y agrega dependencia externa.
 **Decision**: `auditoria.RegistroCambio` se escribe solo con `INSERT`, dentro de la misma
 transacción que el cambio. La app no expone `update` ni `delete`; en PostgreSQL se revocan
 `UPDATE` y `DELETE` al rol de aplicación. Los valores se serializan como texto legible y
-nunca se registran contraseñas, tokens ni secretos TOTP.
+nunca se registran contraseñas ni tokens.
 
 **Rationale**: principio VI y regla `auditoria.md`. La base de datos refuerza la inmutabilidad
 frente a errores de código.
@@ -236,7 +231,7 @@ comportamiento de restricciones y RLS.
 ## 14. Configuración y secretos
 
 **Decision**: settings por entorno (`base`, `dev`, `prod`, `test`); secretos
-(`SECRET_KEY`, `DATABASE_URL`, `REDIS_URL`, `EMAIL_*`, `TOTP_ENCRYPTION_KEY`) por variables
+(`SECRET_KEY`, `DATABASE_URL`, `REDIS_URL`, `EMAIL_*`) por variables
 de entorno. `.env` solo en desarrollo y excluido del repositorio.
 
 **Rationale**: evita secretos en el código y permite despliegues reproducibles.
@@ -247,20 +242,16 @@ de entorno. `.env` solo en desarrollo y excluido del repositorio.
 
 ## Resumen de dependencias adicionales
 
-| Dependencia | Motivo | Alternativa descartada |
-|---|---|---|
-| `pyotp` | Generar y verificar TOTP | `django-otp` (duplica el modelo de secreto) |
-| `cryptography` | Cifrar el secreto TOTP con `Fernet` | Guardar el secreto en claro (prohibido) |
-
-El resto del stack (`Django`, `Celery`, `Redis`, `HTMX`, `pytest`) ya está fijado por la
-constitución y ADR-015. No se requieren más dependencias.
+No se requieren dependencias adicionales para el acceso. El stack (`Django`, `Celery`,
+`Redis`, `HTMX`, `pytest`) ya está fijado por la constitución y ADR-015. `pyotp` y
+`cryptography` se retiraron con el segundo factor (ADR-022).
 
 ## Incógnitas resueltas
 
 | Incógnita del contexto técnico | Resolución |
 |---|---|
 | Modelo de usuario | Personalizado, email como `USERNAME_FIELD` (§1) |
-| Segundo factor | TOTP con `pyotp`, secreto cifrado (§4) |
+| Segundo factor | Retirado; acceso solo con correo y contraseña (§4, ADR-022) |
 | Revocación de sesión | `version_sesion` validada por middleware (§5) |
 | Invitaciones | Token aleatorio, hash SHA-256, 72 h, un solo uso (§6) |
 | Correo | Celery tras commit, SMTP configurable (§6, §8) |

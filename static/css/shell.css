@@ -33,6 +33,8 @@
   padding: 1.1rem 0.85rem 1rem;
   background: #0f1c26;
   color: #fff;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
 .shell-sidebar__cabecera {
@@ -45,22 +47,26 @@
 
 .shell-marca {
   color: #fff;
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
   text-decoration: none;
 }
 
 .shell-cerrar {
   display: none;
-  padding: 0.35rem 0.5rem;
-  border: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 0.35rem;
   background: transparent;
   color: #c9d4de;
-  font: inherit;
-  font-size: 0.8125rem;
   cursor: pointer;
+}
+
+.shell-cerrar:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
 }
 
 .shell-nav {
@@ -79,13 +85,27 @@
 }
 
 .shell-enlace {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
   padding: 0.5rem 0.75rem;
   border-radius: 0.4rem;
   color: #c9d4de;
   font-size: 0.9375rem;
   line-height: 1.35;
   text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.shell-enlace .icono {
+  width: 1.05rem;
+  height: 1.05rem;
+  opacity: 0.66;
+  transition: opacity 160ms ease, color 160ms ease;
+}
+
+.shell-enlace__texto {
+  min-width: 0;
 }
 
 .shell-enlace:hover {
@@ -93,10 +113,51 @@
   color: #fff;
 }
 
+.shell-enlace:hover .icono {
+  opacity: 1;
+}
+
+.shell-enlace {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.52rem 0.75rem;
+  border-radius: 0.45rem;
+  color: #c9d4de;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease, transform 140ms ease;
+}
+
+.shell-enlace:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transform: translateX(2px);
+}
+
 .shell-enlace--activo {
-  background: #172a38;
+  background: rgba(31, 95, 139, 0.28);
   color: #fff;
   font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(156, 195, 223, 0.2);
+}
+
+.shell-enlace--activo::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 3px;
+  background: #38789f;
+  border-radius: 0 2px 2px 0;
+}
+
+.shell-enlace--activo .icono {
+  opacity: 1;
+  color: #9cc3df;
 }
 
 .shell-sidebar :focus-visible {
@@ -123,16 +184,50 @@
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  min-height: 3.5rem;
-  padding: 0.5rem 1.5rem;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.75rem;
+  padding: 0.5rem 1.75rem;
   border-bottom: 1px solid var(--borde);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.shell-migas {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+  color: var(--texto-tenue);
+}
+
+.shell-migas__marca {
+  font-weight: 700;
+  color: var(--acento);
+  letter-spacing: 0.04em;
+}
+
+.shell-migas__sep {
+  opacity: 0.4;
+}
+
+.shell-migas__seccion {
+  font-weight: 500;
+  color: var(--texto);
+}
+
+.shell-topbar__acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-left: auto;
 }
 
 .shell-menu {
   display: none;
   align-items: center;
+  gap: 0.45rem;
   padding: 0.4rem 0.65rem;
   border: 1px solid var(--borde);
   border-radius: 0.4rem;
@@ -142,28 +237,77 @@
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease,
+    color 160ms ease, transform 120ms ease;
+}
+
+.shell-menu .icono {
+  width: 1rem;
+  height: 1rem;
 }
 
 .shell-usuario {
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  min-width: 0;
-  margin: 0 0 0 auto;
-  color: var(--texto);
-  font-size: 0.875rem;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.3rem 0.75rem 0.3rem 0.35rem;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--superficie);
+  box-shadow: var(--sombra-sm);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.shell-usuario:hover {
+  border-color: #b0c4de;
+  box-shadow: 0 2px 6px rgba(15, 28, 38, 0.06);
+}
+
+.shell-avatar {
+  display: grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--acento), #164968);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 1px 3px rgba(31, 95, 139, 0.3);
+}
+
+.shell-usuario__info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
 }
 
 .shell-email {
   overflow: hidden;
-  max-width: 22rem;
+  max-width: 18rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--texto);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .shell-rol {
-  color: #5b6875;
-  font-size: 0.8125rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--texto-tenue);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.shell-rol__dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--exito);
+  box-shadow: 0 0 0 2px rgba(37, 107, 59, 0.2);
 }
 
 .shell-salir {
@@ -171,14 +315,42 @@
 }
 
 .shell-boton-salir {
-  padding: 0.4rem 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
   border: 1px solid var(--borde);
-  border-radius: 0.4rem;
-  background: #fff;
+  border-radius: 999px;
+  background: var(--superficie);
   color: var(--texto);
   font: inherit;
   font-size: 0.8125rem;
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: var(--sombra-sm);
+  transition: background-color 160ms ease, border-color 160ms ease,
+    color 160ms ease, transform 120ms ease;
+}
+
+.shell-boton-salir:hover {
+  border-color: var(--error);
+  background: var(--error-tenue);
+  color: var(--error);
+}
+
+.shell-boton-salir:active {
+  transform: translateY(1px);
+}
+
+.shell-boton-salir .icono {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.shell-boton-salir:active,
+.shell-menu:active,
+.shell-cerrar:active {
+  transform: translateY(1px);
 }
 
 .shell-boton-salir:hover {
@@ -244,7 +416,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shell-sidebar {
+  .shell-sidebar,
+  .shell-enlace,
+  .shell-enlace .icono,
+  .shell-menu,
+  .shell-boton-salir,
+  .shell-cerrar {
     transition: none;
+  }
+
+  .shell-boton-salir:active,
+  .shell-menu:active,
+  .shell-cerrar:active {
+    transform: none;
   }
 }

@@ -4,21 +4,23 @@ Reglas de dominio para el registro de materiales usados por los técnicos y el s
 
 ## 1. Propósito
 
-Permitir que cada tenant controle, mes a mes, el material que entra por los despachos del almacén,
+Permitir que cada tenant controle, mes a mes, el material que entra por las asignaciones confirmadas del almacén,
 el que usan sus técnicos en las órdenes y el saldo resultante.
 
 ```text
-disponible = saldo inicial + despachos del almacén
+disponible = saldo inicial + asignaciones confirmadas del almacén
 saldo final = disponible - uso del mes
 ```
 
-El saldo final de un mes es el saldo inicial del mes siguiente, salvo carga manual.
+El saldo final de un mes es el saldo inicial del mes siguiente. El saldo inicial operativo se carga en Stock inicial; el saldo manual queda solo como dato histórico.
 
-## 2. Independencia de la conciliación y del stock
+## 2. Independencia de la conciliación y alcance del stock
 
 - Este registro no es la conciliación del Excel del almacén.
 - No lee, genera ni modifica conciliaciones.
-- No modifica el stock general ni el stock por técnico.
+- Cada uso descuenta el stock del técnico en la misma transacción mediante un movimiento `CONSUMO`.
+- En materiales seriados se seleccionan las series usadas y pasan a `INSTALADA`.
+- No modifica el stock general.
 - No modifica recojos, asignaciones, traspasos ni el catálogo compartido.
 
 ## 3. Definiciones
@@ -27,20 +29,20 @@ El saldo final de un mes es el saldo inicial del mes siguiente, salvo carga manu
 |---|---|
 | Material habilitado | Material del catálogo que un tenant puede usar en este módulo |
 | Saldo inicial | Cantidad de un material al inicio de un mes |
-| Despacho | Cantidad recogida en el mes, registrada en `DespachoAlmacen` |
+| Asignación confirmada | Cantidad confirmada por el almacén en el mes |
 | Uso | Cantidad de material consumida por un técnico en una orden |
-| Disponible | Saldo inicial + despachos del mes |
+| Disponible | Saldo inicial + asignaciones confirmadas del mes |
 | Saldo final | Disponible - uso del mes |
 | Orden | Orden identificada por número, técnico y mes |
 | Periodo | Mes de la orden o saldo, en formato `YYYY-MM` |
 
-## 4. Catálogo habilitado
+## 4. Materiales disponibles
 
-- El catálogo es fijo por tenant.
-- Solo se puede registrar uso o saldo de materiales habilitados y activos.
-- Deshabilitar un material no borra su historial.
-- Un material deshabilitado no se puede usar en nuevas órdenes.
+- No hay habilitación manual de materiales.
+- El formulario muestra los materiales con stock en `StockTecnico` del técnico o series `ASIGNADA`.
+- Un material que ya tiene uso en la orden sigue visible para poder editarlo.
 - El catálogo referencia `materiales.Material`; no duplica códigos ni descripciones.
+- `MaterialHabilitado` queda como dato histórico y no participa del flujo nuevo.
 
 ## 5. Carga masiva de órdenes
 
@@ -62,7 +64,7 @@ El saldo final de un mes es el saldo inicial del mes siguiente, salvo carga manu
 ## 6. Orden de liquidación
 
 - Se identifica por tenant, técnico, periodo y número.
-- El número es obligatorio, de 1 a 30 caracteres alfanuméricos, sin espacios internos.
+- El número es obligatorio, de 1 a 30 caracteres alfanuméricos, con guiones o guiones bajos simples entre bloques, sin espacios internos ni separadores consecutivos.
 - La orden es única por técnico y mes; el mismo número puede existir para otro técnico o en otro mes.
 - Al registrar materiales se selecciona técnico y mes; la búsqueda es exacta dentro de ese mes.
 - Si el número existe para el mismo técnico en otro mes, es otra orden y no se muestra.
@@ -80,28 +82,27 @@ El saldo final de un mes es el saldo inicial del mes siguiente, salvo carga manu
 - El periodo de uso se obtiene de la fecha de instalación de la orden.
 - El uso se descuenta del disponible del mes.
 
-## 8. Despachos del almacén
+## 8. Asignaciones confirmadas del almacén
 
-- Los despachos ya se registran en `DespachoAlmacen`.
-- El módulo solo lee `tenant`, `material`, `fecha` y `cantidad`.
-- No se registra el despacho otra vez desde la pantalla de materiales.
-- La fecha define el mes al que suma.
-- Un despacho con cantidad 0 se conserva, pero no suma.
-- No se modifica la estructura de `DespachoAlmacen` desde este flujo.
-- El alta/edición existente de `DespachoAlmacen` valida `PeriodoCerrado`; no se edita un despacho de un mes cerrado.
+- La fuente es `LineaAsignacion` de solicitudes con estado `CONFIRMADA`.
+- El mes se determina por `SolicitudAsignacion.confirmada_en`.
+- Para cada material se suma `LineaAsignacion.cantidad`.
+- Las solicitudes enviadas, rechazadas o canceladas no suman.
+- No se registra la asignación otra vez desde la pantalla de materiales.
+- `DespachoAlmacen` queda como tabla histórica y no participa del cálculo.
 
 ## 9. Saldo inicial y cálculo mensual
 
 ```text
-inicial = saldo manual del mes, si existe
+inicial = saldo manual histórico del mes, si existe
 si no, saldo final del cierre anterior
-si no hay anterior, 0
+si no hay anterior, stock actual + usado - asignaciones_confirmadas
 
-despachos = suma de DespachoAlmacen del mes
+asignaciones_confirmadas = suma de LineaAsignacion de solicitudes CONFIRMADA del mes
 
 usado = suma de uso de las órdenes del mes
 
-final = inicial + despachos - usado
+final = inicial + asignaciones_confirmadas - usado = stock actual
 ```
 
 - Un saldo final negativo se muestra con alerta.
@@ -114,7 +115,7 @@ final = inicial + despachos - usado
 - Se calcula el uso total del mes, incluyendo otros técnicos.
 - Si el uso nuevo supera el disponible, no se guarda.
 - Se muestra material, disponible, usado y faltante.
-- No se permite un saldo inicial que deje el mes en negativo si ya hay uso.
+- El saldo inicial operativo se carga en Stock inicial; ya no se registra manualmente desde este módulo.
 
 ## 11. Advertencias
 
@@ -162,7 +163,7 @@ final = inicial + despachos - usado
 
 - Cantidad entera ≥ 0.
 - Periodo con formato `YYYY-MM`.
-- Número de orden obligatorio, 1–30 alfanumérico.
+- Número de orden obligatorio, 1–30 alfanumérico con guiones o guiones bajos simples.
 - Técnico del tenant.
 - Material habilitado y activo.
 - Orden única por técnico/mes/número.

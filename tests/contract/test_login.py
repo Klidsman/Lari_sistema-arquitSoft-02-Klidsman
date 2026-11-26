@@ -3,37 +3,26 @@
 import pytest
 from django.urls import reverse
 
-from acceso.models import Rol, Usuario
-from acceso.services import CLAVE_PENDIENTE_2FA
-from acceso.totp import cifrar_secreto
-from tenants.models import Region, Tenant
-
-
-@pytest.fixture
-def admin_con_2fa(db, usuario_admin):
-    usuario_admin.secreto_totp = cifrar_secreto("JBSWY3DPEHPK3PXPJBSWY3DPJBSWY3DP")
-    usuario_admin.segundo_factor_habilitado = True
-    usuario_admin.save(update_fields=["secreto_totp", "segundo_factor_habilitado"])
-    return usuario_admin
+from tenants.models import Tenant
 
 
 @pytest.mark.django_db
-def test_login_sin_2fa_redirige_a_pendiente(client, admin_con_2fa):
+def test_login_admin_abre_sesion_directamente(client, usuario_admin):
     respuesta = client.post(
         reverse("login"),
-        {"email": admin_con_2fa.email, "password": "ClaveAdmin12345"},
+        {"email": usuario_admin.email, "password": "ClaveAdmin12345"},
     )
 
     assert respuesta.status_code == 302
-    assert respuesta.url == reverse("login_2fa")
-    assert client.session[CLAVE_PENDIENTE_2FA] == admin_con_2fa.pk
+    assert respuesta.url == "/plataforma/regiones/"
+    assert client.session["_auth_user_id"] == str(usuario_admin.pk)
 
 
 @pytest.mark.django_db
-def test_login_credenciales_invalidas(client, admin_con_2fa):
+def test_login_credenciales_invalidas(client, usuario_admin):
     respuesta = client.post(
         reverse("login"),
-        {"email": admin_con_2fa.email, "password": "incorrecta"},
+        {"email": usuario_admin.email, "password": "incorrecta"},
     )
 
     assert respuesta.status_code == 400
@@ -70,7 +59,7 @@ def test_login_tenant_suspendido(client, usuario_tenant):
 
 
 @pytest.mark.django_db
-def test_login_tenant_sin_2fa_abre_sesion(client, usuario_tenant):
+def test_login_tenant_abre_sesion(client, usuario_tenant):
     respuesta = client.post(
         reverse("login"),
         {"email": usuario_tenant.email, "password": "ClaveTenant12345"},

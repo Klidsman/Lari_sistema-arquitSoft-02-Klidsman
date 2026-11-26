@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Traspaso {{ traspaso.pk }} · Almacén{% endblock %}
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'bandeja_traspasos' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a traspasos del almacén</span>
+    </a>
+  </div>
   <h1>Traspaso {{ traspaso.pk }}</h1>
   <p>
     {{ traspaso.forma }} ·
@@ -28,12 +34,18 @@
     <tbody>
       {% for linea in traspaso.lineas.all %}
         <tr>
-          <td>{{ linea.tecnico_origen.nif }}</td>
-          <td>{{ linea.tecnico_destino.nif }}</td>
-          <td>{{ linea.material.codigo }}</td>
-          <td>{{ linea.lote }}</td>
-          <td>{{ linea.serie.numero|default:"—" }}</td>
-          <td>{{ linea.cantidad }}</td>
+          <td><span class="mono">{{ linea.tecnico_origen.nif }}</span></td>
+          <td><span class="mono">{{ linea.tecnico_destino.nif }}</span></td>
+          <td><span class="codigo">{{ linea.material.codigo }}</span></td>
+          <td>{{ linea.lote|default:"—" }}</td>
+          <td>
+            {% if linea.serie %}
+              <span class="badge-serie">{{ linea.serie.numero }}</span>
+            {% else %}
+              <span class="badge-tipo badge-tipo--no_seriado"><span class="badge-tipo__dot" aria-hidden="true"></span>No seriado</span>
+            {% endif %}
+          </td>
+          <td class="columna-numero">{{ linea.cantidad }}</td>
         </tr>
       {% endfor %}
     </tbody>

@@ -26,7 +26,7 @@ Definir las regiones, los almacenes centrales, los tenants y las cuentas de acce
 - Una sola cuenta de tenant, creada por el Administrador de plataforma.
 - Cuentas de Administrador de plataforma y de Responsable de almacén.
 - Invitación por correo para definir la contraseña.
-- Autenticación de dos factores para Administrador de plataforma y Responsable de almacén.
+- Inicio de sesión con correo y contraseña, sin segundo factor.
 - Desactivación de cuentas y suspensión de tenants.
 - Revocación inmediata de acceso.
 - Auditoría de altas, cambios de rol y desactivaciones.
@@ -41,7 +41,7 @@ Definir las regiones, los almacenes centrales, los tenants y las cuentas de acce
 - Recojos, asignaciones, traspasos, conciliaciones y stock.
 - Autoregistro de usuarios.
 - Inicio de sesión con proveedores externos, SSO o LDAP.
-- Recuperación de contraseña y recuperación de códigos de segundo factor.
+- Recuperación automática de contraseña por correo sin intervención del Administrador de plataforma.
 - Eliminación física de regiones, tenants o cuentas.
 - Cambio de región de un tenant.
 - Gestión de más de una región por tenant.
@@ -103,11 +103,19 @@ La misma cuenta que carga una conciliación puede aprobarla. No existe separaci�
 
 ### Invitación
 - Se crea al dar de alta una cuenta.
-- Se envía al correo de la cuenta para que el usuario defina su contraseña.
+- El sistema genera un enlace con el token para que el usuario defina su contraseña.
+- El enlace se muestra una sola vez al Administrador de plataforma para que lo comparta; el envío por correo es opcional.
 - El token es de un solo uso y tiene vencimiento.
 - Un token vencido, usado o revocado no permite definir contraseña.
 - Reenviar una invitación invalida la anterior.
 - La invitación no se envía a un correo que ya pertenece a una cuenta.
+
+### Restablecimiento de contraseña
+- Solo el Administrador de plataforma puede iniciarlo para una cuenta activa.
+- Genera un enlace de un solo uso y cierra las sesiones abiertas de la cuenta.
+- No cambia el rol ni el tenant.
+- El Administrador no conoce ni define la contraseña.
+- Si es el único Administrador y perdió su contraseña, el enlace se genera desde la consola del servidor.
 
 ## Reglas de negocio
 
@@ -118,9 +126,9 @@ La misma cuenta que carga una conciliación puede aprobarla. No existe separaci�
 5. **Alta centralizada.** Solo el Administrador de plataforma crea regiones, almacenes, tenants, la cuenta única del tenant y las cuentas de Responsable de almacén.
 6. **Una sola cuenta por tenant.** Cada tenant tiene exactamente una cuenta operativa. No se crean subcuentas ni roles internos.
 7. **Operación habilitada.** Un tenant no opera hasta que su cuenta esté activa.
-8. **Invitación obligatoria.** Toda cuenta nueva recibe una invitación para definir su contraseña. No se crean cuentas con contraseña conocida por el administrador.
+8. **Invitación obligatoria.** Toda cuenta nueva recibe una invitación para definir su contraseña. No se crean cuentas con contraseña conocida por el administrador. El restablecimiento sigue la misma regla: el Administrador genera el enlace, nunca la contraseña.
 9. **Token de un solo uso.** El token de invitación vence, no se reutiliza y se invalida al reenviar la invitación.
-10. **Dos factores.** Las cuentas de Administrador de plataforma y de Responsable de almacén requieren un segundo factor para iniciar sesión.
+10. **Sin segundo factor.** El inicio de sesión usa solo correo y contraseña para todos los roles. No hay TOTP ni códigos de respaldo.
 11. **Correo único.** No puede existir más de una cuenta con el mismo correo electrónico.
 12. **Desactivación inmediata.** Desactivar una cuenta retira su acceso de inmediato, invalida sus sesiones y conserva su historial.
 13. **Suspensión del tenant.** Suspender un tenant bloquea su cuenta y sus operaciones, sin modificar datos ni stock.
@@ -132,6 +140,8 @@ La misma cuenta que carga una conciliación puede aprobarla. No existe separaci�
 19. **Parámetros configurables.** Centro, Almacén y buzón son datos de la región, no constantes del sistema.
 20. **Sin autoregistro.** Ningún usuario crea su propia cuenta fuera del flujo de invitación.
 21. **Sin separación interna.** La cuenta del tenant puede cargar y aprobar la misma conciliación. No existen Operador, Aprobador ni Responsable del tenant.
+22. **Restablecimiento asistido.** Solo el Administrador de plataforma restablece la contraseña de una cuenta activa, mediante un enlace de un solo uso que se muestra una vez. El restablecimiento invalida las sesiones abiertas y queda auditado.
+23. **Recuperación del Administrador.** Un Administrador de plataforma no restablece su propia cuenta desde la interfaz. Si es el único o perdió el acceso, usa el comando de consola del servidor, que emite el enlace.
 
 ## Flujos
 
@@ -153,16 +163,32 @@ La misma cuenta que carga una conciliación puede aprobarla. No existe separaci�
 2. Registra el correo de la cuenta.
 3. El sistema valida que el correo sea único y que el tenant no tenga ya una cuenta.
 4. El sistema crea la cuenta inactiva con alcance de tenant.
-5. El sistema genera y envía la invitación.
+5. El sistema genera la invitación y muestra el enlace una sola vez.
 6. El alta queda auditada.
+7. Si el correo está configurado, también se envía la invitación.
 
 ### Alta de cuenta de almacén
 1. El Administrador de plataforma elige la región.
 2. Registra el correo de la cuenta.
 3. El sistema valida el correo único.
 4. Crea la cuenta inactiva con alcance de región.
-5. Genera y envía la invitación.
+5. Genera la invitación y muestra el enlace una sola vez.
 6. El alta queda auditada.
+7. Si el correo está configurado, también se envía la invitación.
+
+### Restablecimiento de contraseña
+1. El Administrador de plataforma elige una cuenta activa y confirma el restablecimiento.
+2. El sistema revoca los enlaces pendientes y emite uno nuevo de un solo uso.
+3. El sistema invalida las sesiones abiertas de la cuenta.
+4. El sistema muestra el enlace una sola vez.
+5. El Administrador lo comparte con la cuenta.
+6. El usuario define su nueva contraseña.
+7. El evento queda auditado sin guardar el token ni la contraseña.
+
+### Recuperación del Administrador de plataforma
+1. Si existe otro Administrador, genera el enlace desde la lista de cuentas.
+2. Si es el único, el operador ejecuta `restablecer_admin_plataforma --email ...` en el servidor.
+3. El comando muestra el enlace una sola vez e invalida las sesiones.
 
 ### Aceptación de invitación
 1. El usuario abre el enlace de invitación.
@@ -174,8 +200,7 @@ La misma cuenta que carga una conciliación puede aprobarla. No existe separaci�
 ### Inicio de sesión
 1. El usuario ingresa correo y contraseña.
 2. El sistema rechaza cuentas desactivadas y tenants suspendidos.
-3. Si el rol exige segundo factor, el sistema lo solicita antes de abrir la sesión.
-4. Al completar, el sistema abre la sesión con el alcance del usuario.
+3. Si las credenciales son válidas, el sistema abre la sesión con el alcance del usuario.
 
 ### Desactivación de cuenta
 1. El Administrador de plataforma desactiva la cuenta.
@@ -200,13 +225,18 @@ La misma cuenta que carga una conciliación puede aprobarla. No existe separaci�
 - Dado un tenant que ya tiene cuenta, cuando se intenta crear otra, entonces se rechaza con “El tenant ya tiene una cuenta”.
 - Dada la cuenta del tenant, cuando intenta crear una cuenta o subcuenta, entonces la acción no está disponible y el servidor la rechaza.
 - Dada una invitación vencida, usada o revocada, cuando el usuario intenta definir su contraseña, entonces se rechaza.
+- Dado un Administrador de plataforma, cuando crea una cuenta, entonces el enlace de invitación se muestra una sola vez y el token no se guarda en claro.
+- Dado un Administrador de plataforma y una cuenta activa, cuando restablece su contraseña, entonces se emite un enlace de un solo uso, se invalidan sus sesiones y el evento queda auditado.
+- Dada una cuenta inactiva, cuando el Administrador intenta restablecer su contraseña, entonces se rechaza y se ofrece reenviar la invitación.
+- Dado un restablecimiento aceptado, cuando el usuario define su contraseña, entonces la cuenta sigue activa y conserva su rol y su alcance.
+- Dado un Administrador de plataforma que perdió su contraseña, cuando el operador ejecuta el comando de consola, entonces obtiene un enlace de un solo uso sin que se muestre la contraseña.
 - Dada la cuenta activa de un tenant, cuando carga y aprueba una conciliación, entonces el sistema lo permite porque no hay separación de funciones internas.
 - Dada la cuenta de un tenant, cuando intenta consultar o modificar datos de otro tenant, entonces el sistema no devuelve el dato y no revela su existencia.
 - Dado un Responsable de almacén, cuando intenta ver solicitudes de otra región, entonces el sistema no las devuelve.
 - Dado un Administrador de plataforma, cuando intenta registrar un recojo, una asignación o un traspaso, o aprobar una conciliación, entonces el servidor rechaza la operación aunque se fuerce la petición.
 - Dado un usuario con cuenta activa, cuando se desactiva su cuenta, entonces su sesión deja de ser válida de inmediato y su historial se conserva.
 - Dado un tenant activo, cuando se suspende, entonces su cuenta no puede iniciar sesión ni operar, y sus datos y stock permanecen sin cambios.
-- Dado un Administrador de plataforma o un Responsable de almacén, cuando inicia sesión sin completar el segundo factor, entonces no se abre la sesión.
+- Dado un Administrador de plataforma o un Responsable de almacén, cuando inicia sesión con credenciales válidas, entonces la sesión se abre directamente.
 - Dado un cambio de rol de una cuenta administrativa, cuando se guarda, entonces el rol anterior y el nuevo quedan auditados y el cambio se aplica de inmediato.
 - Dada una cuenta del tenant, cuando se intenta cambiar su rol, entonces se rechaza; solo se permite desactivarla o reactivarla.
 - Dado un correo electrónico ya registrado, cuando se intenta crear otra cuenta con ese correo, entonces se rechaza.
@@ -216,7 +246,10 @@ La misma cuenta que carga una conciliación puede aprobarla. No existe separaci�
 
 ## Casos borde
 - Invitación vencida: se rechaza y se permite reenviar una nueva.
-- Reenvío de invitación: invalida el token anterior.
+- Reenvío de invitación: invalida el token anterior y muestra el enlace nuevo una sola vez.
+- Correo no configurado o buzón inexistente: el enlace se comparte manualmente; el flujo no depende del correo.
+- Enlace de restablecimiento perdido: se genera otro y el anterior queda invalidado.
+- Restablecimiento de una cuenta desactivada después de emitir el enlace: se rechaza.
 - Invitación enviada a un correo que ya tiene cuenta: se rechaza.
 - Cuenta desactivada con sesión abierta: la siguiente petición se rechaza.
 - Tenant suspendido con su cuenta conectada: la siguiente petición se rechaza.
@@ -227,19 +260,19 @@ La misma cuenta que carga una conciliación puede aprobarla. No existe separaci�
 - Cuenta del tenant desactivada: el tenant queda sin operación hasta que el Administrador de plataforma reactive la cuenta existente.
 - Administrador de plataforma sin tenant ni región: es un estado válido.
 - Intento de eliminar una cuenta o tenant: se rechaza; se desactiva o suspende.
-- Pérdida del segundo factor: la recuperación queda fuera de alcance; la cuenta se desactiva y se crea una nueva.
 - Buzón de almacén inválido: se rechaza.
 - Centro o Almacén vacíos: se rechaza.
 
 ## Supuestos y decisiones confirmadas
 1. La región de un tenant no cambia después de crearlo.
 2. Decisión confirmada: la cuenta del tenant puede realizar todas las funciones del tenant, incluida la aprobación de sus propias conciliaciones.
-3. La invitación vence a las 72 horas.
+3. La invitación y el enlace de restablecimiento vencen a las 72 horas.
 4. El correo electrónico es el identificador de inicio de sesión y es único globalmente.
 5. La reactivación de una cuenta o de un tenant se permite al Administrador de plataforma y queda auditada.
-6. El segundo factor se implementa con TOTP y la recuperación de códigos queda fuera de alcance.
-7. La contraseña debe cumplir la política de seguridad configurada; se propone un mínimo de 12 caracteres.
-8. Los códigos de región y tenant son alfanuméricos, de 1 a 20 caracteres.
-9. Centro y Almacén se precargan con PR05 y BE03, pero son editables por región.
-10. La cuenta del tenant puede consultar la auditoría de su tenant, pero no la de otros tenants.
-11. Si el tenant necesita que varias personas operen, se comparte la única cuenta o se define una funcionalidad futura de cuentas adicionales con el mismo alcance.
+6. No hay segundo factor: el acceso usa solo correo y contraseña.
+7. El enlace de invitación o restablecimiento se muestra una sola vez en la interfaz; el correo es opcional y no es requisito para operar.
+8. La contraseña debe cumplir la política de seguridad configurada; se propone un mínimo de 12 caracteres.
+9. Los códigos de región y tenant son alfanuméricos, de 1 a 20 caracteres.
+10. Centro y Almacén se precargan con PR05 y BE03, pero son editables por región.
+11. La cuenta del tenant puede consultar la auditoría de su tenant, pero no la de otros tenants.
+12. Si el tenant necesita que varias personas operen, se comparte la única cuenta o se define una funcionalidad futura de cuentas adicionales con el mismo alcance.

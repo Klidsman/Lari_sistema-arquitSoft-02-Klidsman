@@ -3,13 +3,15 @@
 {% block contenido %}
   <h1>Registro de materiales</h1>
   <p>Periodo actual: {{ periodo }}</p>
+  <p class="ayuda">
+    Este módulo lleva la cuenta mensual de materiales usados y descuenta el
+    stock actual del técnico al registrar el consumo.
+  </p>
   <ul class="menu-modulo">
     <li><a href="{% url 'cargar_ordenes' %}">Cargar órdenes</a></li>
     <li><a href="{% url 'registrar_materiales' %}">Registrar materiales</a></li>
     <li><a href="{% url 'ordenes_pendientes' %}">Órdenes pendientes</a></li>
-    <li><a href="{% url 'entradas_materiales' %}">Entradas y saldos</a></li>
     <li><a href="{% url 'dashboard_materiales' %}">Dashboard mensual</a></li>
     <li><a href="{% url 'cierre_mensual' %}">Cierre mensual</a></li>
-    <li><a href="{% url 'catalogo_materiales' %}">Catálogo habilitado</a></li>
   </ul>
 {% endblock %}

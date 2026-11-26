@@ -47,19 +47,10 @@ SECRET_KEY=dev-solo-local
 DEBUG=True
 DATABASE_URL=postgresql://lari_app:lari_app@localhost:5434/lari
 REDIS_URL=redis://localhost:6379/0
-TOTP_ENCRYPTION_KEY=<clave Fernet válida>
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 DEFAULT_FROM_EMAIL=no-reply@lari.local
 BASE_URL=http://localhost:8000
 ```
-
-Si falta la clave TOTP:
-
-```powershell
-.\.venv\Scripts\python.exe -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-```
-
-Copia el valor en `TOTP_ENCRYPTION_KEY=` y **no** lo versiones.
 
 ### 0.3 Migraciones y suite
 
@@ -96,16 +87,8 @@ Terminal B (necesaria para ver los correos de invitación):
 Copia la URL `/invitacion/<token>/` que imprime el comando. Ábrela en el navegador, define una
 contraseña de **12 caracteres o más** y confirma.
 
-Después inicia sesión en `http://localhost:8000/login/`. Como el administrador aún no tiene
-segundo factor, `/login/2fa/` mostrará el URI `otpauth://...`. Agrégalo a tu aplicación
-autenticadora (Google Authenticator, Aegis, 1Password, etc.) e ingresa el código de 6 dígitos.
-
-> **Ayuda local sin teléfono**: en otra terminal puedes imprimir el código actual del
-> administrador:
->
-> ```powershell
-> .\.venv\Scripts\python.exe manage.py shell -c "import pyotp; from acceso.models import Usuario; from acceso.totp import descifrar_secreto; u=Usuario.objects.get(email='admin@lari.local'); print(pyotp.TOTP(descifrar_secreto(u.secreto_totp)).now())"
-> ```
+Después inicia sesión en `http://localhost:8000/login/` con tu correo y contraseña. La sesión
+se abre directamente, sin segundo factor.
 
 ---
 
@@ -220,18 +203,14 @@ Verificación:
 
 ---
 
-## 5. Inicio de sesión y segundo factor
+## 5. Inicio de sesión
 
 1. Cierra sesión y vuelve a entrar como Administrador.
-2. **Esperado**: tras correo y contraseña, redirige a `/login/2fa/`; cualquier otra ruta
-   redirige también a `/login/2fa/` (sesión pendiente).
-3. Ingresa el código TOTP.
-4. **Esperado**: sesión abierta con acceso a `/plataforma/...`.
-5. Repite con el Responsable de almacén `almacen1@lari.local` (primero acepta su invitación y
-   configura su TOTP).
-6. **Esperado**: también exige segundo factor.
-7. Inicia sesión con `tenant1@lari.local`.
-8. **Esperado**: **no** pide TOTP y solo accede a su propio alcance.
+2. **Esperado**: tras correo y contraseña, la sesión se abre y accede a `/plataforma/...`.
+3. Repite con el Responsable de almacén `almacen1@lari.local` (primero acepta su invitación).
+4. **Esperado**: la sesión se abre con alcance de su región.
+5. Inicia sesión con `tenant1@lari.local`.
+6. **Esperado**: la sesión se abre y solo accede a su propio alcance.
 
 **Resultado:** x OK  ☐ Falló  Observaciones: ______________________________
 
@@ -287,7 +266,7 @@ Abre `http://localhost:8000/auditoria/acceso/?registro_id=<id>` con la sesión d
 
 ## 8. Cambio de rol
 
-1. Activa la cuenta `almacen1@lari.local` aceptando su invitación y configurando su TOTP.
+1. Activa la cuenta `almacen1@lari.local` aceptando su invitación.
 2. Como Administrador, en `/plataforma/cuentas/`, selecciona **Administrador de plataforma**
    para esa cuenta y pulsa **Cambiar rol**.
 3. **Esperado**: `302`; el rol cambia, `version_sesion` aumenta y la auditoría muestra el rol
@@ -342,7 +321,7 @@ curl.exe -i -X DELETE "http://localhost:8000/plataforma/regiones/1/editar/" `
 4. **Esperado**: el listado se filtra y pagina de 50 en 50.
 5. Abre la misma ruta con `tenant1@lari.local`.
 6. **Esperado**: solo registros de `TEN-001`.
-7. Revisa que ningún valor contenga contraseñas, `token_hash` ni secretos TOTP:
+7. Revisa que ningún valor contenga contraseñas ni `token_hash`:
 
 ```powershell
 .\.venv\Scripts\python.exe manage.py shell -c "from auditoria.models import RegistroCambio; prohibidos=('password','contraseña','token','secreto'); malos=[(r.pk,r.campo) for r in RegistroCambio.objects.all() if any(p in (r.campo+' '+r.valor_anterior+' '+r.valor_nuevo).lower() for p in prohibidos)]; print('sospechosos=', malos)"
@@ -400,7 +379,7 @@ Verificación:
 | 2 | Alta de tenant | | |
 | 3 | Cuenta única e invitación | | |
 | 4 | Invitación vencida y reenvío | | |
-| 5 | Login y segundo factor | | |
+| 5 | Inicio de sesión | | |
 | 6 | Aislamiento tenant/región | | |
 | 7 | Desactivación/suspensión | | |
 | 8 | Cambio de rol | | |

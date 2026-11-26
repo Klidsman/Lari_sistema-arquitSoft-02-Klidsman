@@ -44,14 +44,14 @@ Si un documento contradice la constitución, se corrige el documento **antes** d
 - La lógica de negocio va en `services.py` de cada app, nunca en vistas ni formularios.
 - Interfaz, documentación y nombres de código (modelos, campos, rutas, mensajes) en español.
 - Autenticación: `AUTH_USER_MODEL = "acceso.Usuario"`, login por email, una sola cuenta por
-  tenant, sin subcuentas ni autoregistro. 2FA TOTP obligatorio para Administrador de
-  plataforma y Responsable de almacén.
+  tenant, sin subcuentas ni autoregistro. Acceso con correo y contraseña, sin segundo factor
+  (ADR-022).
 - Aislamiento multitenant: tenant y región se derivan **solo de la sesión**
   (`request.usuario`), nunca de `tenant_id`/`region_id` enviados por el cliente. Acceso ajeno
   se responde `404`. Única excepción: el catálogo de materiales es global, sin `tenant_id`.
 - No se eliminan regiones, tenants, cuentas ni materiales; se desactivan o suspenden.
 - Toda alta/cambio se audita en `auditoria.RegistroCambio`, en la misma transacción. Nunca se
-  auditan contraseñas, tokens ni secretos TOTP.
+  auditan contraseñas ni tokens.
 
 ## Reglas de trabajo
 

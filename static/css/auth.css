@@ -28,6 +28,18 @@
   border-radius: 1rem;
   background: #fff;
   box-shadow: 0 1.5rem 3.5rem rgba(15, 28, 38, 0.1);
+  animation: auth-entrada 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes auth-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Panel de marca */
@@ -48,18 +60,13 @@
   position: relative;
 }
 
-.auth-logo {
-  margin: 0;
-  color: #fff;
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+.auth-marca .marca-lari {
+  align-items: flex-start;
 }
 
-.auth-logo__desc {
-  margin: 0.4rem 0 0;
-  color: #aab7c4;
-  font-size: 0.9375rem;
+.auth-marca .marca-lari__simbolo {
+  width: 2.5rem;
+  height: 2.5rem;
 }
 
 .auth-hechos {
@@ -71,21 +78,17 @@
 }
 
 .auth-hechos li {
-  position: relative;
-  padding-left: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
   color: #c9d4de;
   font-size: 0.9375rem;
 }
 
-.auth-hechos li::before {
-  content: "";
-  position: absolute;
-  top: 0.5em;
-  left: 0;
-  width: 0.4rem;
-  height: 0.4rem;
-  border: 1px solid #6f8ba3;
-  border-radius: 50%;
+.auth-hechos .icono {
+  width: 1rem;
+  height: 1rem;
+  color: #9cc3df;
 }
 
 .auth-pie {
@@ -163,6 +166,8 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease,
+    transform 120ms ease;
 }
 
 .auth-panel .boton-primario:hover,
@@ -240,10 +245,6 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.25rem 0.75rem;
-}
-
-.auth--alta .auth-logo__desc {
-  margin: 0;
 }
 
 .auth--alta .auth-hechos {
@@ -358,10 +359,6 @@
     gap: 0.25rem 0.75rem;
   }
 
-  .auth-logo__desc {
-    margin: 0;
-  }
-
   .auth-hechos,
   .auth-pie {
     display: none;
@@ -408,7 +405,24 @@
     font-size: 1.5rem;
   }
 
-  .auth-logo {
-    font-size: 1.25rem;
+  .auth-marca .marca-lari__simbolo {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth {
+    animation: none;
+  }
+
+  .auth-boton,
+  .auth-panel .boton-primario {
+    transition: none;
+  }
+
+  .auth-boton:active,
+  .auth-panel .boton-primario:active {
+    transform: none;
   }
 }

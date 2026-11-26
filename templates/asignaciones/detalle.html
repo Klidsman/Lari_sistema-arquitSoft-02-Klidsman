@@ -3,6 +3,12 @@
 {% block title %}Solicitud {{ solicitud.pk }} · Lari{% endblock %}
 
 {% block contenido %}
+  <div class="cabecera-volver">
+    <a class="boton-volver" href="{% url 'lista_asignaciones' %}">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+      <span>Volver a asignaciones</span>
+    </a>
+  </div>
   <h1>Solicitud {{ solicitud.pk }}</h1>
 
   {% if envio_fallido %}
@@ -41,12 +47,18 @@
     <tbody>
       {% for linea in solicitud.lineas.all %}
         <tr>
-          <td>{{ linea.tecnico.nif }}</td>
-          <td>{{ linea.material.codigo }}</td>
-          <td>{{ linea.material.descripcion }}</td>
-          <td>{{ linea.lote }}</td>
-          <td>{{ linea.serie.numero|default:"—" }}</td>
-          <td>{{ linea.cantidad }}</td>
+          <td><span class="mono">{{ linea.tecnico.nif }}</span></td>
+          <td><span class="codigo">{{ linea.material.codigo }}</span></td>
+          <td><strong>{{ linea.material.descripcion }}</strong></td>
+          <td>{{ linea.lote|default:"—" }}</td>
+          <td>
+            {% if linea.serie %}
+              <span class="badge-serie">{{ linea.serie.numero }}</span>
+            {% else %}
+              <span class="badge-tipo badge-tipo--no_seriado"><span class="badge-tipo__dot" aria-hidden="true"></span>No seriado</span>
+            {% endif %}
+          </td>
+          <td class="columna-numero">{{ linea.cantidad }}</td>
         </tr>
       {% endfor %}
     </tbody>
@@ -70,5 +82,5 @@
     </form>
   {% endif %}
 
-  <p><a href="{% url 'lista_asignaciones' %}">Volver</a></p>
+  
 {% endblock %}

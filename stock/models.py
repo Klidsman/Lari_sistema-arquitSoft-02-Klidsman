@@ -13,6 +13,7 @@ class TipoMovimientoTecnico(models.TextChoices):
     DEVOLUCION = "DEVOLUCION", "Devolución"
     BAJA = "BAJA", "Baja"
     CONCILIACION = "CONCILIACION", "Conciliación"
+    CONSUMO = "CONSUMO", "Consumo en orden"
     AJUSTE = "AJUSTE", "Ajuste"
 
 

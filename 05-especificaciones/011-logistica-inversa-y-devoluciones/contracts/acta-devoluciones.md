@@ -48,7 +48,7 @@ Concreta `04-contratos/acta-devoluciones.md` para la implementación de 011.
 
 ## Prohibiciones
 
-- Contraseñas, tokens, secretos TOTP ni credenciales.
+- Contraseñas, tokens, secretos ni credenciales.
 - Datos de otro tenant o región.
 - Series de otro técnico o material.
 - Rutas absolutas o hashes en celdas.
