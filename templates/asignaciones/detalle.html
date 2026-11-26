@@ -9,6 +9,16 @@
     <p class="mensaje mensaje-error">No se pudo enviar el correo al almacén</p>
   {% endif %}
 
+  {% if solicitud.estado == "RECHAZADA" %}
+    <div class="mensaje mensaje-error" role="alert">
+      <strong>Solicitud rechazada</strong>
+      <p>Motivo: {{ solicitud.motivo_rechazo }}</p>
+      {% if solicitud.rechazada_en %}
+        <p>Fecha: {{ solicitud.rechazada_en|date:"Y-m-d H:i" }}</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
   {% for alerta in alertas %}
     <p class="mensaje">{{ alerta.tecnico.nif }}: {{ alerta.mensaje }}</p>
   {% endfor %}

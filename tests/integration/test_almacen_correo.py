@@ -282,3 +282,62 @@ def test_hash_alterado_bloquea_el_envio(
         envio.error_mensaje
         == "El archivo del Excel no está disponible o fue modificado"
     )
+
+
+@pytest.mark.django_db
+def test_rechazo_avisa_al_tenant_con_el_motivo(
+    usuario_tenant,
+    usuario_almacen,
+    tenant,
+    tecnico,
+    material_no_seriado,
+    almacen,
+    django_capture_on_commit_callbacks,
+):
+    solicitud = _solicitud(
+        usuario_tenant, tenant, tecnico, material_no_seriado
+    )
+    mail.outbox.clear()
+
+    with django_capture_on_commit_callbacks(execute=True):
+        almacen_services.rechazar_solicitud(
+            solicitud, "Serie no coincide", usuario_almacen
+        )
+
+    assert len(mail.outbox) == 1
+    mensaje = mail.outbox[0]
+    assert mensaje.to == [usuario_tenant.email]
+    assert f"#{solicitud.pk}" in mensaje.subject
+    assert "rechazada" in mensaje.subject.lower()
+    assert "Serie no coincide" in mensaje.body
+    assert f"/asignaciones/{solicitud.pk}/" in mensaje.body
+
+
+@pytest.mark.django_db
+def test_fallo_de_correo_no_revierte_el_rechazo(
+    monkeypatch,
+    usuario_tenant,
+    usuario_almacen,
+    tenant,
+    tecnico,
+    material_no_seriado,
+    almacen,
+    django_capture_on_commit_callbacks,
+):
+    solicitud = _solicitud(
+        usuario_tenant, tenant, tecnico, material_no_seriado
+    )
+
+    def fallar(*args, **kwargs):
+        raise RuntimeError("SMTP caído")
+
+    monkeypatch.setattr(almacen_services, "send_mail", fallar)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        almacen_services.rechazar_solicitud(
+            solicitud, "Sin stock", usuario_almacen
+        )
+
+    solicitud.refresh_from_db()
+    assert solicitud.estado == EstadoSolicitud.RECHAZADA
+    assert solicitud.motivo_rechazo == "Sin stock"

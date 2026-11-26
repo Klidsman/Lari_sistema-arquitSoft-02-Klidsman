@@ -5,6 +5,11 @@ from . import almacen_views as views
 urlpatterns = [
     path("bandeja/", views.bandeja, name="bandeja_almacen"),
     path(
+        "bandeja/tabla/",
+        views.tabla_bandeja,
+        name="tabla_bandeja_almacen",
+    ),
+    path(
         "solicitudes/<int:solicitud_id>/previsualizar/",
         views.previsualizar_solicitud,
         name="previsualizar_almacen",

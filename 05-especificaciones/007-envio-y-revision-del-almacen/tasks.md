@@ -450,6 +450,15 @@ Task: "Integración de notificaciones en tests/integration/test_almacen_notifica
 | CA-11 | US6 | T108, T110 búsqueda de históricos |
 | CA-12 | US3 | T067, T068 hash alterado bloquea la descarga |
 
+## Tiempo real implementado (2026-11-25)
+
+- [X] T150 Crear `asignaciones/notificaciones.py` con canal por región, publicación Redis, conteo de pendientes y evento de solicitud enviada
+- [X] T151 Publicar el evento en `transaction.on_commit` al enviar una solicitud, sin revertir la operación si Redis falla
+- [X] T152 Implementar SSE con heartbeat y fallback silencioso; la bandeja mantiene polling cada 30 s
+- [X] T153 Añadir a la bandeja los atributos `data-sse-url`, `data-poll-url` y `data-tabla-url`, el refresco de tabla, el badge, el toast, el sonido y el botón de silencio
+- [X] T154 Añadir la ruta de fragmento de tabla y pruebas de canal, publicación, SSE, región, polling y eventos
+- [X] T155 Notificar al tenant el rechazo con su motivo por correo y mostrar el motivo en el detalle de la solicitud
+
 ## Notas
 
 - [P] significa archivos distintos y sin dependencia de una tarea incompleta.

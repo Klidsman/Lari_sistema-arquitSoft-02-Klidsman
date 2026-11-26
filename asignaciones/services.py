@@ -710,6 +710,12 @@ def enviar_solicitud(solicitud, actor):
         )
         transaction.on_commit(
             lambda: __import__(
+                "asignaciones.notificaciones",
+                fromlist=["publicar_solicitud_enviada"],
+            ).publicar_solicitud_enviada(bloqueada)
+        )
+        transaction.on_commit(
+            lambda: __import__(
                 "asignaciones.correo",
                 fromlist=["encolar_envio_solicitud"],
             ).encolar_envio_solicitud(bloqueada.pk)

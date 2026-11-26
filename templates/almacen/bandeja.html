@@ -3,44 +3,217 @@
 {% block title %}Bandeja de despachos · Lari{% endblock %}
 
 {% block contenido %}
-  <h1>Bandeja de despachos</h1>
-  <p>Pendientes: <span data-pendientes="{{ pendientes }}">{{ pendientes }}</span></p>
+  <div class="cabecera-seccion">
+    <h1>Bandeja de despachos</h1>
+    <button type="button" class="boton boton-secundario" id="silenciar-aviso">
+      Silenciar aviso
+    </button>
+  </div>
 
-  <form method="get" class="buscador">
-    <label>Estado
-      <select name="estado">
-        <option value="">Todos</option>
-        <option value="ENVIADA" {% if estado == "ENVIADA" %}selected{% endif %}>Enviada</option>
-        <option value="CONFIRMADA" {% if estado == "CONFIRMADA" %}selected{% endif %}>Confirmada</option>
-        <option value="RECHAZADA" {% if estado == "RECHAZADA" %}selected{% endif %}>Rechazada</option>
-      </select>
-    </label>
-    <button type="submit">Filtrar</button>
-  </form>
+  <div id="bandeja-live"
+       data-sse-url="{% url 'sse_almacen' %}"
+       data-poll-url="{% url 'pendientes_almacen' %}"
+       data-tabla-url="{% url 'tabla_bandeja_almacen' %}"
+       data-estado="{{ estado }}">
+    <p>
+      Pendientes:
+      <span data-pendientes="{{ pendientes }}">{{ pendientes }}</span>
+    </p>
 
-  <table class="tabla">
-    <thead><tr><th>ID</th><th>Fecha envío</th><th>Tenant</th><th>Técnico</th><th>Estado</th><th></th></tr></thead>
-    <tbody>
-      {% for solicitud in solicitudes %}
-        <tr data-solicitud-id="{{ solicitud.pk }}">
-          <td>{{ solicitud.pk }}</td>
-          <td>{{ solicitud.enviada_en|date:"Y-m-d H:i" }}</td>
-          <td>{{ solicitud.tenant.codigo }}</td>
-          <td>{{ solicitud.nifs_tecnicos }}</td>
-          <td>{{ solicitud.get_estado_display }}</td>
-          <td><a href="{% url 'detalle_almacen' solicitud.pk %}">Revisar</a></td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="6">No hay solicitudes para revisar.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <form method="get" class="buscador">
+      <label>Estado
+        <select name="estado">
+          <option value="">Todos</option>
+          <option value="ENVIADA" {% if estado == "ENVIADA" %}selected{% endif %}>Enviada</option>
+          <option value="CONFIRMADA" {% if estado == "CONFIRMADA" %}selected{% endif %}>Confirmada</option>
+          <option value="RECHAZADA" {% if estado == "RECHAZADA" %}selected{% endif %}>Rechazada</option>
+        </select>
+      </label>
+      <button type="submit">Filtrar</button>
+    </form>
 
-  {% if pagina.paginator.num_pages > 1 %}
-    <nav class="paginacion">
-      {% if pagina.has_previous %}<a href="?page={{ pagina.previous_page_number }}&estado={{ estado }}">Anterior</a>{% endif %}
-      <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
-      {% if pagina.has_next %}<a href="?page={{ pagina.next_page_number }}&estado={{ estado }}">Siguiente</a>{% endif %}
-    </nav>
-  {% endif %}
+    <div id="bandeja-tabla" aria-live="polite">
+      {% include "almacen/_tabla_bandeja.html" %}
+    </div>
+  </div>
+
+  <div id="toast-alerta" class="aviso-toast" role="status" aria-live="polite" hidden></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  "use strict";
+
+  var live = document.getElementById("bandeja-live");
+  if (!live) return;
+
+  var sseUrl = live.dataset.sseUrl;
+  var pollUrl = live.dataset.pollUrl;
+  var tablaUrl = live.dataset.tablaUrl;
+  var estado = live.dataset.estado || "";
+  var pagina = "{{ pagina.number|default:'1' }}";
+  var botonSilencio = document.getElementById("silenciar-aviso");
+  var toast = document.getElementById("toast-alerta");
+  var ultimaSolicitud = null;
+  var audioCtx = null;
+  var temporizadorToast = null;
+
+  function silenciado() {
+    return localStorage.getItem("almacen-sonido") === "off";
+  }
+
+  function pintarBotonSilencio() {
+    if (!botonSilencio) return;
+    botonSilencio.textContent = silenciado()
+      ? "Activar aviso"
+      : "Silenciar aviso";
+    botonSilencio.setAttribute(
+      "aria-pressed",
+      silenciado() ? "true" : "false"
+    );
+  }
+
+  function actualizarBadge(valor) {
+    if (valor === undefined || valor === null) return;
+    document.querySelectorAll("[data-pendientes]").forEach(function (nodo) {
+      nodo.textContent = String(valor);
+    });
+  }
+
+  function sonar() {
+    if (silenciado()) return;
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      audioCtx = audioCtx || new Ctx();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.value = 0.08;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    } catch (error) {
+      // El navegador puede bloquear el audio hasta la primera interacción.
+    }
+  }
+
+  function mostrarToast(datos) {
+    if (!toast) return;
+    toast.innerHTML = "";
+    var enlace = document.createElement("a");
+    enlace.href = datos.url || "/almacen/bandeja/";
+    enlace.textContent =
+      "Nueva solicitud #" +
+      datos.solicitud_id +
+      " · " +
+      (datos.tenant || "") +
+      (datos.tecnicos && datos.tecnicos.length
+        ? " · " + datos.tecnicos.join(", ")
+        : "");
+    toast.appendChild(enlace);
+    toast.hidden = false;
+    if (temporizadorToast) clearTimeout(temporizadorToast);
+    temporizadorToast = setTimeout(function () {
+      toast.hidden = true;
+    }, 10000);
+  }
+
+  function refrescarTabla() {
+    if (!tablaUrl) return;
+    var url =
+      tablaUrl +
+      "?estado=" +
+      encodeURIComponent(estado) +
+      "&page=" +
+      encodeURIComponent(pagina);
+    fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (respuesta) {
+        if (!respuesta.ok) throw new Error("No se pudo actualizar la tabla");
+        return respuesta.text();
+      })
+      .then(function (html) {
+        var contenedor = document.getElementById("bandeja-tabla");
+        if (contenedor) contenedor.innerHTML = html;
+      })
+      .catch(function () {
+        // El polling volverá a intentarlo.
+      });
+  }
+
+  function refrescarPendientes() {
+    if (!pollUrl) return;
+    fetch(pollUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (respuesta) {
+        if (!respuesta.ok) throw new Error("No se pudo consultar pendientes");
+        return respuesta.text();
+      })
+      .then(function (html) {
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        var badge = doc.querySelector("[data-pendientes]");
+        if (badge) actualizarBadge(badge.textContent.trim());
+      })
+      .catch(function () {
+        // El polling volverá a intentarlo.
+      });
+  }
+
+  function tratarEvento(datos) {
+    if (!datos || datos.solicitud_id === ultimaSolicitud) return;
+    ultimaSolicitud = datos.solicitud_id;
+    actualizarBadge(datos.pendientes);
+    refrescarTabla();
+    mostrarToast(datos);
+    sonar();
+  }
+
+  if (window.EventSource && sseUrl) {
+    var fuente = new EventSource(sseUrl);
+    fuente.addEventListener("notificacion", function (evento) {
+      try {
+        tratarEvento(JSON.parse(evento.data));
+      } catch (error) {
+        // Evento inválido: se ignora.
+      }
+    });
+  }
+
+  // Respaldo y sincronización periódica aunque SSE siga conectado.
+  setInterval(function () {
+    refrescarPendientes();
+    refrescarTabla();
+  }, 30000);
+
+  if (botonSilencio) {
+    pintarBotonSilencio();
+    botonSilencio.addEventListener("click", function () {
+      if (silenciado()) {
+        localStorage.removeItem("almacen-sonido");
+      } else {
+        localStorage.setItem("almacen-sonido", "off");
+      }
+      pintarBotonSilencio();
+    });
+  }
+
+  document.addEventListener(
+    "click",
+    function () {
+      try {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        audioCtx = audioCtx || new Ctx();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+      } catch (error) {
+        // Sin audio disponible.
+      }
+    },
+    { passive: true }
+  );
+})();
+</script>
 {% endblock %}

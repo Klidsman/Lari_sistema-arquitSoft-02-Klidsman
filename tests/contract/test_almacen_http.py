@@ -57,6 +57,7 @@ def test_bandeja_y_confirmacion_http(
 @pytest.mark.django_db
 def test_rechazo_http(
     cliente_almacen,
+    cliente_tenant,
     usuario_tenant,
     tenant,
     tecnico,
@@ -82,6 +83,14 @@ def test_rechazo_http(
     assert respuesta.status_code == 302
     solicitud.refresh_from_db()
     assert solicitud.estado == EstadoSolicitud.RECHAZADA
+
+    detalle_tenant = cliente_tenant.get(
+        reverse("detalle_asignacion", args=[solicitud.pk])
+    )
+    contenido = detalle_tenant.content.decode()
+    assert detalle_tenant.status_code == 200
+    assert "Solicitud rechazada" in contenido
+    assert "Sin stock" in contenido
 
 
 @pytest.mark.django_db

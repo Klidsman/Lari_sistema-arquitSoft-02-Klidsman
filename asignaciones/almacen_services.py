@@ -1,6 +1,7 @@
 """Servicios del almacén sobre solicitudes de asignación (007)."""
 
 import hashlib
+import logging
 from pathlib import Path
 
 from django.conf import settings
@@ -18,6 +19,8 @@ from stock.services import (
 )
 
 from .models import EnvioCorreo, EstadoSolicitud, SolicitudAsignacion
+
+logger = logging.getLogger(__name__)
 
 
 class PermisoDenegado(Exception):
@@ -166,6 +169,40 @@ def confirmar_solicitud(solicitud, actor):
     return bloqueada
 
 
+def _notificar_tenant_rechazo(solicitud):
+    """Avisa a la cuenta activa del tenant que la solicitud fue rechazada."""
+    usuario = (
+        Usuario.objects.filter(
+            tenant=solicitud.tenant,
+            rol=Rol.USUARIO_TENANT,
+            is_active=True,
+        )
+        .order_by("pk")
+        .first()
+    )
+    if usuario is None:
+        return
+    try:
+        send_mail(
+            subject=f"Solicitud de asignación #{solicitud.pk} rechazada",
+            message=(
+                f"La solicitud de asignación #{solicitud.pk} del tenant "
+                f"{solicitud.tenant.codigo} fue rechazada.\n\n"
+                f"Motivo: {solicitud.motivo_rechazo}\n\n"
+                f"Revisa el detalle en {settings.BASE_URL.rstrip('/')}"
+                f"/asignaciones/{solicitud.pk}/\n"
+            ),
+            from_email=settings.ENVIOS_REMITENTE,
+            recipient_list=[usuario.email],
+            fail_silently=True,
+        )
+    except Exception:
+        logger.warning(
+            "No se pudo avisar el rechazo al tenant",
+            exc_info=True,
+        )
+
+
 def rechazar_solicitud(solicitud, motivo, actor):
     region = validar_cuenta_almacen(actor)
     if solicitud.region_id != region.pk:
@@ -238,6 +275,9 @@ def rechazar_solicitud(solicitud, motivo, actor):
             EstadoSolicitud.RECHAZADA,
             actor,
             tenant=bloqueada.tenant,
+        )
+        transaction.on_commit(
+            lambda: _notificar_tenant_rechazo(bloqueada)
         )
 
     return bloqueada
