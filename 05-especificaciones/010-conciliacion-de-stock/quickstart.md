@@ -43,11 +43,14 @@ normal de 004/005/008/009.
 ## Pruebas automatizadas
 
 ```powershell
-# Excel
-pytest tests/unit/test_conciliacion_excel.py
+# Unitarias: Excel, restricciones, clasificación, comparación y huella
+pytest tests/unit/test_conciliacion_excel.py tests/unit/test_conciliacion_servicios.py tests/unit/test_conciliacion_comparacion.py
 
-# Integración: carga, aprobación, rechazo y recálculo
-pytest tests/integration/test_conciliacion_carga.py tests/integration/test_conciliacion_aprobacion.py
+# Integración: carga, auditoría, aprobación, recálculo, rechazo y aislamiento
+pytest tests/integration/test_conciliacion_carga.py tests/integration/test_conciliacion_auditoria.py tests/integration/test_conciliacion_aprobacion.py tests/integration/test_conciliacion_recalculo.py tests/integration/test_conciliacion_rechazo.py tests/integration/test_conciliacion_aislamiento.py
+
+# Concurrencia y rendimiento
+pytest tests/integration/test_conciliacion_concurrencia.py tests/integration/test_conciliacion_rendimiento.py
 
 # Contrato HTTP
 pytest tests/contract/test_conciliacion_http.py
@@ -279,6 +282,16 @@ Validación automatizada ejecutada sobre PostgreSQL con `.\.venv\Scripts\python.
 | CA-11 | `test_recalculo_si_hubo_cambios` | Cubierto |
 | CA-12 | `test_tecnico_desconocido_rechaza_archivo` y `test_tecnico_de_otro_tenant_de_la_region_se_ignora` | Cubierto |
 
-Complementarios cubiertos: lectura de `.xlsx` (hoja/columnas/cantidad/corrupción), rechazo sin
-cambios y contrato HTTP (403/404/405/409/400). Concurrencia de aprobación cubierta por `test_dos_aprobaciones_simultaneas_aplican_una_sola_vez`. Rendimiento de 1 000 filas cubierto por `test_reporte_de_mil_filas_en_menos_de_diez_segundos`. Pendiente de validación manual: concurrencia de cargas y prueba de 10 000 filas y RLS de `conciliaciones` (implementada en `0002_rls.py`).
+Complementarios cubiertos: lectura de `.xlsx` (hoja/columnas/cantidad/corrupción), restricciones de
+los modelos, clasificación de técnicos, comparación de series/cantidades, huella de stock, rechazo
+sin cambios, contrato HTTP (403/404/405/409/400) y auditoría de carga y ajustes.
+
+Concurrencia cubierta por `test_dos_aprobaciones_simultaneas_aplican_una_sola_vez` y
+`test_dos_cargas_simultaneas_dejan_una_sola_en_revision`. Rendimiento cubierto con 1 000 y 10 000
+filas (`test_reporte_de_mil_filas_en_menos_de_diez_segundos` y
+`test_reporte_de_diez_mil_filas_sin_n_mas_uno`). RLS verificada por
+`test_rls_activa_en_conciliaciones` sobre la migración `0002_rls.py`.
+
+Pendiente: recorrido manual de los escenarios de este quickstart y reporte de cobertura con
+`pytest --cov=conciliaciones`.
 

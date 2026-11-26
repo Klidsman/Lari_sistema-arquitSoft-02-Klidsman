@@ -9,7 +9,7 @@ from io import BytesIO
 from pathlib import Path
 
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
 
@@ -534,6 +534,12 @@ def crear_conciliacion(actor, archivo):
             )
             _guardar_diferencias(conciliacion, series, cantidades, validado)
             _auditar_alta(conciliacion, actor)
+    except IntegrityError as exc:
+        # Dos cargas simultáneas compiten por el índice parcial de una sola
+        # conciliación EN_REVISION por tenant. Se traduce a un error de
+        # dominio para que la vista responda 409 en lugar de 500.
+        (Path(settings.MEDIA_ROOT) / ruta).unlink(missing_ok=True)
+        raise ConciliacionEnRevision from exc
     except Exception:
         (Path(settings.MEDIA_ROOT) / ruta).unlink(missing_ok=True)
         raise
