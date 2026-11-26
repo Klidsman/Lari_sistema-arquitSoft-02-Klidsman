@@ -228,7 +228,9 @@ class OrdenLiquidacion(models.Model):
                 name="orden_unica_por_tecnico_mes_numero",
             ),
             models.CheckConstraint(
-                condition=Q(numero_normalizado__regex=r"^[A-Z0-9]{1,30}$"),
+                condition=Q(
+                    numero_normalizado__regex=r"^[A-Z0-9]+(-[A-Z0-9]+)*$"
+                ),
                 name="orden_numero_formato",
             ),
             models.CheckConstraint(

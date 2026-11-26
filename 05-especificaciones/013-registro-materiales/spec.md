@@ -86,7 +86,7 @@ El módulo es independiente de la conciliación del Excel del almacén y no modi
 ### 5.4 Orden
 
 - Se identifica por `(tenant, técnico, periodo, número de orden)`.
-- El número de orden es obligatorio, de 1 a 30 caracteres alfanuméricos, sin espacios internos.
+- El número de orden es obligatorio, de 1 a 30 caracteres alfanuméricos, con guiones simples entre bloques (`FE-1133926298`), sin espacios internos ni guiones consecutivos.
 - El mismo número puede existir para otro técnico o en otro mes.
 - Para un mismo técnico y mes, el número no se repite.
 - La carga masiva pide el mes de las órdenes; por defecto el actual.

@@ -20,3 +20,15 @@ def test_procesar_lista_normaliza_mayusculas_e_ignora_vacias():
     lista = procesar_lista("\n   \nAbC9\n")
     assert lista.ordenes == ["ABC9"]
     assert lista.rechazadas == []
+
+
+def test_procesar_lista_acepta_guiones_simples():
+    lista = procesar_lista("FE-1133926298\nfe-1133926298\n")
+    assert lista.ordenes == ["FE-1133926298"]
+    assert lista.rechazadas == []
+
+
+def test_procesar_lista_rechaza_caracteres_invalidos_y_guiones_consecutivos():
+    lista = procesar_lista("FE--1133926298\nFE$1133926298\nFE-1133926298")
+    assert lista.ordenes == ["FE-1133926298"]
+    assert len(lista.rechazadas) == 2

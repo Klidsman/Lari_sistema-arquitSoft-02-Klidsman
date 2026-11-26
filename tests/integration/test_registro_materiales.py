@@ -106,6 +106,39 @@ def test_carga_rechaza_lineas_con_mas_de_un_valor(
 
 
 @pytest.mark.django_db
+def test_carga_acepta_ordenes_con_guion(
+    usuario_tenant, tenant, tecnico, material_no_seriado, almacen
+):
+    _habilitar(tenant, material_no_seriado, usuario_tenant)
+    carga = confirmar_carga(
+        tenant,
+        tecnico,
+        PERIODO,
+        "FE-1133926298\nfe-1133926298",
+        usuario_tenant,
+    )
+    assert carga.total_nuevas == 1
+    assert OrdenLiquidacion.objects.filter(
+        tenant=tenant,
+        tecnico=tecnico,
+        periodo=PERIODO,
+        numero_normalizado="FE-1133926298",
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_carga_rechaza_caracter_invalido_sin_llegar_a_base(
+    usuario_tenant, tenant, tecnico, material_no_seriado, almacen
+):
+    _habilitar(tenant, material_no_seriado, usuario_tenant)
+    with pytest.raises(NumeroOrdenInvalido):
+        confirmar_carga(
+            tenant, tecnico, PERIODO, "FE$1133926298", usuario_tenant
+        )
+    assert not OrdenLiquidacion.objects.filter(tenant=tenant).exists()
+
+
+@pytest.mark.django_db
 def test_deshacer_bloqueado_si_hay_materiales(
     usuario_tenant, tenant, tecnico, material_no_seriado, almacen
 ):

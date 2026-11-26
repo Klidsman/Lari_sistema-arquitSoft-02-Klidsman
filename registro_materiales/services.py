@@ -30,7 +30,7 @@ from .models import (
     UsoMaterialOrden,
 )
 
-ORDEN_RE = re.compile(r"^[A-Z0-9]{1,30}$")
+ORDEN_RE = re.compile(r"^[A-Z0-9]+(?:-[A-Z0-9]+)*$")
 PERIODO_RE = re.compile(r"^[0-9]{4}-(0[1-9]|1[0-2])$")
 
 
@@ -67,7 +67,7 @@ class CantidadInvalida(ErrorRegistro):
 class NumeroOrdenInvalido(ErrorRegistro):
     mensaje = (
         "El número de orden es obligatorio y debe tener entre 1 y 30 "
-        "caracteres alfanuméricos"
+        "caracteres alfanuméricos y guiones simples"
     )
 
 
@@ -173,7 +173,7 @@ def validar_tecnico(tenant, tecnico):
 
 def normalizar_numero(numero):
     texto = str(numero or "").strip().upper()
-    if not ORDEN_RE.match(texto):
+    if len(texto) > 30 or not ORDEN_RE.match(texto):
         raise NumeroOrdenInvalido
     return texto
 
@@ -275,6 +275,9 @@ def procesar_lista(texto):
             rechazadas.append(limpia)
             continue
         normalizada = limpia.upper()
+        if len(normalizada) > 30 or not ORDEN_RE.match(normalizada):
+            rechazadas.append(limpia)
+            continue
         if normalizada in vistos:
             continue
         vistos.add(normalizada)

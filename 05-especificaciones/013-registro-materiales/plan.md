@@ -232,7 +232,7 @@ También se modifican:
 | `creado_en` / `actualizado_en` | `DateTimeField` | automáticos |
 
 - `UniqueConstraint(tenant, tecnico, periodo, numero_normalizado)`.
-- `CheckConstraint(numero_normalizado regex ^[A-Z0-9]{1,30}$)`.
+- `CheckConstraint(numero_normalizado regex ^[A-Z0-9]+(-[A-Z0-9]+)*$)`; el largo máximo de 30 lo impone el `CharField`.
 - `CheckConstraint(periodo regex)`.
 - El mismo número puede existir para otro técnico o en otro mes.
 - La fecha de instalación puede cambiar el periodo; se revalida la clave.
@@ -356,7 +356,7 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 - `TecnicoNoExiste`: “El técnico no pertenece a tu tenant”.
 - `MaterialNoHabilitado` / `MaterialInactivo`.
 - `CantidadInvalida`: “La cantidad debe ser un número entero mayor o igual a 0”.
-- `NumeroOrdenInvalido`: número 1–30 alfanumérico.
+- `NumeroOrdenInvalido`: número 1–30 alfanumérico con guiones simples.
 - `PeriodoInvalido`: “El periodo debe tener el formato AAAA-MM”.
 - `SaldoInsuficiente`: “El uso supera el disponible del mes”.
 - `PeriodoCerrado`: “El mes está cerrado; solicita reapertura”.
@@ -540,7 +540,7 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 | Regla | Dónde | Mensaje |
 |---|---|---|
 | Cantidad entera ≥ 0 | Formulario, servicio y check | “La cantidad debe ser un número entero mayor o igual a 0” |
-| Número 1–30 alfanumérico | Servicio y check | “El número de orden es obligatorio y debe tener entre 1 y 30 caracteres alfanuméricos” |
+| Número 1–30 alfanumérico con guiones simples | Servicio y check | “El número de orden es obligatorio y debe tener entre 1 y 30 caracteres alfanuméricos y guiones simples” |
 | Periodo `YYYY-MM` | Servicio y check | “El periodo debe tener el formato AAAA-MM” |
 | Orden única por técnico/mes/número | Servicio y unique | Si existe, se abre para editar |
 | Uso no supera disponible | Servicio | “El uso supera el disponible del mes” |
