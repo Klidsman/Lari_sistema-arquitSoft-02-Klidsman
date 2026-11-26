@@ -1,5 +1,9 @@
 # Plan de Implementación - Desglose de Tareas por Spec
 
+> **Estado:** documento histórico de planificación. El estado real de cada funcionalidad vive en
+> `05-especificaciones/NNN-*/tasks.md` y en la suite de pruebas. Las casillas de este archivo no
+> representan el estado actual de implementación.
+
 ## Orden de Implementación Recomendado
 
 Las specs deben implementarse en este orden debido a las dependencias:
@@ -35,7 +39,7 @@ Las specs deben implementarse en este orden debido a las dependencias:
 - [ ] Implementar modelo `Usuario`
 - [ ] Implementar modelo `Region`
 - [ ] Crear migraciones
-- [ ] Crear superusuario inicial
+- [X] Crear la primera cuenta con `crear_admin_plataforma` (sin superusuario de Django)
 
 ### Fase 3: Servicios
 - [ ] Implementar servicio de validación de cuenta tenant
