@@ -40,6 +40,16 @@ urlpatterns = [
         name="cambiar_rol",
     ),
     path(
+        "plataforma/cuentas/<int:cuenta_id>/restablecer/",
+        views.restablecer_password,
+        name="restablecer_password",
+    ),
+    path(
+        "plataforma/cuentas/<int:cuenta_id>/invitacion/",
+        views.reenviar_invitacion_cuenta,
+        name="reenviar_invitacion_cuenta",
+    ),
+    path(
         "invitacion/<str:token>/",
         views.aceptar_invitacion,
         name="aceptar_invitacion",

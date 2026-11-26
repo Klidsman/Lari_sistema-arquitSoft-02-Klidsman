@@ -67,6 +67,7 @@ erDiagram
     INVITACION {
         bigint id PK
         bigint usuario_id FK
+        varchar tipo
         varchar token_hash UK
         varchar correo
         datetime expira_en

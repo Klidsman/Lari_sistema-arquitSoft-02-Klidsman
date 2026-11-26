@@ -79,7 +79,12 @@ Región → Responsable de almacén
 - El correo electrónico es único y es el identificador de inicio de sesión.
 - No existe autoregistro.
 - Toda cuenta nueva se crea inactiva y recibe una invitación para definir su contraseña.
+- El enlace de invitación se muestra una sola vez; el envío por correo es opcional.
 - El token de invitación es de un solo uso, vence y se invalida al reenviar la invitación.
+- Solo el Administrador de plataforma restablece la contraseña de una cuenta activa.
+- El restablecimiento usa un enlace de un solo uso, invalida las sesiones abiertas y conserva el rol, el alcance y el segundo factor.
+- El Administrador nunca conoce ni define la contraseña.
+- Si el único Administrador pierde su contraseña o su segundo factor, la recuperación se hace desde la consola del servidor.
 - Las cuentas de Administrador de plataforma y Responsable de almacén requieren segundo factor.
 - Una cuenta desactivada no puede iniciar sesión ni conservar una sesión activa.
 - Un tenant suspendido bloquea el acceso de su cuenta y sus operaciones.
@@ -108,6 +113,8 @@ Región → Responsable de almacén
 - Toda alta de región, almacén, tenant o cuenta se audita.
 - Todo cambio de rol se audita con rol anterior y nuevo.
 - Toda desactivación de cuenta o suspensión de tenant se audita.
+- La solicitud y el completado de un restablecimiento de contraseña se auditan; el token y la contraseña no se registran.
+- El reinicio del segundo factor se audita sin guardar el secreto.
 - Cada registro incluye usuario, fecha, valor anterior y valor nuevo.
 - La auditoría es de solo inserción.
 - No se registran contraseñas, tokens ni secretos de segundo factor.

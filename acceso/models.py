@@ -74,11 +74,21 @@ class Usuario(AbstractUser):
         return self.email
 
 
+class TipoInvitacion(models.TextChoices):
+    ALTA = "ALTA", "Alta de cuenta"
+    RESTABLECIMIENTO = "RESTABLECIMIENTO", "Restablecimiento de contraseña"
+
+
 class Invitacion(models.Model):
     usuario = models.ForeignKey(
         Usuario,
         on_delete=models.CASCADE,
         related_name="invitaciones",
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TipoInvitacion.choices,
+        default=TipoInvitacion.ALTA,
     )
     token_hash = models.CharField(max_length=64, unique=True)
     correo = models.EmailField()

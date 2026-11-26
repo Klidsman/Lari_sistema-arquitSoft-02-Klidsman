@@ -313,6 +313,7 @@ class Usuario(AbstractUser):
 ```python
 class Invitacion(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="invitaciones")
+    tipo = models.CharField(max_length=20, choices=TipoInvitacion.choices, default=TipoInvitacion.ALTA)
     token_hash = models.CharField(max_length=64, unique=True)
     correo = models.EmailField()
     expira_en = models.DateTimeField()
@@ -329,9 +330,10 @@ class Invitacion(models.Model):
         ]
 ```
 
-- `token_hash` guarda el hash del token; el token original solo viaja en el correo.
+- `tipo` distingue el alta de cuenta del restablecimiento de contraseña.
+- `token_hash` guarda el hash del token; el token original se muestra una sola vez en la interfaz y, si el correo está configurado, también viaja por correo.
 - Una cuenta nueva se crea con `is_active=False` hasta aceptar la invitación.
-- `version_sesion` se incrementa al cambiar rol, desactivar la cuenta o suspender el tenant.
+- `version_sesion` se incrementa al cambiar rol, desactivar la cuenta, restablecer la contraseña o su segundo factor, o suspender el tenant.
 
 ### App `auditoria`
 
@@ -391,13 +393,12 @@ Viven en `tenants/services.py` y `acceso/services.py`, no en las vistas.
   - Solo Administrador de plataforma.
   - Verifica correo único y que el tenant no tenga ya una cuenta, activa o desactivada.
   - Crea la cuenta inactiva con rol `USUARIO_TENANT` y su tenant.
-  - Genera y envía la invitación.
-  - Audita el alta.
+  - Genera la invitación, audita y devuelve el token mediante `crear_cuenta_tenant_con_enlace`.
   - Si el tenant ya tiene cuenta, devuelve “El tenant ya tiene una cuenta”; no crea subcuentas.
 - `crear_cuenta_almacen(region, correo, actor)`:
   - Solo Administrador de plataforma.
   - Crea la cuenta inactiva con rol `RESPONSABLE_ALMACEN`, sin tenant.
-  - Genera la invitación y audita.
+  - Genera la invitación, audita y devuelve el token mediante `crear_cuenta_almacen_con_enlace`.
 - `cambiar_rol(usuario, nuevo_rol, actor)`:
   - Solo Administrador de plataforma.
   - Rechaza el cambio de rol de una cuenta de tenant; esa cuenta solo se desactiva o reactiva.
@@ -415,16 +416,28 @@ Viven en `tenants/services.py` y `acceso/services.py`, no en las vistas.
   - Responsable de almacén: no administra cuentas de tenant.
   - Un usuario común no administra cuentas.
 
-### Invitaciones y autenticación
-- `enviar_invitacion(usuario, actor)`:
+### Invitaciones, restablecimiento y autenticación
+- `emitir_invitacion(usuario, actor, tipo, enviar_correo=True)`:
   - Revoca invitaciones pendientes anteriores.
   - Genera un token aleatorio, guarda solo su hash y fija `expira_en = ahora + 72 h`.
-  - Envía el correo mediante una tarea con reintentos.
-  - Registra `enviada_en` o `ultimo_error`.
+  - Envía el correo mediante una tarea con reintentos cuando `enviar_correo` es verdadero.
+  - Devuelve la invitación y el token en memoria para mostrarlo una sola vez.
+- `enviar_invitacion(usuario, actor, tipo)`:
+  - Emite una invitación y devuelve solo el registro persistido.
+- `solicitar_restablecimiento(usuario, actor)`:
+  - Solo Administrador de plataforma y solo cuentas activas.
+  - Emite una invitación de tipo `RESTABLECIMIENTO`.
+  - Incrementa `version_sesion` para cerrar las sesiones abiertas.
+  - Audita `acceso_cuenta` sin guardar el token.
 - `aceptar_invitacion(token, password)`:
   - Busca por hash, verifica vigencia, que no esté usada ni revocada.
   - Valida la política de contraseña.
-  - Activa la cuenta, guarda la contraseña, marca la invitación como usada y audita.
+  - Para `ALTA`: exige cuenta inactiva, la activa y audita `is_active`.
+  - Para `RESTABLECIMIENTO`: exige cuenta activa, conserva el segundo factor, incrementa `version_sesion` y audita `acceso_cuenta`.
+  - En ambos casos marca la invitación como usada.
+- `restablecer_segundo_factor(usuario, actor)`:
+  - Borra el secreto TOTP, deshabilita el segundo factor e incrementa `version_sesion`.
+  - Audita `segundo_factor` sin guardar el secreto.
 - `iniciar_sesion(correo, password)`:
   - Rechaza cuentas inactivas y tenants suspendidos.
   - Si el rol exige segundo factor, deja la sesión en estado pendiente.
@@ -492,13 +505,16 @@ Viven en `tenants/services.py` y `acceso/services.py`, no en las vistas.
 | `/plataforma/cuentas/<id>/desactivar/` | POST | Desactivar cuenta |
 | `/plataforma/cuentas/<id>/reactivar/` | POST | Reactivar cuenta |
 | `/plataforma/cuentas/<id>/rol/` | POST | Cambiar rol administrativo |
+| `/plataforma/cuentas/<id>/restablecer/` | POST | Generar enlace de restablecimiento de contraseña |
+| `/plataforma/cuentas/<id>/invitacion/` | POST | Reenviar invitación a una cuenta inactiva |
 | `/auditoria/acceso/` | GET | Consulta de altas, cambios y desactivaciones |
 
 ### Pantallas
 - **Administrador de plataforma:** regiones, tenants, cuenta única del tenant, cuentas de almacén y auditoría de acceso.
 - **Cuenta del tenant:** todas las funciones del tenant, sin pantalla de gestión de usuarios.
 - **Responsable de almacén:** solo su perfil y su región; no administra cuentas.
-- **Invitación:** formulario de contraseña con token.
+- **Invitación y restablecimiento:** formulario de contraseña con token y pantalla de enlace mostrado una sola vez.
+- **Cuentas:** acciones de restablecer contraseña y reenviar invitación, con confirmación.
 - **Segundo factor:** verificación y configuración inicial.
 
 ## Validaciones (dónde vive cada una)
@@ -545,6 +561,13 @@ Un caso por criterio de aceptación. Nombres propuestos:
 - `test_cuenta_de_tenant_puede_cargar_y_aprobar_conciliacion`
 - `test_invitacion_vencida_usada_o_revocada_se_rechaza`
 - `test_reenvio_de_invitacion_invalida_la_anterior`
+- `test_admin_genera_enlace_de_restablecimiento`
+- `test_restablecimiento_invalida_sesion_abierta`
+- `test_restablecimiento_conserva_rol_alcance_y_segundo_factor`
+- `test_cuenta_inactiva_no_se_restablece`
+- `test_admin_no_se_restablece_a_si_mismo`
+- `test_comando_restablece_admin_e_invalida_sesiones`
+- `test_comando_reinicia_2fa`
 - `test_usuario_de_tenant_no_ve_datos_de_otro_tenant`
 - `test_responsable_almacen_no_ve_otra_region`
 - `test_admin_plataforma_no_opera_inventario_ni_aprueba_conciliacion`

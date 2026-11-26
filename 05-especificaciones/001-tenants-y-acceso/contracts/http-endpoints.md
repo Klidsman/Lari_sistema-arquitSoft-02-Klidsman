@@ -138,16 +138,17 @@ existe. `200`.
 
 ### `GET/POST /plataforma/tenants/<id>/cuenta/nueva/`
 
-Crear la cuenta única del tenant y enviar la invitación.
+Crear la cuenta única del tenant y generar la invitación.
 
 | Aspecto | Contrato |
 |---|---|
 | Petición (`POST`) | `email` |
-| Éxito | `302` al detalle; cuenta `is_active=False`, rol `USUARIO_TENANT`, invitación creada; correo encolado tras el commit; auditoría de alta |
+| Éxito | `200` con la página de enlace mostrado una sola vez (`Cache-Control: no-store`); cuenta `is_active=False`, rol `USUARIO_TENANT`, invitación creada; auditoría de alta |
+| Correo configurado | Además se encola el envío tras el commit; es opcional |
 | Tenant ya tiene cuenta | `409` `"El tenant ya tiene una cuenta"` |
 | Correo ya registrado | `409` `"El correo ya está registrado"` |
 | Correo inválido | `400` `"El correo no es válido"` |
-| Fallo de correo | El alta se mantiene; se registra `ultimo_error` y se puede reenviar |
+| Fallo de correo | El alta y el enlace se mantienen; se registra `ultimo_error` y se puede reenviar |
 
 ### `POST /plataforma/tenants/<id>/suspender/`
 
@@ -193,6 +194,31 @@ Cambiar rol de una cuenta administrativa.
 | Cuenta de tenant | `409` `"La cuenta del tenant no cambia de rol"` |
 | Rol no permitido | `400` `"No puedes asignar ese rol"` |
 | Alcance incompatible (p. ej. almacén sin región) | `400` `"El alcance de la cuenta no es válido"` |
+
+### `POST /plataforma/cuentas/<id>/restablecer/`
+
+Generar un enlace de restablecimiento para una cuenta activa.
+
+| Aspecto | Contrato |
+|---|---|
+| Éxito | `200` con el enlace mostrado una sola vez (`Cache-Control: no-store`); invitación `RESTABLECIMIENTO`; `version_sesion++`; auditoría `acceso_cuenta` |
+| Cuenta inactiva | `409` `"Reactiva la cuenta antes de restablecer su contraseña"` |
+| Cuenta propia del Administrador | `400`; debe usarse el comando de consola |
+| Cuenta inexistente | `404` |
+| `GET` | `405` |
+| Rol distinto de Administrador | `403` |
+
+Al aceptar el enlace, la cuenta sigue activa y conserva rol, alcance y segundo factor.
+
+### `POST /plataforma/cuentas/<id>/invitacion/`
+
+Reenviar la invitación de una cuenta inactiva.
+
+| Aspecto | Contrato |
+|---|---|
+| Éxito | `200` con el enlace nuevo; la invitación anterior queda revocada |
+| Cuenta activa | `409`; debe usarse «Restablecer contraseña» |
+| Cuenta inexistente | `404` |
 
 ## Rutas de consulta de auditoría
 

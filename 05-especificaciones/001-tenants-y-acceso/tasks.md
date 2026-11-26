@@ -188,6 +188,19 @@ Proyecto Django único en la raíz: `config/`, `tenants/`, `acceso/`, `auditoria
 
 **Checkpoint**: US4 funcional de forma independiente; la cuenta creada queda inactiva hasta aceptar la invitación.
 
+### Restablecimiento de contraseña (2026-11-26)
+
+- [X] T100 [P] [US4] Agregar `tipo` (`ALTA`/`RESTABLECIMIENTO`) a `acceso.Invitacion` con migración y valor por defecto `ALTA`
+- [X] T101 [P] [US4] Pruebas de contrato en `tests/contract/test_restablecimiento_password.py`: enlace mostrado una sola vez, `403` no admin, `405` `GET`, `409` cuenta inactiva, `400` auto-restablecimiento, sesión invalidada, 2FA conservado, token vencido, alta no sirve sobre cuenta activa, reenvío y comando de consola
+- [X] T102 [US4] Implementar `emitir_invitacion`, `solicitar_restablecimiento` y `restablecer_segundo_factor` en `acceso/services.py`, con auditoría `acceso_cuenta`/`segundo_factor` sin token ni secreto
+- [X] T103 [US4] Ajustar `aceptar_invitacion` para distinguir alta y restablecimiento, conservar el 2FA y cerrar sesiones
+- [X] T104 [US4] Implementar las vistas `restablecer_password` y `reenviar_invitacion_cuenta`, las rutas `/restablecer/` e `/invitacion/`, y la pantalla `templates/acceso/enlace_generado.html` con `Cache-Control: no-store`
+- [X] T105 [US4] Mostrar el enlace de invitación una sola vez al crear cuentas de tenant y almacén, en lugar de depender del correo
+- [X] T106 [US4] Agregar los botones «Restablecer contraseña» y «Reenviar invitación» en `templates/acceso/cuentas_lista.html`
+- [X] T107 [US4] Implementar `acceso/management/commands/restablecer_admin_plataforma.py` con `--email` y `--reiniciar-2fa`, documentado en `quickstart.md`
+
+**Checkpoint**: el Administrador restablece contraseñas sin correo y recupera su propia cuenta desde la consola.
+
 ---
 
 ## Fase 7: US5 — Desactivación, reactivación, suspensión y cambio de rol (P5)
@@ -374,6 +387,6 @@ plataforma y a las acciones de estado de cuentas, tenants, técnicos y materiale
 - Nunca se registran contraseñas, hashes de contraseña, tokens de invitación, `token_hash` ni secretos TOTP.
 - El tenant y la región se derivan de la sesión; `tenant_id`/`region_id` del cliente se ignoran o rechazan.
 - No existen rutas de borrado para regiones, tenants ni cuentas.
-- `contracts/http-endpoints.md` no define rutas de edición de tenant, reenvío de invitación ni alta de cuenta de almacén como pantalla propia: esas operaciones se cubren por servicio y se validan con pruebas de integración; si se requieren en la UI, actualizar primero el contrato (constitución, «documento primero»).
+- `contracts/http-endpoints.md` no define una ruta de edición de tenant como pantalla propia; el reenvío de invitación y el restablecimiento de contraseña sí están documentados y cubiertos por pruebas de contrato.
 - Commit tras cada tarea o grupo lógico; detenerse en cada checkpoint para validar la historia de forma independiente.
 - Evitar: tareas vagas, conflictos en el mismo archivo y dependencias entre historias que rompan la independencia.

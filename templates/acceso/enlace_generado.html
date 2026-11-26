@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} · Lari{% endblock %}
+
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <h1>{{ titulo }}</h1>
+    <a class="boton" href="{% url 'listar_cuentas' %}">Volver a cuentas</a>
+  </div>
+
+  <p class="mensaje mensaje-aviso" role="status">
+    Este enlace se muestra una sola vez. Cópialo y compártelo por un canal seguro.
+  </p>
+
+  {% if descripcion %}
+    <p>{{ descripcion }}</p>
+  {% endif %}
+
+  <p>Cuenta: <strong>{{ correo }}</strong></p>
+
+  <div class="campo-codigo">
+    <label for="enlace-generado">Enlace</label>
+    <input id="enlace-generado" type="text" value="{{ enlace }}" readonly
+           autocomplete="off" spellcheck="false">
+    <button type="button" class="boton-copiar" data-copiar-enlace
+            data-destino="enlace-generado">Copiar enlace</button>
+  </div>
+
+  <p class="texto-ayuda">
+    Vence en 72 horas. Si se pierde, genera uno nuevo y el anterior quedará invalidado.
+  </p>
+
+  <script>
+    (function () {
+      var boton = document.querySelector("[data-copiar-enlace]");
+      if (!boton) return;
+      boton.addEventListener("click", function () {
+        var campo = document.getElementById(boton.dataset.destino);
+        if (!campo) return;
+        campo.select();
+        var texto = campo.value;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(texto).then(function () {
+            boton.textContent = "Copiado";
+          });
+        } else {
+          document.execCommand("copy");
+          boton.textContent = "Copiado";
+        }
+      });
+    })();
+  </script>
+{% endblock %}

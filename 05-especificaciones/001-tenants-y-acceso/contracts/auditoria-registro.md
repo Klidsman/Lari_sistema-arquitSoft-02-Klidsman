@@ -12,7 +12,7 @@ Se apoya en `03-reglas-de-dominio/auditoria.md` y en el principio VI de la const
 | `id` | entero | Sí | Clave primaria |
 | `entidad` | texto(50) | Sí | `Region`, `Almacen`, `Tenant`, `Usuario` o `Invitacion` |
 | `entidad_id` | entero | Sí | Identificador de la entidad auditada |
-| `campo` | texto(50) | Sí | Campo modificado o evento (`alta`, `suspension`, `activacion`, `desactivacion`, `reactivacion`, `cambio_rol`, `invitacion_enviada`, `invitacion_aceptada`) |
+| `campo` | texto(50) | Sí | Campo modificado o evento (`alta`, `suspension`, `activacion`, `desactivacion`, `reactivacion`, `cambio_rol`, `invitacion_enviada`, `invitacion_aceptada`, `acceso_cuenta`, `segundo_factor`) |
 | `valor_anterior` | texto | No | Valor antes del cambio; vacío en altas |
 | `valor_nuevo` | texto | No | Valor después del cambio |
 | `usuario` | FK `Usuario` | Sí | Autor de la acción; nunca nulo |

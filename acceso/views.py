@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST, require_http_methods
 
@@ -52,6 +53,23 @@ def _primer_error(formulario) -> str:
         if errores:
             return errores[0]
     return "Revisa los datos ingresados"
+
+
+def _pagina_enlace(request, usuario, token, titulo, descripcion=""):
+    """Muestra una sola vez el enlace de invitación o restablecimiento."""
+    enlace = request.build_absolute_uri(
+        reverse("aceptar_invitacion", args=[token])
+    )
+    return render(
+        request,
+        "acceso/enlace_generado.html",
+        {
+            "titulo": titulo,
+            "descripcion": descripcion,
+            "enlace": enlace,
+            "correo": usuario.email,
+        },
+    )
 
 
 def login(request):
@@ -224,6 +242,7 @@ def configurar_2fa(request):
 
 @requiere_rol(Rol.ADMIN_PLATAFORMA)
 @require_http_methods(["GET", "POST"])
+@never_cache
 def crear_cuenta_tenant(request, tenant_id):
     tenant = get_object_or_404(Tenant, pk=tenant_id)
 
@@ -233,7 +252,7 @@ def crear_cuenta_tenant(request, tenant_id):
 
         if formulario.is_valid():
             try:
-                acceso_servicios.crear_cuenta_tenant(
+                usuario, token = acceso_servicios.crear_cuenta_tenant_con_enlace(
                     tenant,
                     formulario.cleaned_data["email"],
                     request.usuario,
@@ -263,8 +282,13 @@ def crear_cuenta_tenant(request, tenant_id):
                     contexto,
                 )
 
-            messages.success(request, "Cuenta creada; invitación enviada")
-            return redirect("detalle_tenant", tenant_id=tenant.pk)
+            return _pagina_enlace(
+                request,
+                usuario,
+                token,
+                "Cuenta del tenant creada",
+                "Comparte este enlace con la cuenta del tenant. Se muestra una sola vez.",
+            )
 
         return _render_error(
             request,
@@ -283,6 +307,7 @@ def crear_cuenta_tenant(request, tenant_id):
 
 @requiere_rol(Rol.ADMIN_PLATAFORMA)
 @require_http_methods(["GET", "POST"])
+@never_cache
 def crear_cuenta_almacen(request):
     if request.method == "POST":
         formulario = CuentaAlmacenForm(request.POST)
@@ -290,7 +315,7 @@ def crear_cuenta_almacen(request):
 
         if formulario.is_valid():
             try:
-                acceso_servicios.crear_cuenta_almacen(
+                usuario, token = acceso_servicios.crear_cuenta_almacen_con_enlace(
                     formulario.cleaned_data["region"],
                     formulario.cleaned_data["email"],
                     request.usuario,
@@ -320,8 +345,13 @@ def crear_cuenta_almacen(request):
                     contexto,
                 )
 
-            messages.success(request, "Cuenta de almacén creada; invitación enviada")
-            return redirect("listar_cuentas")
+            return _pagina_enlace(
+                request,
+                usuario,
+                token,
+                "Cuenta de almacén creada",
+                "Comparte este enlace con el Responsable de almacén. Se muestra una sola vez.",
+            )
 
         return _render_error(
             request,
@@ -436,6 +466,79 @@ def cambiar_rol(request, cuenta_id):
 
     messages.success(request, "Rol actualizado")
     return redirect("listar_cuentas")
+
+
+@requiere_rol(Rol.ADMIN_PLATAFORMA)
+@require_POST
+@never_cache
+def restablecer_password(request, cuenta_id):
+    usuario = get_object_or_404(Usuario, pk=cuenta_id)
+
+    if usuario.pk == request.usuario.pk:
+        return _render_error(
+            request,
+            "acceso/cuentas_lista.html",
+            "Usa el comando de consola para restablecer tu propia contraseña",
+            400,
+            _contexto_cuentas(request),
+        )
+
+    try:
+        _, token = acceso_servicios.solicitar_restablecimiento(
+            usuario,
+            request.usuario,
+        )
+    except acceso_servicios.CuentaInactivaRestablecimiento:
+        return _render_error(
+            request,
+            "acceso/cuentas_lista.html",
+            acceso_servicios.CuentaInactivaRestablecimiento.mensaje,
+            409,
+            _contexto_cuentas(request),
+        )
+
+    return _pagina_enlace(
+        request,
+        usuario,
+        token,
+        "Restablecer contraseña",
+        (
+            "Comparte este enlace con la cuenta. Al usarlo se cerrarán sus "
+            "sesiones abiertas. Se muestra una sola vez."
+        ),
+    )
+
+
+@requiere_rol(Rol.ADMIN_PLATAFORMA)
+@require_POST
+@never_cache
+def reenviar_invitacion_cuenta(request, cuenta_id):
+    usuario = get_object_or_404(Usuario, pk=cuenta_id)
+
+    if usuario.is_active:
+        return _render_error(
+            request,
+            "acceso/cuentas_lista.html",
+            "La cuenta ya está activa; usa «Restablecer contraseña»",
+            409,
+            _contexto_cuentas(request),
+        )
+
+    _, token = acceso_servicios.reenviar_invitacion(
+        usuario,
+        request.usuario,
+    )
+
+    return _pagina_enlace(
+        request,
+        usuario,
+        token,
+        "Invitación reenviada",
+        (
+            "Comparte este enlace con la cuenta. El enlace anterior quedó "
+            "invalidado. Se muestra una sola vez."
+        ),
+    )
 
 
 @require_http_methods(["GET", "POST"])
