@@ -20,8 +20,9 @@ registran de nuevo desde la pantalla de materiales. El módulo agrega bloqueo de
 advertencias por cantidades atípicas, panel de pendientes, dashboard, cierre mensual con checklist,
 reapertura con motivo y exportación a Excel/CSV.
 
-Es independiente de la conciliación del Excel del almacén y no modifica stock, series, asignaciones,
-traspasos ni recojos.
+Descuenta el stock del técnico al registrar el consumo mediante movimientos `CONSUMO`; en materiales
+seriados registra las series usadas y las pasa a `INSTALADA`. No modifica `StockGeneral`, no toca
+asignaciones, traspasos ni recojos, y la conciliación del Excel del almacén queda retirada del flujo.
 
 ## Technical Context
 
@@ -34,7 +35,7 @@ traspasos ni recojos.
 | App | `registro_materiales` (013) |
 | Catálogo | `materiales.Material`; habilitación por tenant |
 | Despachos | `DespachoAlmacen` existente en 013; solo lectura para el cálculo |
-| Stock | **No se lee ni se modifica** |
+| Stock | **Descuenta `StockTecnico`; no toca `StockGeneral`** |
 | Conciliación | **No se lee, genera ni modifica** |
 | Saldo | Inicial manual o heredado del cierre anterior |
 | Bloqueo | Uso que dejaría saldo negativo se rechaza |
@@ -73,7 +74,7 @@ Si falta cualquiera, la implementación se detiene y se reporta.
 |---|---|---|
 | I. Aislamiento multitenant (NO NEGOCIABLE) | PASA | Todas las tablas llevan `tenant`; las consultas filtran por la sesión; un dato ajeno se trata como inexistente. RLS como respaldo. |
 | II. Jerarquía Región → Tenant → Técnico | PASA | Solo `USUARIO_TENANT` opera el módulo; técnicos y materiales se validan contra el tenant. Admin y almacén no operan. |
-| III. Invariantes de stock | PASA | 013 no lee ni escribe `StockGeneral`/`StockTecnico`; el saldo es un registro paralelo. |
+| III. Invariantes de stock | PASA | 013 descuenta `StockTecnico` con movimientos `CONSUMO` y no toca `StockGeneral`; nunca deja saldo negativo. |
 | IV. Identidad y unicidad de series | PASA | 013 no crea ni modifica series. |
 | V. Integridad transaccional | PASA | Carga de órdenes, guardado de uso, saldo y cierre son atómicos; un fallo revierte datos y auditoría. |
 | VI. Auditoría inmutable y trazabilidad | PASA | Se auditan órdenes, usos, saldos, catálogo, cierre y reapertura con valor anterior/nuevo. |
@@ -81,7 +82,8 @@ Si falta cualquiera, la implementación se detiene y se reporta.
 | VIII. Spec-driven, pruebas y simplicidad | PASA | Cada CA tiene prueba; sin dependencias nuevas; lógica en `services.py`. |
 
 **Post-design re-check**: PASA. Se reutiliza `DespachoAlmacen`, no se duplica el registro de
-despachos, se bloquea el negativo, se agrega cierre auditable y no se toca stock ni conciliación.
+despachos, se bloquea el negativo, se agrega cierre auditable, se descuenta `StockTecnico` y no se
+toca `StockGeneral` ni la conciliación retirada.
 
 ## Project Structure
 
@@ -652,7 +654,7 @@ Además:
 |---|---|
 | Reutilizar `DespachoAlmacen` | No duplica datos ni funciones; solo lee cantidades existentes. |
 | Carga masiva con lote | Permite deshacer sin borrar órdenes con materiales; queda auditado. |
-| Cierre con snapshot | No modifica stock ni conciliación; conserva el saldo histórico. |
+| Cierre con snapshot | Congela el periodo y conserva el saldo histórico; no toca `StockGeneral` ni la conciliación retirada. |
 | Advertencia sin bloqueo | La revisión humana decide; el cierre exige resolver o justificar. |
 | Exportación Excel/CSV | Usa `openpyxl` y la librería estándar; no agrega dependencias. |
 
@@ -660,6 +662,6 @@ Además:
 
 - Spec, plan, data-model, contracts, quickstart y tasks actualizados al flujo aprobado.
 - No se crea una segunda tabla de despachos.
-- No se modifica stock, series, asignaciones, traspasos ni conciliaciones.
+- No se modifica `StockGeneral`, asignaciones, traspasos ni conciliaciones; el consumo descuenta `StockTecnico` y las series seriadas pasan a `INSTALADA`.
 - Cada CA tiene al menos una prueba.
 - No se implementa código en esta fase documental.

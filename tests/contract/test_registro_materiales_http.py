@@ -2,12 +2,19 @@
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
-from registro_materiales.models import MaterialHabilitado, OrdenLiquidacion
+from registro_materiales.models import (
+    MaterialHabilitado,
+    OrdenLiquidacion,
+    UsoMaterialSerie,
+)
 from registro_materiales.services import (
     obtener_o_crear_orden,
     registrar_saldo_inicial,
 )
+from series.models import EstadoSerie, Serie
+from stock.models import StockTecnico
 from tecnicos.models import Tecnico
 
 PERIODO = "2026-11"
@@ -44,6 +51,12 @@ def test_flujo_http_carga_materiales_y_exportacion(
     )
     registrar_saldo_inicial(
         tenant, material_no_seriado, PERIODO, 10, usuario_tenant
+    )
+    StockTecnico.objects.create(
+        tenant=tenant,
+        tecnico=tecnico,
+        material=material_no_seriado,
+        cantidad=10,
     )
 
     assert cliente_tenant.get(reverse("cargar_ordenes")).status_code == 200
@@ -176,6 +189,65 @@ def test_acciones_no_aceptan_get(cliente_tenant, usuario_tenant, tenant, almacen
         "guardar_materiales",
     ):
         assert cliente_tenant.get(reverse(nombre)).status_code == 405
+
+
+@pytest.mark.django_db
+def test_guardar_material_seriado_desde_http(
+    cliente_tenant,
+    usuario_tenant,
+    tenant,
+    tecnico,
+    material_seriado,
+    almacen,
+):
+    MaterialHabilitado.objects.create(
+        tenant=tenant,
+        material=material_seriado,
+        creado_por=usuario_tenant,
+    )
+    StockTecnico.objects.create(
+        tenant=tenant,
+        tecnico=tecnico,
+        material=material_seriado,
+        cantidad=1,
+    )
+    serie = Serie.objects.create(
+        numero="SER000000099",
+        tenant=tenant,
+        region=tenant.region,
+        material=material_seriado,
+        lote=material_seriado.lote,
+        estado=EstadoSerie.ASIGNADA,
+        tecnico=tecnico,
+        asignada_en=timezone.now(),
+        creado_por=usuario_tenant,
+    )
+    orden = obtener_o_crear_orden(
+        tenant, tecnico, PERIODO, "A1", usuario_tenant
+    )
+
+    respuesta = cliente_tenant.post(
+        reverse("guardar_materiales"),
+        {
+            "tecnico": tecnico.pk,
+            "periodo": PERIODO,
+            "numero_orden": orden.numero_normalizado,
+            "fecha_instalacion": "2026-11-10",
+            f"series[{material_seriado.pk}]": str(serie.pk),
+        },
+    )
+
+    assert respuesta.status_code == 302
+    serie.refresh_from_db()
+    assert serie.estado == EstadoSerie.INSTALADA
+    assert serie.tecnico_id is None
+    assert (
+        StockTecnico.objects.get(
+            tenant=tenant, tecnico=tecnico, material=material_seriado
+        ).cantidad
+        == 0
+    )
+    assert UsoMaterialSerie.objects.filter(uso__orden=orden).exists()
 
 
 @pytest.mark.django_db

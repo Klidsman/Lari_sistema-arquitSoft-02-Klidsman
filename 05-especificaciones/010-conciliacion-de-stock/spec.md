@@ -1,5 +1,8 @@
 # Spec 010 - Conciliación de Stock
 
+> **Estado (2026-11-26):** funcionalidad retirada del flujo operativo por ADR-021. Se conservan el
+> código, las tablas y los datos históricos; no se muestra en menú, Inicio ni reportes.
+
 Especificación técnica para la conciliación del stock del tenant contra el reporte de Lari.
 
 ## 1. Propósito

@@ -3,7 +3,8 @@
 {% block contenido %}
   <h1>Registrar materiales</h1>
   <p class="ayuda">
-    Registro contable del periodo. No descuenta Stock actual ni mueve series.
+    El consumo descuenta el stock actual del técnico. Para materiales seriados
+    selecciona las series usadas.
   </p>
 
   <form method="get" action="{% url 'registrar_materiales' %}" class="buscador">
@@ -49,13 +50,28 @@
         <input type="date" name="fecha_instalacion" required>
       </label>
       <table class="tabla">
-        <thead><tr><th>Material</th><th>Disponible</th><th>Cantidad usada</th></tr></thead>
+        <thead><tr><th>Material</th><th>Disponible</th><th>Uso</th></tr></thead>
         <tbody>
           {% for fila in filas %}
             <tr>
               <td>{{ fila.material.codigo }} - {{ fila.material.descripcion }}</td>
               <td>{{ fila.disponible }}</td>
-              <td><input type="number" min="0" name="cantidades[{{ fila.material.pk }}]" value="{{ fila.cantidad }}"></td>
+              <td>
+                {% if fila.material.es_seriado %}
+                  {% if fila.series %}
+                    <select name="series[{{ fila.material.pk }}]" multiple size="4">
+                      {% for opcion in fila.series %}
+                        <option value="{{ opcion.serie.pk }}" {% if opcion.usada %}selected{% endif %}>{{ opcion.serie.numero }}</option>
+                      {% endfor %}
+                    </select>
+                    <span class="ayuda">Selecciona las series usadas.</span>
+                  {% else %}
+                    <span class="ayuda">Sin series en custodia.</span>
+                  {% endif %}
+                {% else %}
+                  <input type="number" min="0" name="cantidades[{{ fila.material.pk }}]" value="{{ fila.cantidad }}">
+                {% endif %}
+              </td>
             </tr>
           {% empty %}
             <tr><td colspan="3">No hay materiales habilitados.</td></tr>

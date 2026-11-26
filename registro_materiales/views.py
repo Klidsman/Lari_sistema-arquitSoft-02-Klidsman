@@ -10,6 +10,8 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from materiales.models import Material
+from series.models import EstadoSerie, Serie
+from stock.services import obtener_stock_tecnico
 from tecnicos.models import Tecnico
 
 from . import exportacion, services
@@ -60,6 +62,20 @@ def _cantidades(request):
         coincidencia = patron.match(clave)
         if coincidencia:
             datos[int(coincidencia.group(1))] = valor
+    return datos
+
+
+def _series(request):
+    datos = {}
+    patron = re.compile(r"^series\[(\d+)\]$")
+    for clave in request.POST.keys():
+        coincidencia = patron.match(clave)
+        if coincidencia:
+            datos[int(coincidencia.group(1))] = [
+                int(valor)
+                for valor in request.POST.getlist(clave)
+                if valor
+            ]
     return datos
 
 
@@ -224,18 +240,56 @@ def _contexto_materiales(tenant, tecnico, periodo, numero):
     usos = {}
     if orden is not None:
         usos = {
-            uso.material_id: uso.cantidad
-            for uso in orden.usos.all()
+            uso.material_id: uso
+            for uso in orden.usos.prefetch_related(
+                "series_usadas__serie__material"
+            )
         }
+
+    series_por_material = {}
+    if tecnico is not None:
+        for serie in (
+            Serie.objects.filter(
+                tenant=tenant,
+                tecnico=tecnico,
+                estado=EstadoSerie.ASIGNADA,
+            )
+            .select_related("material")
+            .order_by("material__codigo", "numero")
+        ):
+            series_por_material.setdefault(
+                serie.material_id, []
+            ).append(serie)
+
+    usadas = set()
+    for uso in usos.values():
+        for enlace in uso.series_usadas.all():
+            serie = enlace.serie
+            usadas.add(serie.pk)
+            opciones_material = series_por_material.setdefault(
+                serie.material_id, []
+            )
+            if all(opcion.pk != serie.pk for opcion in opciones_material):
+                opciones_material.append(serie)
+
     filas = []
     for habilitado in services.materiales_habilitados(tenant):
+        material = habilitado.material
+        uso = usos.get(material.pk)
+        opciones = [
+            {"serie": serie, "usada": serie.pk in usadas}
+            for serie in series_por_material.get(material.pk, [])
+        ]
         filas.append(
             {
-                "material": habilitado.material,
-                "cantidad": usos.get(habilitado.material_id, 0),
-                "disponible": services.saldo_final(
-                    tenant, habilitado.material, periodo
+                "material": material,
+                "cantidad": uso.cantidad if uso is not None else 0,
+                "disponible": (
+                    obtener_stock_tecnico(tecnico, material)
+                    if tecnico is not None
+                    else 0
                 ),
+                "series": opciones,
             }
         )
     return orden, filas
@@ -325,6 +379,7 @@ def guardar_materiales(request):
             ),
             _cantidades(request),
             request.usuario,
+            series_por_material=_series(request),
         )
     except (services.ErrorRegistro, ValueError) as exc:
         return _error(exc if isinstance(exc, services.ErrorRegistro) else services.PeriodoInvalido())

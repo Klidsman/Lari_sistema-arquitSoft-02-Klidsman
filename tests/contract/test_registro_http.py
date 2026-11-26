@@ -43,6 +43,7 @@ def test_firmas_publicas_de_servicios():
             "fecha_instalacion",
             "cantidades",
             "actor",
+            "series_por_material",
         ],
         "cerrar_mes": ["tenant", "periodo", "backup_ref", "actor"],
         "reabrir_mes": ["cierre", "motivo", "actor"],

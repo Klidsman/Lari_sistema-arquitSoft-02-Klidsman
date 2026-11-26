@@ -11,7 +11,7 @@ saldo final = disponible − material usado en órdenes
 
 El saldo final de un mes es el saldo inicial del mes siguiente, salvo que exista una carga manual.
 
-El módulo es independiente de la conciliación del Excel del almacén y no modifica el stock del sistema.
+El módulo descuenta el stock del técnico al registrar el consumo. No modifica el stock general ni la conciliación del Excel del almacén, que queda retirada del flujo operativo.
 
 ## 1.1 Trazabilidad
 
@@ -141,7 +141,7 @@ El módulo es independiente de la conciliación del Excel del almacén y no modi
 15. **Sin borrado ordinario.** No se borran órdenes, usos, saldos ni despachos; la única excepción es deshacer una carga de órdenes nuevas sin materiales.
 16. **Cierre y reapertura.** El cierre congela; la reapertura exige motivo y se audita.
 17. **Exportación.** Reporte mensual y detalle de órdenes en Excel o CSV.
-18. **Independencia.** No se lee, genera ni modifica la conciliación; no se modifica el stock.
+18. **Consumo y stock.** Cada uso descuenta `StockTecnico` en la misma transacción mediante un movimiento `CONSUMO`; no se modifica `StockGeneral`. En materiales seriados se seleccionan las series usadas y pasan a `INSTALADA`.
 
 ## 7. Flujos
 
@@ -342,7 +342,7 @@ Dado un reporte mensual o detalle de órdenes, cuando se exporta, entonces se ge
 ## 11. Fuera de alcance
 
 - Conciliación del Excel del almacén.
-- Modificación del stock del sistema.
+- Modificación del stock general.
 - Modificación de asignaciones, traspasos, recojos o catálogo compartido.
 - Registro manual de despachos desde la pantalla de materiales.
 - Importación de entradas por Excel.

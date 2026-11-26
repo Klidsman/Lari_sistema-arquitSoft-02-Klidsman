@@ -4,8 +4,8 @@
   <h1>Registro de materiales</h1>
   <p>Periodo actual: {{ periodo }}</p>
   <p class="ayuda">
-    Este módulo lleva la cuenta mensual de materiales usados. No modifica el
-    stock en custodia ni el Stock actual de los técnicos.
+    Este módulo lleva la cuenta mensual de materiales usados y descuenta el
+    stock actual del técnico al registrar el consumo.
   </p>
   <ul class="menu-modulo">
     <li><a href="{% url 'cargar_ordenes' %}">Cargar órdenes</a></li>

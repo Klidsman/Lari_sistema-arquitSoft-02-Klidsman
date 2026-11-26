@@ -137,7 +137,8 @@ Resuelve las incógnitas del plan aprobado. No hay `NEEDS CLARIFICATION` pendien
 ### D-15. Exportación y alcance
 
 - **Decisión**: exportar reporte mensual y detalle de órdenes a Excel o CSV. No se exportan otros
-  módulos. No se modifica stock, series, asignaciones, traspasos ni conciliaciones.
+  módulos. El consumo descuenta el stock del técnico y las series seriadas seleccionadas pasan a
+`INSTALADA`; no se modifica `StockGeneral`, asignaciones, traspasos ni conciliaciones.
 - **Justificación**: pedido explícito y alcance acotado.
 - **Alternativas descartadas**: PDF (no solicitado); exportar todo el sistema (fuera de alcance).
 

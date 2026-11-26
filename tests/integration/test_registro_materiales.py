@@ -3,6 +3,7 @@
 from datetime import date
 
 import pytest
+from django.utils import timezone
 
 from materiales.models import Material
 from registro_materiales.exportacion import (
@@ -18,6 +19,7 @@ from registro_materiales.models import (
     OrdenLiquidacion,
     SaldoMensualMaterial,
     UsoMaterialOrden,
+    UsoMaterialSerie,
 )
 from registro_materiales.services import (
     CantidadInvalida,
@@ -42,6 +44,7 @@ from registro_materiales.services import (
     saldo_final,
     saldo_inicial_efectivo,
 )
+from series.models import EstadoSerie, Serie
 from stock.models import MovimientoTecnico, StockGeneral, StockTecnico
 from tecnicos.models import Tecnico
 
@@ -60,6 +63,15 @@ def _habilitar(tenant, material, actor, activo=True):
 def _tecnicos(tenant, actor):
     return Tecnico.objects.create(
         tenant=tenant, nif="LA2222", nombre="Destino", creado_por=actor
+    )
+
+
+def _stock(tenant, tecnico, material, cantidad):
+    return StockTecnico.objects.create(
+        tenant=tenant,
+        tecnico=tecnico,
+        material=material,
+        cantidad=cantidad,
     )
 
 
@@ -155,6 +167,7 @@ def test_deshacer_bloqueado_si_hay_materiales(
     registrar_saldo_inicial(
         tenant, material_no_seriado, PERIODO, 10, usuario_tenant
     )
+    _stock(tenant, tecnico, material_no_seriado, 10)
     guardar_uso(orden, date(2026, 11, 10), {material_no_seriado.pk: 2}, usuario_tenant)
     with pytest.raises(CargaNoDeshacible):
         deshacer_carga(carga, usuario_tenant)
@@ -168,6 +181,7 @@ def test_guardar_uso_cantidad_cero_e_invalida(
     registrar_saldo_inicial(
         tenant, material_no_seriado, PERIODO, 10, usuario_tenant
     )
+    _stock(tenant, tecnico, material_no_seriado, 10)
     orden = obtener_o_crear_orden(
         tenant, tecnico, PERIODO, "A1", usuario_tenant
     )
@@ -186,7 +200,7 @@ def test_guardar_uso_cantidad_cero_e_invalida(
 
 
 @pytest.mark.django_db
-def test_guardar_uso_es_solo_registro_y_no_toca_stock(
+def test_guardar_uso_descuenta_stock_tecnico_y_no_toca_general(
     usuario_tenant, tenant, tecnico, material_no_seriado, almacen
 ):
     _habilitar(tenant, material_no_seriado, usuario_tenant)
@@ -196,12 +210,7 @@ def test_guardar_uso_es_solo_registro_y_no_toca_stock(
     general = StockGeneral.objects.create(
         tenant=tenant, material=material_no_seriado, cantidad=50
     )
-    tecnico_stock = StockTecnico.objects.create(
-        tenant=tenant,
-        tecnico=tecnico,
-        material=material_no_seriado,
-        cantidad=7,
-    )
+    tecnico_stock = _stock(tenant, tecnico, material_no_seriado, 7)
     movimientos_antes = MovimientoTecnico.objects.count()
     orden = obtener_o_crear_orden(
         tenant, tecnico, PERIODO, "A1", usuario_tenant
@@ -218,8 +227,100 @@ def test_guardar_uso_es_solo_registro_y_no_toca_stock(
     tecnico_stock.refresh_from_db()
     assert UsoMaterialOrden.objects.get(orden=orden).cantidad == 3
     assert general.cantidad == 50
-    assert tecnico_stock.cantidad == 7
-    assert MovimientoTecnico.objects.count() == movimientos_antes
+    assert tecnico_stock.cantidad == 4
+    assert MovimientoTecnico.objects.count() > movimientos_antes
+    assert MovimientoTecnico.objects.filter(tipo="CONSUMO").count() == 1
+
+
+@pytest.mark.django_db
+def test_guardar_uso_seriado_descuenta_stock_y_mueve_series(
+    usuario_tenant, tenant, tecnico, material_seriado, almacen
+):
+    _habilitar(tenant, material_seriado, usuario_tenant)
+    _stock(tenant, tecnico, material_seriado, 2)
+    primera = Serie.objects.create(
+        numero="SER000000001",
+        tenant=tenant,
+        region=tenant.region,
+        material=material_seriado,
+        lote=material_seriado.lote,
+        estado=EstadoSerie.ASIGNADA,
+        tecnico=tecnico,
+        asignada_en=timezone.now(),
+        creado_por=usuario_tenant,
+    )
+    segunda = Serie.objects.create(
+        numero="SER000000002",
+        tenant=tenant,
+        region=tenant.region,
+        material=material_seriado,
+        lote=material_seriado.lote,
+        estado=EstadoSerie.ASIGNADA,
+        tecnico=tecnico,
+        asignada_en=timezone.now(),
+        creado_por=usuario_tenant,
+    )
+    orden = obtener_o_crear_orden(
+        tenant, tecnico, PERIODO, "A1", usuario_tenant
+    )
+
+    guardar_uso(
+        orden,
+        date(2026, 11, 10),
+        {},
+        usuario_tenant,
+        series_por_material={material_seriado.pk: [primera.pk]},
+    )
+
+    primera.refresh_from_db()
+    segunda.refresh_from_db()
+    assert primera.estado == EstadoSerie.INSTALADA
+    assert segunda.estado == EstadoSerie.ASIGNADA
+    assert UsoMaterialOrden.objects.get(orden=orden).cantidad == 1
+    assert UsoMaterialSerie.objects.filter(uso__orden=orden).count() == 1
+    assert (
+        StockTecnico.objects.get(
+            tenant=tenant, tecnico=tecnico, material=material_seriado
+        ).cantidad
+        == 1
+    )
+
+    guardar_uso(
+        orden,
+        date(2026, 11, 10),
+        {},
+        usuario_tenant,
+        series_por_material={
+            material_seriado.pk: [primera.pk, segunda.pk]
+        },
+    )
+    segunda.refresh_from_db()
+    assert segunda.estado == EstadoSerie.INSTALADA
+    assert UsoMaterialOrden.objects.get(orden=orden).cantidad == 2
+    assert (
+        StockTecnico.objects.get(
+            tenant=tenant, tecnico=tecnico, material=material_seriado
+        ).cantidad
+        == 0
+    )
+
+    guardar_uso(
+        orden,
+        date(2026, 11, 10),
+        {},
+        usuario_tenant,
+        series_por_material={material_seriado.pk: [primera.pk]},
+    )
+    segunda.refresh_from_db()
+    assert segunda.estado == EstadoSerie.ASIGNADA
+    assert segunda.tecnico_id == tecnico.pk
+    assert UsoMaterialOrden.objects.get(orden=orden).cantidad == 1
+    assert (
+        StockTecnico.objects.get(
+            tenant=tenant, tecnico=tecnico, material=material_seriado
+        ).cantidad
+        == 1
+    )
 
 
 @pytest.mark.django_db
@@ -230,6 +331,7 @@ def test_bloqueo_de_saldo_negativo(
     registrar_saldo_inicial(
         tenant, material_no_seriado, PERIODO, 45, usuario_tenant
     )
+    _stock(tenant, tecnico, material_no_seriado, 45)
     primera = obtener_o_crear_orden(
         tenant, tecnico, PERIODO, "A1", usuario_tenant
     )
@@ -264,6 +366,7 @@ def test_advertencia_atipica_no_bloquea(
     registrar_saldo_inicial(
         tenant, material_no_seriado, PERIODO, 100, usuario_tenant
     )
+    _stock(tenant, tecnico, material_no_seriado, 100)
     orden = obtener_o_crear_orden(
         tenant, tecnico, PERIODO, "A1", usuario_tenant
     )
@@ -281,6 +384,7 @@ def test_saldo_final_herencia_y_manual_y_despachos(
     registrar_saldo_inicial(
         tenant, material_no_seriado, PERIODO, 100, usuario_tenant
     )
+    _stock(tenant, tecnico, material_no_seriado, 100)
     DespachoAlmacen.objects.create(
         tenant=tenant,
         material=material_no_seriado,
@@ -323,6 +427,7 @@ def test_historial_y_pendientes(
     registrar_saldo_inicial(
         tenant, material_no_seriado, PERIODO, 10, usuario_tenant
     )
+    _stock(tenant, tecnico, material_no_seriado, 10)
     orden = obtener_o_crear_orden(
         tenant, tecnico, PERIODO, "A1", usuario_tenant
     )
@@ -360,6 +465,7 @@ def test_cierre_traspaso_y_reapertura(
     registrar_saldo_inicial(
         tenant, material_no_seriado, periodo, 100, usuario_tenant
     )
+    _stock(tenant, tecnico, material_no_seriado, 100)
     orden = obtener_o_crear_orden(
         tenant, tecnico, periodo, "A1", usuario_tenant
     )
@@ -387,6 +493,7 @@ def test_exportacion_excel_y_csv(
     registrar_saldo_inicial(
         tenant, material_no_seriado, PERIODO, 10, usuario_tenant
     )
+    _stock(tenant, tecnico, material_no_seriado, 10)
     orden = obtener_o_crear_orden(
         tenant, tecnico, PERIODO, "A1", usuario_tenant
     )

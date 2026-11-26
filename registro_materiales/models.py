@@ -318,6 +318,50 @@ class UsoMaterialOrden(models.Model):
         return f"{self.material} x {self.cantidad}"
 
 
+class UsoMaterialSerie(models.Model):
+    """Serie concreta consumida por una línea de uso de material."""
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        related_name="usos_series",
+    )
+    uso = models.ForeignKey(
+        UsoMaterialOrden,
+        on_delete=models.CASCADE,
+        related_name="series_usadas",
+    )
+    serie = models.OneToOneField(
+        "series.Serie",
+        on_delete=models.PROTECT,
+        related_name="uso_material",
+    )
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["serie"],
+                name="uso_material_serie_unica",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["tenant", "serie"],
+                name="uso_serie_tenant_serie",
+            ),
+        ]
+        ordering = ["serie__numero"]
+
+    def __str__(self) -> str:
+        return f"{self.uso} · {self.serie.numero}"
+
+
 class AdvertenciaUso(models.Model):
     TIPO = [("CANTIDAD_ATIPICA", "Cantidad atípica")]
 

@@ -26,6 +26,7 @@ from registro_materiales.services import (
     registrar_saldo_inicial,
     reabrir_mes,
 )
+from stock.models import StockTecnico
 
 PERIODO = "2026-11"
 
@@ -52,6 +53,12 @@ def _preparar(usuario_tenant, tenant, tecnico, material, saldo=100, uso=10):
     )
     registrar_saldo_inicial(
         tenant, material, PERIODO, saldo, usuario_tenant
+    )
+    StockTecnico.objects.create(
+        tenant=tenant,
+        tecnico=tecnico,
+        material=material,
+        cantidad=saldo,
     )
     orden = obtener_o_crear_orden(
         tenant, tecnico, PERIODO, "A1", usuario_tenant

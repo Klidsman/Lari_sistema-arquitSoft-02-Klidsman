@@ -14,11 +14,13 @@ saldo final = disponible - uso del mes
 
 El saldo final de un mes es el saldo inicial del mes siguiente, salvo carga manual.
 
-## 2. Independencia de la conciliación y del stock
+## 2. Independencia de la conciliación y alcance del stock
 
 - Este registro no es la conciliación del Excel del almacén.
 - No lee, genera ni modifica conciliaciones.
-- No modifica el stock general ni el stock por técnico.
+- Cada uso descuenta el stock del técnico en la misma transacción mediante un movimiento `CONSUMO`.
+- En materiales seriados se seleccionan las series usadas y pasan a `INSTALADA`.
+- No modifica el stock general.
 - No modifica recojos, asignaciones, traspasos ni el catálogo compartido.
 
 ## 3. Definiciones

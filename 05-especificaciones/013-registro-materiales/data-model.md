@@ -162,6 +162,21 @@ erDiagram
 - Una línea existente a 0 se conserva; no se borra.
 - El técnico de la línea debe ser el de la orden.
 
+### `registro_materiales.UsoMaterialSerie`
+
+| Campo | Tipo | Nulo | Regla |
+|---|---|---|---|
+| `id` | `BigAutoField` | No | Clave primaria |
+| `tenant` | FK `Tenant` | No | `PROTECT` |
+| `uso` | FK `UsoMaterialOrden` | No | `CASCADE` |
+| `serie` | OneToOne `Serie` | No | `PROTECT`; una serie solo puede consumirse una vez |
+| `creado_por` | FK `Usuario` | No | `PROTECT` |
+| `creado_en` | `DateTimeField` | No | `auto_now_add` |
+
+- `UniqueConstraint(serie)`.
+- Al crear el uso, la serie pasa de `ASIGNADA` a `INSTALADA` y se descuenta `StockTecnico`.
+- Al retirar la serie del uso, vuelve a `ASIGNADA` al técnico y se incrementa `StockTecnico`.
+
 ### `registro_materiales.AdvertenciaUso`
 
 | Campo | Tipo | Nulo | Regla |

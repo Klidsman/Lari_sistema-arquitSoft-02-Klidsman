@@ -21,6 +21,7 @@ from registro_materiales.services import (
     reabrir_mes,
     registrar_saldo_inicial,
 )
+from stock.models import StockTecnico
 from tecnicos.models import Tecnico
 
 PERIODO = "2026-11"
@@ -53,6 +54,12 @@ def test_dos_usos_simultaneos_no_superan_el_disponible(
     )
     registrar_saldo_inicial(
         tenant, material_no_seriado, PERIODO, 10, usuario_tenant
+    )
+    StockTecnico.objects.create(
+        tenant=tenant,
+        tecnico=tecnico,
+        material=material_no_seriado,
+        cantidad=10,
     )
     primera = obtener_o_crear_orden(
         tenant, tecnico, PERIODO, "A1", usuario_tenant

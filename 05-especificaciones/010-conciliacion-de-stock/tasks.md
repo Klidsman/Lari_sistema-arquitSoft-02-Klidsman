@@ -4,6 +4,9 @@ description: "Lista de tareas para la implementación de 010 Conciliación de St
 
 # Tareas: 010 Conciliación de Stock
 
+> **Estado (2026-11-26):** funcionalidad retirada del flujo operativo por ADR-021. El código y los
+> datos quedan archivados; las tareas siguientes son históricas.
+
 > **Estado real auditado (2026-11-25):** implementación completa y **63 pruebas de conciliación en
 > verde** (90 % de cobertura de la app). Solo quedan tres tareas no funcionales: T003 (fixtures
 > dedicadas), T076 (revisión fina de cobertura) y T085 (recorrido manual del quickstart).
