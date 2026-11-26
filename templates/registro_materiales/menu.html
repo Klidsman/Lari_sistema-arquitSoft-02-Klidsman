@@ -3,6 +3,10 @@
 {% block contenido %}
   <h1>Registro de materiales</h1>
   <p>Periodo actual: {{ periodo }}</p>
+  <p class="ayuda">
+    Este módulo lleva la cuenta mensual de materiales usados. No modifica el
+    stock en custodia ni el Stock actual de los técnicos.
+  </p>
   <ul class="menu-modulo">
     <li><a href="{% url 'cargar_ordenes' %}">Cargar órdenes</a></li>
     <li><a href="{% url 'registrar_materiales' %}">Registrar materiales</a></li>

@@ -42,6 +42,7 @@ from registro_materiales.services import (
     saldo_final,
     saldo_inicial_efectivo,
 )
+from stock.models import MovimientoTecnico, StockGeneral, StockTecnico
 from tecnicos.models import Tecnico
 
 PERIODO = "2026-11"
@@ -182,6 +183,43 @@ def test_guardar_uso_cantidad_cero_e_invalida(
         guardar_uso(
             orden, date(2026, 11, 10), {material_no_seriado.pk: "2.5"}, usuario_tenant
         )
+
+
+@pytest.mark.django_db
+def test_guardar_uso_es_solo_registro_y_no_toca_stock(
+    usuario_tenant, tenant, tecnico, material_no_seriado, almacen
+):
+    _habilitar(tenant, material_no_seriado, usuario_tenant)
+    registrar_saldo_inicial(
+        tenant, material_no_seriado, PERIODO, 10, usuario_tenant
+    )
+    general = StockGeneral.objects.create(
+        tenant=tenant, material=material_no_seriado, cantidad=50
+    )
+    tecnico_stock = StockTecnico.objects.create(
+        tenant=tenant,
+        tecnico=tecnico,
+        material=material_no_seriado,
+        cantidad=7,
+    )
+    movimientos_antes = MovimientoTecnico.objects.count()
+    orden = obtener_o_crear_orden(
+        tenant, tecnico, PERIODO, "A1", usuario_tenant
+    )
+
+    guardar_uso(
+        orden,
+        date(2026, 11, 10),
+        {material_no_seriado.pk: 3},
+        usuario_tenant,
+    )
+
+    general.refresh_from_db()
+    tecnico_stock.refresh_from_db()
+    assert UsoMaterialOrden.objects.get(orden=orden).cantidad == 3
+    assert general.cantidad == 50
+    assert tecnico_stock.cantidad == 7
+    assert MovimientoTecnico.objects.count() == movimientos_antes
 
 
 @pytest.mark.django_db

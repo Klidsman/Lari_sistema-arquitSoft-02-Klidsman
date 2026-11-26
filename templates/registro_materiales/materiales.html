@@ -2,6 +2,9 @@
 {% block title %}Registrar materiales · Lari{% endblock %}
 {% block contenido %}
   <h1>Registrar materiales</h1>
+  <p class="ayuda">
+    Registro contable del periodo. No descuenta Stock actual ni mueve series.
+  </p>
 
   <form method="get" action="{% url 'registrar_materiales' %}" class="buscador">
     <label>Técnico

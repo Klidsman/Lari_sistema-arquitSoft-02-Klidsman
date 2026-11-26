@@ -415,6 +415,8 @@ Toda tabla con operaciones por fila reserva una última columna «Acciones» ali
 ### Registro de materiales
 `registro_materiales/materiales.html` usa un `.buscador` con selector de técnico y periodo; al enviarlo muestra la tabla **«Órdenes por cargar»** con las órdenes pendientes de ese técnico y periodo, su fecha de creación y el botón `Registrar` de cada fila. El formulario de materiales solo aparece después de elegir una orden y ofrece «Volver a las órdenes». No se escribe el número de orden a mano en el flujo principal: la lista es la fuente de selección.
 
+El módulo es un **registro contable del periodo**: no modifica `StockTecnico`, `StockGeneral`, `MovimientoTecnico` ni series. El menú, el formulario y el dashboard muestran ese límite con una línea de ayuda; el stock en custodia se consulta en «Stock actual».
+
 ### Signature: shell autenticado
 La estructura de todas las pantallas privadas. Sidebar de `15rem` en Tapa con la marca gráfica, grupos por rol, iconos de trazo único y «Mi perfil» al pie; topbar blanca de `3.5rem` con correo, rol y «Cerrar sesión» con icono; contenido sobre Papel con máximo `1100px`. No hay sombras: sidebar y topbar se separan del contenido por el cambio de superficie y el filete. En móvil la sidebar se convierte en drawer con overlay y el botón «Menú» queda en la topbar.
 

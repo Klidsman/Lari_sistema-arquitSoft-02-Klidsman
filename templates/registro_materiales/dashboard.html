@@ -3,6 +3,9 @@
 {% block contenido %}
   <h1>Dashboard {{ datos.periodo }}</h1>
   <p>Órdenes: {{ datos.ordenes }} · Técnicos con uso: {{ datos.tecnicos }}</p>
+  <p class="ayuda">
+    Saldo del registro mensual de materiales. No es el stock en custodia.
+  </p>
   <table class="tabla">
     <thead><tr><th>Material</th><th>Inicial</th><th>Despachos</th><th>Usado</th><th>Final</th></tr></thead>
     <tbody>
