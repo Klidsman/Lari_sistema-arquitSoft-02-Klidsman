@@ -135,7 +135,7 @@ corrigieron. Las reglas de negocio viven en `materiales/services.py`, nunca en l
 
 ## Referencias
 - Spec: `05-especificaciones/002-materiales/spec.md`
-- Reglas: `03-reglas-de-dominio/catalogo-de-materiales.md` (vacío a la fecha),
+- Reglas: `03-reglas-de-dominio/catalogo-de-materiales.md`,
   `03-reglas-de-dominio/auditoria.md`
 - Specs consumidoras: 004 (recojo), 005 (stock inicial), 006 (asignación), 008 (confirmación de
   stock), 009 (traspaso), 010 (conciliación), 011 (logística inversa), 013 (registro de materiales)

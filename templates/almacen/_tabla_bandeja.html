@@ -1,0 +1,38 @@
+<table class="tabla">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Fecha envío</th>
+      <th>Tenant</th>
+      <th>Técnico</th>
+      <th>Estado</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for solicitud in solicitudes %}
+      <tr data-solicitud-id="{{ solicitud.pk }}">
+        <td>{{ solicitud.pk }}</td>
+        <td>{{ solicitud.enviada_en|date:"Y-m-d H:i" }}</td>
+        <td>{{ solicitud.tenant.codigo }}</td>
+        <td>{{ solicitud.nifs_tecnicos }}</td>
+        <td>{{ solicitud.get_estado_display }}</td>
+        <td><a href="{% url 'detalle_almacen' solicitud.pk %}">Revisar</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">No hay solicitudes para revisar.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if pagina.paginator.num_pages > 1 %}
+  <nav class="paginacion">
+    {% if pagina.has_previous %}
+      <a href="?page={{ pagina.previous_page_number }}&estado={{ estado }}">Anterior</a>
+    {% endif %}
+    <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+    {% if pagina.has_next %}
+      <a href="?page={{ pagina.next_page_number }}&estado={{ estado }}">Siguiente</a>
+    {% endif %}
+  </nav>
+{% endif %}

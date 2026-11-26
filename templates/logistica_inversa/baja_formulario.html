@@ -2,9 +2,51 @@
 {% block title %}Nueva baja · Lari{% endblock %}
 {% block contenido %}
   <h1>Registrar baja de equipo</h1>
-  <form method="post">
+  <p class="ayuda">
+    Elige al técnico, marca las series que se dan de baja e indica la causa.
+    Las series quedarán inactivas y saldrán del stock del técnico.
+  </p>
+
+  <form method="post" id="form-baja">
     {% csrf_token %}
-    {{ formulario.as_p }}
+
+    {% if formulario.non_field_errors %}
+      <div class="mensaje mensaje-error" role="alert">
+        {% for error in formulario.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+    {% endif %}
+
+    <p>
+      <label for="{{ formulario.tecnico.id_for_label }}">Técnico</label>
+      {{ formulario.tecnico }}
+      {% for error in formulario.tecnico.errors %}
+        <span class="mensaje mensaje-error">{{ error }}</span>
+      {% endfor %}
+    </p>
+
+    <div id="series-tecnico" aria-live="polite">
+      {% include "logistica_inversa/_series_tecnico.html" with grupos=grupos seleccionadas=seleccionadas %}
+    </div>
+    {% for error in formulario.series.errors %}
+      <p class="mensaje mensaje-error">{{ error }}</p>
+    {% endfor %}
+
+    <p>
+      <label for="{{ formulario.causa.id_for_label }}">Causa</label>
+      {{ formulario.causa }}
+      {% for error in formulario.causa.errors %}
+        <span class="mensaje mensaje-error">{{ error }}</span>
+      {% endfor %}
+    </p>
+
+    <p>
+      <label for="{{ formulario.observaciones.id_for_label }}">Observaciones</label>
+      {{ formulario.observaciones }}
+      {% for error in formulario.observaciones.errors %}
+        <span class="mensaje mensaje-error">{{ error }}</span>
+      {% endfor %}
+    </p>
+
     <button type="submit">Registrar baja</button>
   </form>
 {% endblock %}

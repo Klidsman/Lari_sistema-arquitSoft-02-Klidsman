@@ -1,0 +1,31 @@
+{% if grupos %}
+  <p class="ayuda">
+    Series asignadas al técnico. Marca las que se devuelven.
+  </p>
+  {% for grupo in grupos %}
+    <fieldset class="linea-recojo">
+      <legend>
+        {{ grupo.material.codigo }} — {{ grupo.material.descripcion }}
+      </legend>
+      <p class="ayuda">
+        Lote: {{ grupo.material.lote|default:"—" }}
+        · {{ grupo.series|length }} serie{{ grupo.series|length|pluralize }}
+      </p>
+      <div class="series-lista">
+        {% for serie in grupo.series %}
+          <label class="serie-opcion">
+            <input type="checkbox"
+                   name="series"
+                   value="{{ serie.pk }}"
+                   {% if serie.pk in seleccionadas %}checked{% endif %}>
+            <span>{{ serie.numero }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+  {% endfor %}
+{% else %}
+  <p class="ayuda">
+    Selecciona un técnico para ver sus series asignadas.
+  </p>
+{% endif %}

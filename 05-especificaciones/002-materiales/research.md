@@ -237,19 +237,11 @@ los suyos.
 
 ---
 
-## 12. Regla de dominio ausente
+## 12. Regla de dominio del catálogo
 
-**Decision**: `03-reglas-de-dominio/catalogo-de-materiales.md` está vacío (0 bytes) a la fecha.
-La fuente de verdad para esta spec es `05-especificaciones/002-materiales/spec.md`.
-
-**Rationale**: la constitución exige que las specs referencien reglas de dominio, pero no se
-puede implementar un documento vacío. No se inventan reglas adicionales: se documentan solo las
-de la spec. Se registra la carencia para que el responsable del proyecto complete la regla.
-
-**Seguimiento documental**: completar `03-reglas-de-dominio/catalogo-de-materiales.md` con las
-reglas de esta spec y las que agreguen las specs consumidoras. Si el documento completo llega a
-contradecir la spec, prevalece la constitución y se corrige el artefacto antes del código
-(principio VIII).
+La regla de dominio está documentada en `03-reglas-de-dominio/catalogo-de-materiales.md` y sigue a
+`05-especificaciones/002-materiales/spec.md`. Si ambos documentos llegaran a contradecirse,
+prevalece la constitución y se corrige el artefacto antes del código (principio VIII).
 
 ---
 

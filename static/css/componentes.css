@@ -534,3 +534,22 @@ a.boton-secundario {
   font-size: 1.15rem;
   line-height: 1.3;
 }
+
+/* Aviso flotante de la bandeja del almacén */
+.aviso-toast {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 50;
+  max-width: 26rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--acento);
+  border-radius: 0.5rem;
+  background: var(--superficie);
+  color: var(--texto);
+}
+
+.aviso-toast a {
+  color: var(--acento);
+  font-weight: 600;
+}

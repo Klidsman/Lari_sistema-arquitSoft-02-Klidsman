@@ -39,6 +39,9 @@ Permitir que los tiles registren la devolución de equipos por parte de técnico
 
 ### 5.1 Devolución de Equipos (RF-65)
 - El tenant registra la devolución de equipos por parte de un técnico
+- Primero se selecciona al técnico; la pantalla muestra **solo sus series asignadas**, agrupadas
+  por material con código, descripción y lote, y ordenadas por material y número de serie
+- No se puede seleccionar una serie de otro técnico ni una serie que no esté asignada
 - Cada serie devuelta sale del stock del técnico
 - Las series vuelven a estado Disponible
 - La custodia del técnico sobre las series se libera
@@ -46,6 +49,12 @@ Permitir que los tiles registren la devolución de equipos por parte de técnico
 
 ### 5.2 Recuperación y Baja de Equipos (RF-66)
 - El tenant registra equipos recuperados o de baja
+- La baja usa el mismo selector que la devolución: se elige al técnico y solo se muestran sus
+  series asignadas, agrupadas por material
+- Se pueden dar de baja varias series en una sola operación; cada serie genera su registro
+  `BajaEquipo`
+- La devolución y la baja comparten la selección técnico → series, pero **no el efecto**:
+  la devolución vuelve la serie a `DISPONIBLE` y suma al stock general; la baja la deja `INACTIVA`
 - Se registra la serie y la causa:
   - Avería: el equipo está dañado
   - Migración: el equipo se está migrando a otro sistema/proceso

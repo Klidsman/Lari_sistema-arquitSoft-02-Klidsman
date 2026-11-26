@@ -1,59 +1,65 @@
 # Arquitectura del Sistema
 
-Monolito modular en capas con frontend SPA y base de datos PostgreSQL.
+Monolito modular en Django con renderizado en servidor, HTMX y PostgreSQL.
 
 ```mermaid
 flowchart TB
-    subgraph SPA["Frontend SPA (Single Page Application)"]
-        V1["Vistas por rol<br/>(Administrador / Subcontratista / Almacenero)"]
-        V2["Notificaciones en tiempo real<br/>(WebSocket/SSE: sonoras y visuales)"]
-        V3["Bandeja de despachos / Reportes"]
+    subgraph Cliente["Navegador"]
+        V1["Vistas HTML por rol<br/>(Administrador / Tenant / Almacén)"]
+        V2["HTMX: fragmentos, polling y SSE"]
     end
 
-    subgraph Monolito["Monolito Modular — Backend"]
-        subgraph API["Capa de API / Controladores"]
-            C1["Auth & RBAC<br/>(JWT, expiración configurable)"]
-            C2["Pedidos, Despachos, Confirmaciones"]
-            C3["Conciliación diaria"]
-            C4["Devoluciones / Logs / Reportes"]
+    subgraph Monolito["Monolito Modular — Django"]
+        subgraph Aplicacion["Capa de aplicación"]
+            C1["Acceso y sesión<br/>(cookie + 2FA TOTP)"]
+            C2["Vistas y formularios<br/>(renderizado en servidor)"]
+            C3["Servicios de dominio<br/>(services.py)"]
+            C4["Tareas Celery<br/>(correo, reintentos)"]
+            C5["SSE / polling<br/>(bandeja del almacén)"]
         end
 
-        subgraph Dominio["Capa de Dominio (Módulos)"]
-            M1["Seguridad y Padrón de Técnicos"]
-            M2["Catálogo y Almacén"]
-            M3["Despacho y Custodia"]
-            M4["Mensajería y Confirmación"]
-            M5["Conciliación por Diferencias"]
-            M6["Logística Inversa"]
-            M7["Auditoría y Reportes"]
-        end
-
-        subgraph Infra["Capa de Infraestructura"]
-            R1["Repositorios (EF/ORM)"]
-            R2["Generador de Excel .xlsx"]
-            R3["Hash SHA-256 / almacenamiento inmutable"]
-            R4["Importador de reportes<br/>(Excel / CSV / texto)"]
+        subgraph Dominio["Módulos de dominio"]
+            M1["Tenants y acceso"]
+            M2["Materiales y técnicos"]
+            M3["Series, stock y asignaciones"]
+            M4["Recojos, traspasos y conciliaciones"]
+            M5["Logística inversa"]
+            M6["Registro de materiales y reportes"]
         end
     end
 
     subgraph Persistencia["Persistencia"]
-        PG[("PostgreSQL<br/>(datos, bitácora inmutable, estados)")]
-        FS["Almacenamiento local seguro<br/>(Excels de despacho firmados)"]
+        PG[("PostgreSQL<br/>(datos, auditoría, estados)")]
+        RD[("Redis<br/>(broker Celery, notificaciones)")]
+        FS["MEDIA_ROOT<br/>(Excels y actas)"]
     end
 
-    SPA -->|REST/JSON| API
-    V2 <-->|WebSocket/SSE| API
-    API --> Dominio
-    Dominio --> Infra
-    R1 --> PG
-    R3 --> FS
-    M7 --> PG
-    M5 --> R4
+    V1 -->|HTTP HTML| C2
+    V2 <-->|HTMX / SSE| C5
+    C3 --> M1
+    C3 --> M2
+    C3 --> M3
+    C3 --> M4
+    C3 --> M5
+    C3 --> M6
+    C4 <--> RD
+    C5 <--> RD
+    M3 --> PG
+    M4 --> PG
+    M5 --> PG
+    M6 --> PG
+    C3 --> FS
 ```
 
 ## Notas
 
-- El frontend es una SPA desacoplada que consume la API REST del monolito.
-- El backend es un único despliegue con módulos de dominio separados.
-- PostgreSQL es la única base de datos; los Excels firmados se guardan en disco.
-- Las notificaciones en tiempo real usan canal push (WebSocket/SSE) entre Almacenero y Subcontratista.
+- La interfaz es HTML renderizado por Django y potenciado con HTMX. No hay SPA, API REST ni JWT.
+- La sesión se mantiene con cookie de Django; los roles y el alcance por tenant/región se validan en
+  los servicios, no en el cliente.
+- El backend es un único despliegue con módulos de dominio separados y lógica de negocio en
+  `services.py`.
+- PostgreSQL es la única base de datos. Redis se usa para Celery y para las notificaciones de la
+  bandeja del almacén.
+- Los Excel y actas se generan con `openpyxl`, se guardan bajo `MEDIA_ROOT` y se verifican con hash
+  SHA-256.
+- Las notificaciones del almacén usan SSE y polling de respaldo; no hay WebSocket ni Channels.

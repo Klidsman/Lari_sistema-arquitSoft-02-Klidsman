@@ -11,6 +11,7 @@ from django.utils import timezone
 from logistica_inversa.models import BajaEquipo, Devolucion
 from series.models import EstadoSerie, Serie
 from stock.models import StockGeneral, StockTecnico
+from tecnicos.models import Tecnico
 
 
 def _serie(tenant, material, estado, usuario, tecnico=None, numero="SER000000001"):
@@ -107,14 +108,16 @@ def test_flujo_http_baja(
     cliente_otro_tenant,
     usuario_tenant,
     tenant,
+    tecnico,
     material_seriado,
     almacen,
 ):
     serie = _serie(
-        tenant, material_seriado, EstadoSerie.DISPONIBLE, usuario_tenant
+        tenant, material_seriado, EstadoSerie.ASIGNADA, usuario_tenant,
+        tecnico=tecnico, numero="SER000000021",
     )
-    StockGeneral.objects.create(
-        tenant=tenant, material=material_seriado, cantidad=1
+    StockTecnico.objects.create(
+        tenant=tenant, tecnico=tecnico, material=material_seriado, cantidad=1
     )
     assert cliente_tenant.get(reverse("lista_bajas")).status_code == 200
     assert cliente_autenticado.get(reverse("lista_bajas")).status_code == 403
@@ -122,7 +125,12 @@ def test_flujo_http_baja(
 
     respuesta = cliente_tenant.post(
         reverse("nueva_baja"),
-        {"serie": serie.numero, "causa": "AVERIA", "observaciones": ""},
+        {
+            "tecnico": tecnico.pk,
+            "series": [serie.pk],
+            "causa": "AVERIA",
+            "observaciones": "",
+        },
     )
     assert respuesta.status_code == 302
     baja = BajaEquipo.objects.get()
@@ -132,6 +140,156 @@ def test_flujo_http_baja(
 
     respuesta = cliente_tenant.post(
         reverse("nueva_baja"),
-        {"serie": serie.numero, "causa": "", "observaciones": ""},
+        {
+            "tecnico": tecnico.pk,
+            "series": [serie.pk],
+            "causa": "",
+            "observaciones": "",
+        },
     )
     assert respuesta.status_code == 400
+
+
+@pytest.mark.django_db
+def test_devolucion_solo_muestra_series_del_tecnico(
+    cliente_tenant,
+    usuario_tenant,
+    tenant,
+    tecnico,
+    material_seriado,
+    almacen,
+):
+    otro = Tecnico.objects.create(
+        tenant=tenant, nif="LA7777", nombre="Otro", creado_por=usuario_tenant
+    )
+    propia = _serie(
+        tenant, material_seriado, EstadoSerie.ASIGNADA, usuario_tenant,
+        tecnico=tecnico, numero="SER000000011",
+    )
+    ajena = _serie(
+        tenant, material_seriado, EstadoSerie.ASIGNADA, usuario_tenant,
+        tecnico=otro, numero="SER000000012",
+    )
+
+    respuesta = cliente_tenant.get(
+        reverse("nueva_devolucion"), {"tecnico": tecnico.pk}
+    )
+    contenido = respuesta.content.decode()
+    assert respuesta.status_code == 200
+    assert propia.numero in contenido
+    assert ajena.numero not in contenido
+    assert material_seriado.codigo in contenido
+    assert material_seriado.descripcion in contenido
+
+    fragmento = cliente_tenant.get(
+        reverse("series_tecnico_devolucion"), {"tecnico": tecnico.pk}
+    )
+    assert fragmento.status_code == 200
+    assert propia.numero in fragmento.content.decode()
+    assert ajena.numero not in fragmento.content.decode()
+
+
+@pytest.mark.django_db
+def test_devolucion_rechaza_serie_de_otro_tecnico(
+    cliente_tenant,
+    usuario_tenant,
+    tenant,
+    tecnico,
+    material_seriado,
+    almacen,
+):
+    otro = Tecnico.objects.create(
+        tenant=tenant, nif="LA7778", nombre="Otro", creado_por=usuario_tenant
+    )
+    ajena = _serie(
+        tenant, material_seriado, EstadoSerie.ASIGNADA, usuario_tenant,
+        tecnico=otro, numero="SER000000013",
+    )
+    StockTecnico.objects.create(
+        tenant=tenant, tecnico=tecnico, material=material_seriado, cantidad=1
+    )
+
+    respuesta = cliente_tenant.post(
+        reverse("nueva_devolucion"),
+        {
+            "tecnico": tecnico.pk,
+            "fecha": date.today().isoformat(),
+            "series": [ajena.pk],
+            "observaciones": "",
+        },
+    )
+
+    assert respuesta.status_code == 400
+    assert not Devolucion.objects.exists()
+    ajena.refresh_from_db()
+    assert ajena.estado == EstadoSerie.ASIGNADA
+    assert ajena.tecnico_id == otro.pk
+
+
+@pytest.mark.django_db
+def test_baja_solo_muestra_series_del_tecnico(
+    cliente_tenant,
+    usuario_tenant,
+    tenant,
+    tecnico,
+    material_seriado,
+    almacen,
+):
+    otro = Tecnico.objects.create(
+        tenant=tenant, nif="LA7779", nombre="Otro", creado_por=usuario_tenant
+    )
+    propia = _serie(
+        tenant, material_seriado, EstadoSerie.ASIGNADA, usuario_tenant,
+        tecnico=tecnico, numero="SER000000033",
+    )
+    ajena = _serie(
+        tenant, material_seriado, EstadoSerie.ASIGNADA, usuario_tenant,
+        tecnico=otro, numero="SER000000034",
+    )
+
+    respuesta = cliente_tenant.get(
+        reverse("nueva_baja"), {"tecnico": tecnico.pk}
+    )
+    contenido = respuesta.content.decode()
+    assert respuesta.status_code == 200
+    assert propia.numero in contenido
+    assert ajena.numero not in contenido
+    assert material_seriado.codigo in contenido
+    assert material_seriado.descripcion in contenido
+
+
+@pytest.mark.django_db
+def test_baja_rechaza_serie_de_otro_tecnico(
+    cliente_tenant,
+    usuario_tenant,
+    tenant,
+    tecnico,
+    material_seriado,
+    almacen,
+):
+    otro = Tecnico.objects.create(
+        tenant=tenant, nif="LA7780", nombre="Otro", creado_por=usuario_tenant
+    )
+    ajena = _serie(
+        tenant, material_seriado, EstadoSerie.ASIGNADA, usuario_tenant,
+        tecnico=otro, numero="SER000000035",
+    )
+    StockTecnico.objects.create(
+        tenant=tenant, tecnico=tecnico, material=material_seriado, cantidad=1
+    )
+
+    respuesta = cliente_tenant.post(
+        reverse("nueva_baja"),
+        {
+            "tecnico": tecnico.pk,
+            "series": [ajena.pk],
+            "causa": "AVERIA",
+            "observaciones": "",
+        },
+    )
+
+    assert respuesta.status_code == 400
+    assert not BajaEquipo.objects.exists()
+    ajena.refresh_from_db()
+    assert ajena.estado == EstadoSerie.ASIGNADA
+    assert ajena.tecnico_id == otro.pk

@@ -1,5 +1,8 @@
 """Vistas del almacén (007)."""
 
+import time
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -10,6 +13,7 @@ from django.views.decorators.http import require_GET, require_POST
 from acceso.models import Rol
 
 from . import almacen_services as services
+from . import notificaciones
 from .models import EstadoSolicitud, SolicitudAsignacion
 
 
@@ -63,6 +67,27 @@ def bandeja(request):
             "solicitudes": pagina.object_list,
             "estado": estado or "",
             "pendientes": pendientes,
+        },
+    )
+
+
+@login_required
+@require_GET
+def tabla_bandeja(request):
+    region, error = _region_o_error(request)
+    if error is not None:
+        return error
+    estado = request.GET.get("estado") or None
+    pagina = Paginator(
+        services.bandeja(region, estado), 50
+    ).get_page(request.GET.get("page"))
+    return render(
+        request,
+        "almacen/_tabla_bandeja.html",
+        {
+            "pagina": pagina,
+            "solicitudes": pagina.object_list,
+            "estado": estado or "",
         },
     )
 
@@ -243,11 +268,16 @@ def sse(request):
         return error
 
     def eventos():
-        pendientes = services.bandeja(region, EstadoSolicitud.ENVIADA).count()
-        yield f"data: {pendientes}\n\n"
+        try:
+            yield from notificaciones.suscribir_region(region)
+        except Exception:
+            while True:
+                yield ": heartbeat\n\n"
+                time.sleep(settings.ALMACEN_SSE_HEARTBEAT_SEGUNDOS)
 
     respuesta = StreamingHttpResponse(
-        eventos(), content_type="text/event-stream"
+        eventos(), content_type="text/event-stream; charset=utf-8"
     )
     respuesta["Cache-Control"] = "no-cache"
+    respuesta["X-Accel-Buffering"] = "no"
     return respuesta
