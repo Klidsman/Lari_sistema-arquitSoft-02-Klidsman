@@ -120,6 +120,21 @@ def stock_actual_tecnico(tecnico, solo_con_stock=False):
     return filas.select_related("material").order_by("material__codigo")
 
 
+def series_en_custodia(tecnico):
+    """Series ASIGNADA que el técnico tiene físicamente en custodia."""
+    from series.models import EstadoSerie, Serie
+
+    return (
+        Serie.objects.filter(
+            tenant=tecnico.tenant,
+            tecnico=tecnico,
+            estado=EstadoSerie.ASIGNADA,
+        )
+        .select_related("material")
+        .order_by("material__codigo", "numero")
+    )
+
+
 def _tecnicos_filtrados(tenant, q=""):
     tecnicos = Tecnico.objects.filter(tenant=tenant)
     texto = " ".join((q or "").split())

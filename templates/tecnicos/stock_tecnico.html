@@ -55,4 +55,32 @@
       {% endfor %}
     </tbody>
   </table>
+
+  <h2>Series en custodia</h2>
+  {% if series %}
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Descripción</th>
+          <th>Lote</th>
+          <th>Serie</th>
+          <th>Asignada desde</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for serie in series %}
+          <tr>
+            <td class="mono">{{ serie.material.codigo }}</td>
+            <td>{{ serie.material.descripcion }}</td>
+            <td>{{ serie.lote|default:"—" }}</td>
+            <td class="mono">{{ serie.numero }}</td>
+            <td>{{ serie.asignada_en|date:"Y-m-d H:i" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="ayuda">Este técnico no tiene series en custodia.</p>
+  {% endif %}
 {% endblock %}

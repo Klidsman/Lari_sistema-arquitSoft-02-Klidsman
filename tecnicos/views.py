@@ -111,10 +111,16 @@ def detalle_stock_tecnico(request, tecnico_id):
         materiales=Count("material", distinct=True),
         unidades=Sum("cantidad", default=0),
     )
+    series = services.series_en_custodia(tecnico)
     return render(
         request,
         "tecnicos/stock_tecnico.html",
-        {"tecnico": tecnico, "filas": filas, "resumen": resumen},
+        {
+            "tecnico": tecnico,
+            "filas": filas,
+            "resumen": resumen,
+            "series": series,
+        },
     )
 
 

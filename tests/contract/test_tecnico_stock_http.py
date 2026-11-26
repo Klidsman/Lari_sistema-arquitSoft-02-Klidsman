@@ -2,8 +2,10 @@
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from materiales.models import Material
+from series.models import EstadoSerie, Serie
 from stock.models import StockTecnico
 from tecnicos.models import Tecnico
 
@@ -162,6 +164,72 @@ def test_stock_actual_detalle_sin_stock_muestra_estado_vacio(
 
     assert respuesta.status_code == 200
     assert "Este técnico no tiene stock registrado." in respuesta.content.decode()
+    assert "Este técnico no tiene series en custodia." in respuesta.content.decode()
+
+
+@pytest.mark.django_db
+def test_stock_actual_detalle_muestra_las_series_en_custodia(
+    cliente_tenant, usuario_tenant, tenant, tecnico, material_seriado
+):
+    serie = Serie.objects.create(
+        numero="SER000000001",
+        tenant=tenant,
+        region=tenant.region,
+        material=material_seriado,
+        lote=material_seriado.lote,
+        estado=EstadoSerie.ASIGNADA,
+        tecnico=tecnico,
+        asignada_en=timezone.now(),
+        creado_por=usuario_tenant,
+    )
+    StockTecnico.objects.create(
+        tenant=tenant,
+        tecnico=tecnico,
+        material=material_seriado,
+        cantidad=1,
+    )
+
+    respuesta = cliente_tenant.get(
+        reverse("detalle_stock_tecnico", args=[tecnico.pk])
+    )
+    contenido = respuesta.content.decode()
+
+    assert respuesta.status_code == 200
+    assert "Series en custodia" in contenido
+    assert serie.numero in contenido
+    assert material_seriado.descripcion in contenido
+
+
+@pytest.mark.django_db
+def test_stock_actual_detalle_no_muestra_series_de_otro_tecnico(
+    cliente_tenant, usuario_tenant, tenant, tecnico, material_seriado
+):
+    otro = Tecnico.objects.create(
+        tenant=tenant,
+        nif="LA3333",
+        nombre="Técnico Ajeno",
+        creado_por=usuario_tenant,
+    )
+    Serie.objects.create(
+        numero="SER000000002",
+        tenant=tenant,
+        region=tenant.region,
+        material=material_seriado,
+        lote=material_seriado.lote,
+        estado=EstadoSerie.ASIGNADA,
+        tecnico=otro,
+        asignada_en=timezone.now(),
+        creado_por=usuario_tenant,
+    )
+
+    respuesta = cliente_tenant.get(
+        reverse("detalle_stock_tecnico", args=[tecnico.pk])
+    )
+    contenido = respuesta.content.decode()
+
+    assert respuesta.status_code == 200
+    assert "SER000000002" not in contenido
+    assert "Este técnico no tiene series en custodia." in contenido
 
 
 @pytest.mark.django_db
