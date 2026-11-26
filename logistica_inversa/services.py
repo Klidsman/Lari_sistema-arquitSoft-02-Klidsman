@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from acceso.models import Rol
+from auditoria.models import RegistroCambio
 from auditoria.services import registrar_cambio
 from materiales.models import Material
 from series.models import EstadoSerie, Serie
@@ -201,6 +202,47 @@ def _resolver_series(tenant, series):
     return resultado
 
 
+def _serie_perdida():
+    raise SerieFueraTenant
+
+
+def _eventos_serie(serie, nuevo_estado, nuevo_tecnico, nueva_fecha, actor, tenant):
+    """Construye los registros de auditoría de una serie para inserción masiva."""
+    return [
+        RegistroCambio(
+            tenant=tenant,
+            entidad="Serie",
+            entidad_id=serie.pk,
+            campo="estado",
+            valor_anterior=str(serie.estado),
+            valor_nuevo=str(nuevo_estado),
+            usuario=actor,
+        ),
+        RegistroCambio(
+            tenant=tenant,
+            entidad="Serie",
+            entidad_id=serie.pk,
+            campo="tecnico",
+            valor_anterior=str(serie.tecnico_id or ""),
+            valor_nuevo=str(nuevo_tecnico or ""),
+            usuario=actor,
+        ),
+        RegistroCambio(
+            tenant=tenant,
+            entidad="Serie",
+            entidad_id=serie.pk,
+            campo="asignada_en",
+            valor_anterior=(
+                serie.asignada_en.isoformat() if serie.asignada_en else ""
+            ),
+            valor_nuevo=(
+                nueva_fecha.isoformat() if nueva_fecha else ""
+            ),
+            usuario=actor,
+        ),
+    ]
+
+
 def _auditar_serie(serie, anterior_estado, anterior_tecnico, anterior_fecha, actor, tenant):
     registrar_cambio(
         "Serie",
@@ -244,13 +286,17 @@ def registrar_devolucion(
     ruta_acta = ""
     try:
         with transaction.atomic():
-            list(
+            bloqueadas = list(
                 Serie.objects.select_for_update()
                 .filter(pk__in=[serie.pk for serie in series])
                 .order_by("pk")
             )
+            por_id = {serie.pk: serie for serie in bloqueadas}
+            series = [
+                por_id.get(serie.pk) or _serie_perdida()
+                for serie in series
+            ]
             for serie in series:
-                serie.refresh_from_db()
                 validar_serie_para_devolucion(serie, tecnico)
 
             devolucion = Devolucion.objects.create(
@@ -261,45 +307,67 @@ def registrar_devolucion(
                 observaciones=" ".join((observaciones or "").split()),
                 creado_por=actor,
             )
-            for serie in series:
-                LineaDevolucion.objects.create(
-                    tenant=tenant,
-                    devolucion=devolucion,
-                    serie=serie,
-                    material=serie.material,
-                    descripcion=serie.material.descripcion,
-                    lote=serie.lote,
-                )
+            lineas = LineaDevolucion.objects.bulk_create(
+                [
+                    LineaDevolucion(
+                        tenant=tenant,
+                        devolucion=devolucion,
+                        serie=serie,
+                        material=serie.material,
+                        descripcion=serie.material.descripcion,
+                        lote=serie.lote,
+                    )
+                    for serie in series
+                ]
+            )
 
             cantidades = {}
+            ahora = timezone.now()
+            eventos = []
             for serie in series:
                 cantidades[serie.material_id] = (
                     cantidades.get(serie.material_id, 0) + 1
                 )
-                anterior_estado = serie.estado
-                anterior_tecnico = serie.tecnico_id
-                anterior_fecha = serie.asignada_en
+                eventos.extend(
+                    _eventos_serie(
+                        serie,
+                        EstadoSerie.DISPONIBLE,
+                        None,
+                        None,
+                        actor,
+                        tenant,
+                    )
+                )
                 serie.estado = EstadoSerie.DISPONIBLE
                 serie.tecnico = None
                 serie.asignada_en = None
                 serie.actualizado_por = actor
-                serie.save(
-                    update_fields=[
-                        "estado",
-                        "tecnico",
-                        "asignada_en",
-                        "actualizado_por",
-                        "actualizado_en",
-                    ]
+                serie.actualizado_en = ahora
+            Serie.objects.bulk_update(
+                series,
+                [
+                    "estado",
+                    "tecnico",
+                    "asignada_en",
+                    "actualizado_por",
+                    "actualizado_en",
+                ],
+            )
+            for linea in lineas:
+                eventos.append(
+                    RegistroCambio(
+                        tenant=tenant,
+                        entidad="LineaDevolucion",
+                        entidad_id=linea.pk,
+                        campo="alta",
+                        valor_anterior="",
+                        valor_nuevo=(
+                            f"{linea.serie.numero}; {linea.material.codigo}"
+                        ),
+                        usuario=actor,
+                    )
                 )
-                _auditar_serie(
-                    serie,
-                    anterior_estado,
-                    anterior_tecnico,
-                    anterior_fecha,
-                    actor,
-                    tenant,
-                )
+            RegistroCambio.objects.bulk_create(eventos)
 
             for material_id, cantidad in cantidades.items():
                 material = Material.objects.get(pk=material_id)
@@ -330,16 +398,6 @@ def registrar_devolucion(
                 actor,
                 tenant=tenant,
             )
-            for linea in devolucion.lineas.select_related("serie", "material"):
-                registrar_cambio(
-                    "LineaDevolucion",
-                    linea.pk,
-                    "alta",
-                    "",
-                    f"{linea.serie.numero}; {linea.material.codigo}",
-                    actor,
-                    tenant=tenant,
-                )
             registrar_cambio(
                 "Devolucion",
                 devolucion.pk,

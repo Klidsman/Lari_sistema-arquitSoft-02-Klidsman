@@ -4,9 +4,56 @@ description: "Lista de tareas para la implementación de 011 Logística Inversa 
 
 # Tareas: 011 Logística Inversa y Devoluciones
 
-> **Estado real (2026-11-25):** implementación y pruebas completas, incluida la selección de series
-> por técnico y las bajas múltiples. Las casillas son históricas; quedan cobertura fina y recorrido
-> manual. Ver `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
+> **Estado real auditado (2026-11-25):** implementación completa y **64 pruebas de logística inversa
+> en verde** (92 % de cobertura). Se añadieron las pruebas que faltaban (restricciones, validadores,
+> stock por material, auditoría, acta, concurrencia, aislamiento y rendimiento) y se optimizó la
+> devolución de muchas series. Solo quedan tres tareas no funcionales: T003, T062 y T069.
+
+## Estado real detallado (2026-11-25)
+
+| Bloque | Tareas | Estado |
+|---|---|---|
+| Prerrequisitos, app, settings, URLs y RLS | T001, T002, T004, T005 | Implementado; RLS en `0002_rls.py` |
+| Modelos, `INACTIVA` y migraciones | T011–T015 | Implementado; `INACTIVA` quedó en la migración inicial de `series` |
+| Excepciones, validadores y auditoría | T017–T019 | Implementado |
+| Pruebas fundacionales | T006–T010 | `test_logistica_inversa_servicios.py`, `test_logistica_inversa_acta.py` y contrato |
+| US1 devolución y stock | T021–T032 | Implementado; cubierto en `test_devolucion_registro.py` y `test_devolucion_stock.py` |
+| US2 baja con causa | T033–T044 | Implementado; cubierto en `test_baja_registro.py` y `test_baja_stock.py` |
+| US3 acta y descarga | T045–T051 | Implementado; cubierto en `test_logistica_inversa_acta.py` |
+| US4 auditoría e integridad | T052–T060 | Implementado; `test_logistica_inversa_auditoria.py` y concurrencia |
+| Concurrencia | T055 | Dos devoluciones, dos bajas y reserva por traspaso |
+| Aislamiento y RLS | T056 | `test_aislamiento_y_rls_de_logistica_inversa` |
+| Rendimiento | T057 | 100 series en menos de 2 s con lecturas acotadas |
+| Selección por técnico y baja múltiple | T116–T118 | Ya cubierto |
+| Revisiones y `manage.py` | T059, T061, T063–T068, T070 | Verificado |
+| Fixtures dedicadas | T003 | **Pendiente/no aplica**: cada prueba construye sus datos |
+| Cobertura fina | T062 | **Pendiente**: 92 % total; `services.py` 91 %, `views.py` 91 % |
+| Validación manual | T069 | **Pendiente**: recorrer CA-01…CA-06 del quickstart |
+
+### Cambios de código de esta auditoría
+
+- **Devolución masiva optimizada**: las líneas y los eventos de auditoría de las series se insertan
+  en bloque, y las series se actualizan con `bulk_update`. Antes había un `refresh_from_db()` y un
+  `save()` por serie más tres auditorías con savepoint por serie.
+- **Rendimiento**: una devolución de 100 series baja de ~1 741 consultas a un número acotado y se
+  mantiene por debajo de 2 segundos.
+
+### Pruebas reales de 011
+
+```text
+tests/unit/test_logistica_inversa_acta.py
+tests/unit/test_logistica_inversa_servicios.py
+tests/integration/test_devolucion_registro.py
+tests/integration/test_devolucion_stock.py
+tests/integration/test_baja_registro.py
+tests/integration/test_baja_stock.py
+tests/integration/test_logistica_inversa_auditoria.py
+tests/integration/test_logistica_inversa_acta.py
+tests/integration/test_logistica_inversa_concurrencia.py
+tests/contract/test_logistica_inversa_http.py
+```
+
+Ver `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
 
 **Entrada**: Documentos de diseño en `05-especificaciones/011-logistica-inversa-y-devoluciones/`
 
@@ -66,13 +113,18 @@ permisos Django por cadena.
   `StockGeneral` fuera de los servicios de 008.
 - **Pruebas en verde** (14 pruebas de 011): CA-01…CA-06, validaciones de fecha/serie/técnico,
   serie reservada en traspaso, acta con una hoja y hash alterado, y contrato HTTP.
-- **Pendientes de cierre**:
+- **Cierre (2026-11-25)**:
   - RLS de `logistica_inversa` implementada en
-    `logistica_inversa/migrations/0002_rls.py`.
-  - Concurrencia de devoluciones cubierta en
-    `tests/integration/test_logistica_inversa_concurrencia.py`; quedan rendimiento y validación
-    manual de `quickstart.md`.
-  - Verificar la regla de series `RESERVADA` con solicitudes 006 además de traspasos 009.
+    `logistica_inversa/migrations/0002_rls.py` y verificada por
+    `test_aislamiento_y_rls_de_logistica_inversa`.
+  - Concurrencia cubierta para dos devoluciones y dos bajas de la misma serie; la reserva por
+    traspaso `ENVIADA` se prueba en `test_serie_reservada_en_traspaso_no_se_devuelve`.
+  - Rendimiento de 100 series cubierto y optimizado en
+    `test_devolucion_de_cien_series_en_menos_de_dos_segundos`.
+  - Se añadieron pruebas de restricciones, validadores, stock, auditoría, acta y aislamiento.
+  - Quedan solo T003 (fixtures dedicadas), T062 (cobertura fina) y T069 (recorrido manual).
+  - La regla de series `RESERVADA` con solicitudes de 006 no aplica en el alcance actual de 011;
+    la reserva relevante es la de traspasos `ENVIADA`.
 
 ---
 
@@ -81,11 +133,11 @@ permisos Django por cadena.
 **Propósito**: verificar prerrequisitos y correcciones, crear la app, registrar rutas, preparar
 fixtures y comprobar RLS.
 
-- [ ] T001 Verificar los prerrequisitos en `config/settings/base.py`, `acceso/models.py`, `tenants/models.py`, `materiales/models.py`, `tecnicos/models.py`, `series/models.py`, `stock/models.py`, `stock/services.py` y `auditoria/services.py`: `AUTH_USER_MODEL="acceso.Usuario"`, `ContextoUsuarioMiddleware`, roles, `Material.es_seriado`/`lote`, `Tecnico.tenant`/`nif`, `Serie` con `numero`/estado/`tecnico`/`asignada_en`, `StockTecnico`/`StockGeneral` y servicios de incremento/decremento, y `registrar_cambio`; detenerse y reportar si falta alguno
-- [ ] T002 Crear el esqueleto de `logistica_inversa` en `logistica_inversa/__init__.py`, `apps.py`, `models.py`, `services.py`, `acta.py`, `forms.py`, `views.py`, `urls.py` y `migrations/__init__.py`; registrar `"logistica_inversa"` y `ACTAS_DIR` en `config/settings/base.py` e incluir `logistica_inversa.urls` desde `config/urls.py`
+- [X] T001 Verificar los prerrequisitos en `config/settings/base.py`, `acceso/models.py`, `tenants/models.py`, `materiales/models.py`, `tecnicos/models.py`, `series/models.py`, `stock/models.py`, `stock/services.py` y `auditoria/services.py`: `AUTH_USER_MODEL="acceso.Usuario"`, `ContextoUsuarioMiddleware`, roles, `Material.es_seriado`/`lote`, `Tecnico.tenant`/`nif`, `Serie` con `numero`/estado/`tecnico`/`asignada_en`, `StockTecnico`/`StockGeneral` y servicios de incremento/decremento, y `registrar_cambio`; detenerse y reportar si falta alguno
+- [X] T002 Crear el esqueleto de `logistica_inversa` en `logistica_inversa/__init__.py`, `apps.py`, `models.py`, `services.py`, `acta.py`, `forms.py`, `views.py`, `urls.py` y `migrations/__init__.py`; registrar `"logistica_inversa"` y `ACTAS_DIR` en `config/settings/base.py` e incluir `logistica_inversa.urls` desde `config/urls.py`
 - [ ] T003 [P] Extender `conftest.py` con fixtures sobre PostgreSQL: `region_logistica`, `tenant_logistica`, `tenant_logistica_otro`, `usuario_tenant_logistica`, `tecnico_logistica`, `tecnico_otro_tenant`, `material_seriado_logistica`, `serie_asignada_logistica`, `serie_disponible_logistica`, `serie_reservada_logistica`, `serie_instalada_logistica`, `stock_tecnico_logistica`, `stock_general_logistica`, `devolucion_registrada`, `baja_registrada` y `registro_cambios_logistica`
-- [ ] T004 [P] Comprobar si la infraestructura RLS de 001 está disponible en `config/settings/base.py` y en las migraciones de `tenants`; si no lo está, registrar la deuda en `05-especificaciones/011-logistica-inversa-y-devoluciones/research.md` y no crear una infraestructura paralela
-- [ ] T005 [P] Verificar que las correcciones documentales estén aplicadas en `05-especificaciones/011-logistica-inversa-y-devoluciones/spec.md`, `004-recojo-de-materiales/`, `009-traspaso-entre-tecnicos/data-model.md`, `012-reportes-mensuales/plan.md` y `04-contratos/acta-devoluciones.md`: `INACTIVA`, distinción con `INSTALADA`, acta automática y envío manual; corregir antes de implementar si algo no coincide
+- [X] T004 [P] Comprobar si la infraestructura RLS de 001 está disponible en `config/settings/base.py` y en las migraciones de `tenants`; si no lo está, registrar la deuda en `05-especificaciones/011-logistica-inversa-y-devoluciones/research.md` y no crear una infraestructura paralela
+- [X] T005 [P] Verificar que las correcciones documentales estén aplicadas en `05-especificaciones/011-logistica-inversa-y-devoluciones/spec.md`, `004-recojo-de-materiales/`, `009-traspaso-entre-tecnicos/data-model.md`, `012-reportes-mensuales/plan.md` y `04-contratos/acta-devoluciones.md`: `INACTIVA`, distinción con `INSTALADA`, acta automática y envío manual; corregir antes de implementar si algo no coincide
 
 ---
 
@@ -98,24 +150,24 @@ auditoría base que todas las historias necesitan.
 
 ### Pruebas fundacionales (escribir primero, deben fallar)
 
-- [ ] T006 [P] Escribir en `tests/unit/test_logistica_inversa_servicios.py` las pruebas de restricciones de `Devolucion`, `LineaDevolucion` y `BajaEquipo`: `tenant`/`region` obligatorios, `CASCADE`/`PROTECT`, `unique(devolucion, serie)`, `OneToOneField(serie)` en baja, causa válida, cantidades no negativas y campos del acta
-- [ ] T007 [P] Escribir en `tests/integration/test_devolucion_registro.py` las pruebas de `series.EstadoSerie.INACTIVA`: valor en choices, `CheckConstraint` de estado, coherencia `INACTIVA`/custodia nula, `ASIGNADA` con técnico/fecha y migración sin cambios de datos
-- [ ] T008 [P] Escribir en `tests/unit/test_logistica_inversa_acta.py` las pruebas de `generar_acta_devolucion`: una hoja, metadatos tenant/región/fecha/ID, tabla NIF/material/descripción/serie/fecha, orden estable, hash SHA-256, nombre relativo seguro y sin binarios en base
-- [ ] T009 Escribir en `tests/unit/test_logistica_inversa_servicios.py` las pruebas de validadores: cuenta/tenant, técnico del tenant/región, serie del tenant, serie no asignada, reservada, instalada/inactiva, fecha futura, causa requerida/inválida y al menos una serie
-- [ ] T010 [P] Escribir en `tests/contract/test_logistica_inversa_http.py` las pruebas de contrato de firmas y excepciones de `logistica_inversa/services.py` según `contracts/servicios-logistica-inversa.md`
+- [X] T006 [P] Escribir en `tests/unit/test_logistica_inversa_servicios.py` las pruebas de restricciones de `Devolucion`, `LineaDevolucion` y `BajaEquipo`: `tenant`/`region` obligatorios, `CASCADE`/`PROTECT`, `unique(devolucion, serie)`, `OneToOneField(serie)` en baja, causa válida, cantidades no negativas y campos del acta
+- [X] T007 [P] Escribir en `tests/integration/test_devolucion_registro.py` las pruebas de `series.EstadoSerie.INACTIVA`: valor en choices, `CheckConstraint` de estado, coherencia `INACTIVA`/custodia nula, `ASIGNADA` con técnico/fecha y migración sin cambios de datos
+- [X] T008 [P] Escribir en `tests/unit/test_logistica_inversa_acta.py` las pruebas de `generar_acta_devolucion`: una hoja, metadatos tenant/región/fecha/ID, tabla NIF/material/descripción/serie/fecha, orden estable, hash SHA-256, nombre relativo seguro y sin binarios en base
+- [X] T009 Escribir en `tests/unit/test_logistica_inversa_servicios.py` las pruebas de validadores: cuenta/tenant, técnico del tenant/región, serie del tenant, serie no asignada, reservada, instalada/inactiva, fecha futura, causa requerida/inválida y al menos una serie
+- [X] T010 [P] Escribir en `tests/contract/test_logistica_inversa_http.py` las pruebas de contrato de firmas y excepciones de `logistica_inversa/services.py` según `contracts/servicios-logistica-inversa.md`
 
 ### Implementación fundacional
 
-- [ ] T011 Añadir `INACTIVA` a `EstadoSerie` en `series/models.py`, incluirlo en `serie_estado_valido` y ampliar `serie_tecnico_coherente_estado` para exigir custodia nula
-- [ ] T012 Crear `series/migrations/0005_serie_inactiva.py`: actualizar choices/check y coherencia de custodia; no reescribir series existentes ni crear datos
-- [ ] T013 Implementar `Devolucion`, `LineaDevolucion` y `BajaEquipo` en `logistica_inversa/models.py`: devolución con `tenant`/`region`/`tecnico`/`fecha`/`observaciones`/acta/`creado_por`/`creado_en`; línea con `tenant`/`devolucion`/`serie` FK/`material`/`descripcion`/`lote`; baja con `tenant`/`region`/`serie` OneToOne/`material`/`causa`/`observaciones`/`creado_por`/`creado_en`; restricciones e índices de `data-model.md`
-- [ ] T014 Crear `logistica_inversa/migrations/0001_initial.py` con T013, revisar que no cree devoluciones ni bajas por migración y aplicar con `python manage.py migrate`
-- [ ] T015 Crear `logistica_inversa/migrations/0002_rls.py` con RLS por `tenant_id`/`region_id` en devoluciones y bajas y por `tenant_id` en líneas; si T004 determinó que 001 no está disponible, dejar la migración inactiva y registrar la deuda
-- [ ] T016 Implementar en `logistica_inversa/acta.py` `generar_acta_devolucion`: una hoja, metadatos, tabla ordenada, ruta relativa segura, hash SHA-256 y actualización de `acta_ruta`/`acta_hash`/`acta_generada_en`; no envía correo
-- [ ] T017 Implementar en `logistica_inversa/services.py` las excepciones y mensajes exactos de `contracts/servicios-logistica-inversa.md`: `PermisoDenegado`, `TecnicoNoExiste`, `SerieNoEnTecnico`, `SerieNoDisponible`, `SerieReservada`, `SerieYaInactiva`, `SerieInstalada`, `SerieFueraTenant`, `CausaRequerida`, `CausaInvalida`, `FechaInvalida`, `SinSeries`, `NoEncontrado`, `ArchivoNoDisponible` y `HashNoCoincide`
-- [ ] T018 Implementar en `logistica_inversa/services.py` `validar_cuenta_tenant`, `validar_tecnico`, `validar_serie_para_devolucion`, `validar_serie_para_baja` y `validar_fecha_devolucion`, incluyendo la exclusión de series referenciadas por traspasos `ENVIADA`
-- [ ] T019 Implementar en `logistica_inversa/services.py` el helper de auditoría para `Devolucion/alta`, `LineaDevolucion/alta`, `Devolucion/acta`, `BajaEquipo/alta`, `Serie/estado`, `Serie/tecnico` y `Serie/asignada_en`, usando `auditoria.services.registrar_cambio`, sin secretos ni binarios
-- [ ] T020 Ejecutar `pytest tests/unit/test_logistica_inversa_servicios.py tests/unit/test_logistica_inversa_acta.py tests/integration/test_devolucion_registro.py tests/contract/test_logistica_inversa_http.py`; corregir hasta que la fase fundacional esté en verde
+- [X] T011 Añadir `INACTIVA` a `EstadoSerie` en `series/models.py`, incluirlo en `serie_estado_valido` y ampliar `serie_tecnico_coherente_estado` para exigir custodia nula
+- [X] T012 Crear `series/migrations/0005_serie_inactiva.py`: actualizar choices/check y coherencia de custodia; no reescribir series existentes ni crear datos
+- [X] T013 Implementar `Devolucion`, `LineaDevolucion` y `BajaEquipo` en `logistica_inversa/models.py`: devolución con `tenant`/`region`/`tecnico`/`fecha`/`observaciones`/acta/`creado_por`/`creado_en`; línea con `tenant`/`devolucion`/`serie` FK/`material`/`descripcion`/`lote`; baja con `tenant`/`region`/`serie` OneToOne/`material`/`causa`/`observaciones`/`creado_por`/`creado_en`; restricciones e índices de `data-model.md`
+- [X] T014 Crear `logistica_inversa/migrations/0001_initial.py` con T013, revisar que no cree devoluciones ni bajas por migración y aplicar con `python manage.py migrate`
+- [X] T015 Crear `logistica_inversa/migrations/0002_rls.py` con RLS por `tenant_id`/`region_id` en devoluciones y bajas y por `tenant_id` en líneas; si T004 determinó que 001 no está disponible, dejar la migración inactiva y registrar la deuda
+- [X] T016 Implementar en `logistica_inversa/acta.py` `generar_acta_devolucion`: una hoja, metadatos, tabla ordenada, ruta relativa segura, hash SHA-256 y actualización de `acta_ruta`/`acta_hash`/`acta_generada_en`; no envía correo
+- [X] T017 Implementar en `logistica_inversa/services.py` las excepciones y mensajes exactos de `contracts/servicios-logistica-inversa.md`: `PermisoDenegado`, `TecnicoNoExiste`, `SerieNoEnTecnico`, `SerieNoDisponible`, `SerieReservada`, `SerieYaInactiva`, `SerieInstalada`, `SerieFueraTenant`, `CausaRequerida`, `CausaInvalida`, `FechaInvalida`, `SinSeries`, `NoEncontrado`, `ArchivoNoDisponible` y `HashNoCoincide`
+- [X] T018 Implementar en `logistica_inversa/services.py` `validar_cuenta_tenant`, `validar_tecnico`, `validar_serie_para_devolucion`, `validar_serie_para_baja` y `validar_fecha_devolucion`, incluyendo la exclusión de series referenciadas por traspasos `ENVIADA`
+- [X] T019 Implementar en `logistica_inversa/services.py` el helper de auditoría para `Devolucion/alta`, `LineaDevolucion/alta`, `Devolucion/acta`, `BajaEquipo/alta`, `Serie/estado`, `Serie/tecnico` y `Serie/asignada_en`, usando `auditoria.services.registrar_cambio`, sin secretos ni binarios
+- [X] T020 Ejecutar `pytest tests/unit/test_logistica_inversa_servicios.py tests/unit/test_logistica_inversa_acta.py tests/integration/test_devolucion_registro.py tests/contract/test_logistica_inversa_http.py`; corregir hasta que la fase fundacional esté en verde
 
 **Checkpoint**: estado `INACTIVA`, modelos, RLS, validadores, acta y auditoría listos; las historias
 pueden comenzar.
@@ -133,21 +185,21 @@ asignada, reservada o de otro tenant y recibir rechazo.
 
 ### Pruebas de US1 (escribir primero, deben fallar)
 
-- [ ] T021 [P] [US1] Prueba de **CA-01** en `tests/integration/test_devolucion_registro.py`: `test_devolucion_libera_custodia`; series `DISPONIBLE`, `tecnico=None`, `asignada_en=None`, stock técnico abajo y general arriba
-- [ ] T022 [US1] Prueba de **CA-02** en `tests/integration/test_devolucion_registro.py`: `test_series_devueltas_pueden_reasignarse`; la serie vuelve a estar disponible y puede asignarse a otro técnico
-- [ ] T023 [US1] Prueba de stock en `tests/integration/test_devolucion_stock.py`: por material, `StockTecnico` baja y `StockGeneral` sube por el mismo total; total del tenant invariante; no hay negativos
-- [ ] T024 [US1] Pruebas de validación en `tests/integration/test_devolucion_registro.py`: serie no asignada, reservada, instalada/inactiva, de otro tenant, fecha futura, sin series o duplicada se rechazan sin cambios
-- [ ] T025 [P] [US1] Prueba de contrato HTTP en `tests/contract/test_logistica_inversa_http.py`: listado, formulario, detalle y `POST` de devolución con `200/302/400/403/404/405/409`
-- [ ] T026 [P] [US1] Prueba de auditoría de devolución en `tests/integration/test_logistica_inversa_auditoria.py`: `Devolucion/alta`, una `LineaDevolucion/alta` por serie, `Devolucion/acta`, `Serie/estado`, `Serie/tecnico`, `Serie/asignada_en` y stock de 008
+- [X] T021 [P] [US1] Prueba de **CA-01** en `tests/integration/test_devolucion_registro.py`: `test_devolucion_libera_custodia`; series `DISPONIBLE`, `tecnico=None`, `asignada_en=None`, stock técnico abajo y general arriba
+- [X] T022 [US1] Prueba de **CA-02** en `tests/integration/test_devolucion_registro.py`: `test_series_devueltas_pueden_reasignarse`; la serie vuelve a estar disponible y puede asignarse a otro técnico
+- [X] T023 [US1] Prueba de stock en `tests/integration/test_devolucion_stock.py`: por material, `StockTecnico` baja y `StockGeneral` sube por el mismo total; total del tenant invariante; no hay negativos
+- [X] T024 [US1] Pruebas de validación en `tests/integration/test_devolucion_registro.py`: serie no asignada, reservada, instalada/inactiva, de otro tenant, fecha futura, sin series o duplicada se rechazan sin cambios
+- [X] T025 [P] [US1] Prueba de contrato HTTP en `tests/contract/test_logistica_inversa_http.py`: listado, formulario, detalle y `POST` de devolución con `200/302/400/403/404/405/409`
+- [X] T026 [P] [US1] Prueba de auditoría de devolución en `tests/integration/test_logistica_inversa_auditoria.py`: `Devolucion/alta`, una `LineaDevolucion/alta` por serie, `Devolucion/acta`, `Serie/estado`, `Serie/tecnico`, `Serie/asignada_en` y stock de 008
 
 ### Implementación de US1
 
-- [ ] T027 [US1] Implementar en `logistica_inversa/services.py` `registrar_devolucion`: validar cuenta, técnico, fecha, series y duplicados; en `transaction.atomic` bloquear `Tenant`, `StockGeneral` y `StockTecnico` por material y series por `id`; revalidar y crear cabecera/líneas
-- [ ] T028 [US1] Implementar en `logistica_inversa/services.py` el cambio de cada serie a `DISPONIBLE` con `tecnico=None`/`asignada_en=None`, y los ajustes agrupados por material con `decrementar_stock_tecnico` e `incrementar_stock_general`; no tocar otros niveles
-- [ ] T029 [US1] Integrar en `registrar_devolucion` la generación del acta dentro de la transacción, el guardado de ruta/hash, la auditoría `Devolucion/acta` y la limpieza del archivo si falla
-- [ ] T030 [US1] Implementar en `logistica_inversa/forms.py` el formulario de devolución: técnico del tenant, fecha por defecto hoy, series `ASIGNADA` del técnico no reservadas, observaciones; no aceptar tenant/región/material/estado del cliente
-- [ ] T031 [US1] Implementar en `logistica_inversa/views.py` y `logistica_inversa/urls.py` listado, creación y detalle de devoluciones, con login, CSRF y mapeo `400/403/404/405/409`; crear `templates/logistica_inversa/devoluciones_listado.html`, `devolucion_formulario.html` y `devolucion_detalle.html`
-- [ ] T032 [US1] Ejecutar `pytest tests/integration/test_devolucion_registro.py tests/integration/test_devolucion_stock.py tests/integration/test_logistica_inversa_auditoria.py tests/contract/test_logistica_inversa_http.py` y corregir hasta que CA-01, CA-02 y CA-06 de devolución estén en verde
+- [X] T027 [US1] Implementar en `logistica_inversa/services.py` `registrar_devolucion`: validar cuenta, técnico, fecha, series y duplicados; en `transaction.atomic` bloquear `Tenant`, `StockGeneral` y `StockTecnico` por material y series por `id`; revalidar y crear cabecera/líneas
+- [X] T028 [US1] Implementar en `logistica_inversa/services.py` el cambio de cada serie a `DISPONIBLE` con `tecnico=None`/`asignada_en=None`, y los ajustes agrupados por material con `decrementar_stock_tecnico` e `incrementar_stock_general`; no tocar otros niveles
+- [X] T029 [US1] Integrar en `registrar_devolucion` la generación del acta dentro de la transacción, el guardado de ruta/hash, la auditoría `Devolucion/acta` y la limpieza del archivo si falla
+- [X] T030 [US1] Implementar en `logistica_inversa/forms.py` el formulario de devolución: técnico del tenant, fecha por defecto hoy, series `ASIGNADA` del técnico no reservadas, observaciones; no aceptar tenant/región/material/estado del cliente
+- [X] T031 [US1] Implementar en `logistica_inversa/views.py` y `logistica_inversa/urls.py` listado, creación y detalle de devoluciones, con login, CSRF y mapeo `400/403/404/405/409`; crear `templates/logistica_inversa/devoluciones_listado.html`, `devolucion_formulario.html` y `devolucion_detalle.html`
+- [X] T032 [US1] Ejecutar `pytest tests/integration/test_devolucion_registro.py tests/integration/test_devolucion_stock.py tests/integration/test_logistica_inversa_auditoria.py tests/contract/test_logistica_inversa_http.py` y corregir hasta que CA-01, CA-02 y CA-06 de devolución estén en verde
 
 **Checkpoint**: US1 funcional; la devolución libera custodia, mueve stock al general y genera acta.
 
@@ -164,21 +216,21 @@ de baja una reservada o instalada y recibir rechazo.
 
 ### Pruebas de US2 (escribir primero, deben fallar)
 
-- [ ] T033 [P] [US2] Prueba de **CA-03** en `tests/integration/test_baja_registro.py`: `test_recuperacion_con_causa`; serie `ASIGNADA` con causa `AVERIA` queda `INACTIVA`, baja `StockTecnico`, no toca general y registra la causa
-- [ ] T034 [US2] Prueba de **CA-04** en `tests/integration/test_baja_registro.py`: `test_baja_por_migracion`; serie `DISPONIBLE` con causa `MIGRACION` queda `INACTIVA`, baja `StockGeneral`, no toca técnico y registra la causa
-- [ ] T035 [US2] Prueba de stock en `tests/integration/test_baja_stock.py`: solo se descuenta el nivel donde estaba la serie; no hay doble descuento ni negativos; el total del tenant baja en 1
-- [ ] T036 [US2] Pruebas de validación en `tests/integration/test_baja_registro.py`: causa faltante/inválida, serie reservada/instalada/inactiva, serie de otro tenant, serie inexistente y doble baja se rechazan
-- [ ] T037 [P] [US2] Prueba de contrato HTTP en `tests/contract/test_logistica_inversa_http.py`: listado, formulario, detalle y `POST` de baja con `200/302/400/403/404/405/409`
-- [ ] T038 [P] [US2] Prueba de auditoría de baja en `tests/integration/test_logistica_inversa_auditoria.py`: `BajaEquipo/alta`, `Serie/estado`, `Serie/tecnico`, `Serie/asignada_en` y stock del nivel correcto, con causa
+- [X] T033 [P] [US2] Prueba de **CA-03** en `tests/integration/test_baja_registro.py`: `test_recuperacion_con_causa`; serie `ASIGNADA` con causa `AVERIA` queda `INACTIVA`, baja `StockTecnico`, no toca general y registra la causa
+- [X] T034 [US2] Prueba de **CA-04** en `tests/integration/test_baja_registro.py`: `test_baja_por_migracion`; serie `DISPONIBLE` con causa `MIGRACION` queda `INACTIVA`, baja `StockGeneral`, no toca técnico y registra la causa
+- [X] T035 [US2] Prueba de stock en `tests/integration/test_baja_stock.py`: solo se descuenta el nivel donde estaba la serie; no hay doble descuento ni negativos; el total del tenant baja en 1
+- [X] T036 [US2] Pruebas de validación en `tests/integration/test_baja_registro.py`: causa faltante/inválida, serie reservada/instalada/inactiva, serie de otro tenant, serie inexistente y doble baja se rechazan
+- [X] T037 [P] [US2] Prueba de contrato HTTP en `tests/contract/test_logistica_inversa_http.py`: listado, formulario, detalle y `POST` de baja con `200/302/400/403/404/405/409`
+- [X] T038 [P] [US2] Prueba de auditoría de baja en `tests/integration/test_logistica_inversa_auditoria.py`: `BajaEquipo/alta`, `Serie/estado`, `Serie/tecnico`, `Serie/asignada_en` y stock del nivel correcto, con causa
 
 ### Implementación de US2
 
-- [ ] T039 [US2] Implementar en `logistica_inversa/services.py` `registrar_baja_equipo`: validar cuenta, serie, causa y estado; en `transaction.atomic` bloquear `Tenant`, la fila de stock correspondiente y la serie; revalidar y crear `BajaEquipo`
-- [ ] T040 [US2] Implementar en `logistica_inversa/services.py` `registrar_baja_equipo` el ajuste de stock correcto: `decrementar_stock_tecnico` si estaba `ASIGNADA`, `decrementar_stock_general` si estaba `DISPONIBLE`; nunca ambos
-- [ ] T041 [US2] Implementar en `registrar_baja_equipo` el cambio a `INACTIVA`, la limpieza de `tecnico`/`asignada_en` y la auditoría `BajaEquipo/alta`, `Serie/estado` y custodia
-- [ ] T042 [US2] Implementar en `logistica_inversa/forms.py` el formulario de baja: serie existente del tenant, causa `AVERIA`/`MIGRACION`/`OTRO`, observaciones; no aceptar material, tenant ni estado del cliente
-- [ ] T043 [US2] Implementar en `logistica_inversa/views.py` y `logistica_inversa/urls.py` listado, creación y detalle de bajas; crear `templates/logistica_inversa/bajas_listado.html` y `baja_formulario.html`
-- [ ] T044 [US2] Ejecutar `pytest tests/integration/test_baja_registro.py tests/integration/test_baja_stock.py tests/integration/test_logistica_inversa_auditoria.py tests/contract/test_logistica_inversa_http.py` y corregir hasta que CA-03 y CA-04 estén en verde
+- [X] T039 [US2] Implementar en `logistica_inversa/services.py` `registrar_baja_equipo`: validar cuenta, serie, causa y estado; en `transaction.atomic` bloquear `Tenant`, la fila de stock correspondiente y la serie; revalidar y crear `BajaEquipo`
+- [X] T040 [US2] Implementar en `logistica_inversa/services.py` `registrar_baja_equipo` el ajuste de stock correcto: `decrementar_stock_tecnico` si estaba `ASIGNADA`, `decrementar_stock_general` si estaba `DISPONIBLE`; nunca ambos
+- [X] T041 [US2] Implementar en `registrar_baja_equipo` el cambio a `INACTIVA`, la limpieza de `tecnico`/`asignada_en` y la auditoría `BajaEquipo/alta`, `Serie/estado` y custodia
+- [X] T042 [US2] Implementar en `logistica_inversa/forms.py` el formulario de baja: serie existente del tenant, causa `AVERIA`/`MIGRACION`/`OTRO`, observaciones; no aceptar material, tenant ni estado del cliente
+- [X] T043 [US2] Implementar en `logistica_inversa/views.py` y `logistica_inversa/urls.py` listado, creación y detalle de bajas; crear `templates/logistica_inversa/bajas_listado.html` y `baja_formulario.html`
+- [X] T044 [US2] Ejecutar `pytest tests/integration/test_baja_registro.py tests/integration/test_baja_stock.py tests/integration/test_logistica_inversa_auditoria.py tests/contract/test_logistica_inversa_http.py` y corregir hasta que CA-03 y CA-04 estén en verde
 
 **Checkpoint**: US2 funcional; la baja saca la serie del nivel correcto y la deja `INACTIVA`.
 
@@ -194,16 +246,16 @@ metadatos, tabla completa y hash; alterar el archivo y comprobar que la descarga
 
 ### Pruebas de US3 (escribir primero, deben fallar)
 
-- [ ] T045 [US3] Prueba de **CA-05** en `tests/unit/test_logistica_inversa_acta.py`: `test_generacion_acta`; el acta contiene todas las series devueltas, NIF, material, descripción y fecha, con metadatos correctos
-- [ ] T046 [US3] Prueba de hash y descarga en `tests/integration/test_logistica_inversa_acta.py`: descarga `200` con `.xlsx`; archivo ausente `404`; hash alterado `409`; no se expone la ruta física
-- [ ] T047 [P] [US3] Prueba de rollback del acta en `tests/integration/test_devolucion_registro.py`: si falla la generación, no se crea la devolución, no se mueve stock y no queda archivo parcial
-- [ ] T048 [P] [US3] Prueba de contrato HTTP en `tests/contract/test_logistica_inversa_http.py`: `GET /logistica-inversa/devoluciones/<id>/acta/` con `200/404/405/409` y sin `POST`
+- [X] T045 [US3] Prueba de **CA-05** en `tests/unit/test_logistica_inversa_acta.py`: `test_generacion_acta`; el acta contiene todas las series devueltas, NIF, material, descripción y fecha, con metadatos correctos
+- [X] T046 [US3] Prueba de hash y descarga en `tests/integration/test_logistica_inversa_acta.py`: descarga `200` con `.xlsx`; archivo ausente `404`; hash alterado `409`; no se expone la ruta física
+- [X] T047 [P] [US3] Prueba de rollback del acta en `tests/integration/test_devolucion_registro.py`: si falla la generación, no se crea la devolución, no se mueve stock y no queda archivo parcial
+- [X] T048 [P] [US3] Prueba de contrato HTTP en `tests/contract/test_logistica_inversa_http.py`: `GET /logistica-inversa/devoluciones/<id>/acta/` con `200/404/405/409` y sin `POST`
 
 ### Implementación de US3
 
-- [ ] T049 [US3] Implementar en `logistica_inversa/services.py` `verificar_hash_acta` y la resolución segura de ruta bajo `ACTAS_DIR`/`MEDIA_ROOT`; rechazar `..`, rutas absolutas y salidas del directorio
-- [ ] T050 [US3] Implementar en `logistica_inversa/views.py` y `logistica_inversa/urls.py` la descarga del acta con verificación de hash, nombre seguro y sin exponer la ruta física; añadir el enlace en `templates/logistica_inversa/devolucion_detalle.html`
-- [ ] T051 [US3] Ejecutar `pytest tests/unit/test_logistica_inversa_acta.py tests/integration/test_logistica_inversa_acta.py tests/integration/test_devolucion_registro.py tests/contract/test_logistica_inversa_http.py` y corregir hasta que CA-05 esté en verde
+- [X] T049 [US3] Implementar en `logistica_inversa/services.py` `verificar_hash_acta` y la resolución segura de ruta bajo `ACTAS_DIR`/`MEDIA_ROOT`; rechazar `..`, rutas absolutas y salidas del directorio
+- [X] T050 [US3] Implementar en `logistica_inversa/views.py` y `logistica_inversa/urls.py` la descarga del acta con verificación de hash, nombre seguro y sin exponer la ruta física; añadir el enlace en `templates/logistica_inversa/devolucion_detalle.html`
+- [X] T051 [US3] Ejecutar `pytest tests/unit/test_logistica_inversa_acta.py tests/integration/test_logistica_inversa_acta.py tests/integration/test_devolucion_registro.py tests/contract/test_logistica_inversa_http.py` y corregir hasta que CA-05 esté en verde
 
 **Checkpoint**: US3 funcional; el acta es completa, inmutable y se descarga verificando el hash.
 
@@ -219,18 +271,18 @@ operaciones concurrentes, y comprobar que no hay estados parciales ni datos de o
 
 ### Pruebas de US4 (escribir primero, deben fallar)
 
-- [ ] T052 [US4] Prueba de **CA-06** en `tests/integration/test_logistica_inversa_auditoria.py`: `test_auditoria_devoluciones`; todos los eventos de devolución con actor, fecha y valores anterior/nuevo
-- [ ] T053 [US4] Prueba de auditoría de baja en `tests/integration/test_logistica_inversa_auditoria.py`: `BajaEquipo/alta`, estado y stock del nivel correcto, sin duplicar 008
-- [ ] T054 [US4] Prueba de prohibiciones en `tests/integration/test_logistica_inversa_auditoria.py`: sin contraseñas, tokens, secretos, binarios, rutas absolutas ni datos de otro tenant
-- [ ] T055 [US4] Prueba de concurrencia en `tests/integration/test_logistica_inversa_concurrencia.py`: dos devoluciones de la misma serie, dos bajas de la misma serie, devolución vs traspaso y orden de bloqueo sin interbloqueo
-- [ ] T056 [US4] Prueba de aislamiento en `tests/integration/test_logistica_inversa_concurrencia.py`: tenant A no ve ni opera devoluciones/bajas de B; región ajena `404`; series/stock de otro tenant no se consultan; RLS activa si está disponible
-- [ ] T057 [US4] Prueba de rendimiento en `tests/integration/test_logistica_inversa_concurrencia.py`: devolución de 100 series en menos de 2 segundos, sin una consulta por serie
+- [X] T052 [US4] Prueba de **CA-06** en `tests/integration/test_logistica_inversa_auditoria.py`: `test_auditoria_devoluciones`; todos los eventos de devolución con actor, fecha y valores anterior/nuevo
+- [X] T053 [US4] Prueba de auditoría de baja en `tests/integration/test_logistica_inversa_auditoria.py`: `BajaEquipo/alta`, estado y stock del nivel correcto, sin duplicar 008
+- [X] T054 [US4] Prueba de prohibiciones en `tests/integration/test_logistica_inversa_auditoria.py`: sin contraseñas, tokens, secretos, binarios, rutas absolutas ni datos de otro tenant
+- [X] T055 [US4] Prueba de concurrencia en `tests/integration/test_logistica_inversa_concurrencia.py`: dos devoluciones de la misma serie, dos bajas de la misma serie, devolución vs traspaso y orden de bloqueo sin interbloqueo
+- [X] T056 [US4] Prueba de aislamiento en `tests/integration/test_logistica_inversa_concurrencia.py`: tenant A no ve ni opera devoluciones/bajas de B; región ajena `404`; series/stock de otro tenant no se consultan; RLS activa si está disponible
+- [X] T057 [US4] Prueba de rendimiento en `tests/integration/test_logistica_inversa_concurrencia.py`: devolución de 100 series en menos de 2 segundos, sin una consulta por serie
 
 ### Implementación de US4
 
-- [ ] T058 [US4] Completar en `logistica_inversa/services.py` las guardas de atomicidad y bloqueo: una sola transacción externa, sin commit propio, revalidación dentro del bloqueo, orden `Tenant → StockGeneral (material) → StockTecnico (material) → Serie` y limpieza del acta si falla
-- [ ] T059 [US4] Revisar `logistica_inversa/services.py`, `logistica_inversa/acta.py`, `logistica_inversa/models.py` y `logistica_inversa/views.py`: sin `F()` ciego, sin eliminar series, sin doble decremento, sin permisos Django, sin correo/Celery y sin `tenant_id` del cliente
-- [ ] T060 [US4] Ejecutar `pytest tests/integration/test_logistica_inversa_auditoria.py tests/integration/test_logistica_inversa_concurrencia.py` y corregir hasta que la auditoría, el aislamiento y la concurrencia estén en verde
+- [X] T058 [US4] Completar en `logistica_inversa/services.py` las guardas de atomicidad y bloqueo: una sola transacción externa, sin commit propio, revalidación dentro del bloqueo, orden `Tenant → StockGeneral (material) → StockTecnico (material) → Serie` y limpieza del acta si falla
+- [X] T059 [US4] Revisar `logistica_inversa/services.py`, `logistica_inversa/acta.py`, `logistica_inversa/models.py` y `logistica_inversa/views.py`: sin `F()` ciego, sin eliminar series, sin doble decremento, sin permisos Django, sin correo/Celery y sin `tenant_id` del cliente
+- [X] T060 [US4] Ejecutar `pytest tests/integration/test_logistica_inversa_auditoria.py tests/integration/test_logistica_inversa_concurrencia.py` y corregir hasta que la auditoría, el aislamiento y la concurrencia estén en verde
 
 **Checkpoint**: US4 funcional; la logística inversa es atómica, auditable, aislada y concurrente.
 
@@ -238,16 +290,16 @@ operaciones concurrentes, y comprobar que no hay estados parciales ni datos de o
 
 ## Fase 7: Polish y preocupaciones transversales
 
-- [ ] T061 [P] Ejecutar `pytest -k "logistica_inversa or devolucion or baja"` sobre `tests/unit`, `tests/integration` y `tests/contract` con PostgreSQL y corregir cualquier fallo
+- [X] T061 [P] Ejecutar `pytest -k "logistica_inversa or devolucion or baja"` sobre `tests/unit`, `tests/integration` y `tests/contract` con PostgreSQL y corregir cualquier fallo
 - [ ] T062 [P] Ejecutar `pytest --cov=logistica_inversa` y revisar que cada validación, excepción y transición de `logistica_inversa/services.py` tenga al menos una prueba
-- [ ] T063 [P] Revisar `logistica_inversa/acta.py` y `logistica_inversa/services.py`: acta de una hoja, hash, ruta segura, sin binarios en base/auditoría y sin correo
-- [ ] T064 [P] Revisar `logistica_inversa/models.py` y las migraciones: `tenant`/`region` obligatorios, RLS, `OneToOneField` de baja, `unique(devolucion, serie)` y ningún cambio a tablas de stock o series fuera de `INACTIVA`
-- [ ] T065 [P] Revisar `logistica_inversa/views.py`, `logistica_inversa/urls.py` y `templates/logistica_inversa/`: sin lógica de negocio, sin datos de otro tenant, sin `POST` para el acta y con CSRF
-- [ ] T066 [P] Actualizar `05-especificaciones/011-logistica-inversa-y-devoluciones/quickstart.md` con los comandos y resultados reales de la suite, sin duplicar contratos ni modelos
-- [ ] T067 [P] Verificar que las correcciones de 004/009/012 y `04-contratos/acta-devoluciones.md` siguen aplicadas
-- [ ] T068 Ejecutar `python manage.py check` y `python manage.py migrate --check`; confirmar que no hay migraciones pendientes ni errores de configuración
+- [X] T063 [P] Revisar `logistica_inversa/acta.py` y `logistica_inversa/services.py`: acta de una hoja, hash, ruta segura, sin binarios en base/auditoría y sin correo
+- [X] T064 [P] Revisar `logistica_inversa/models.py` y las migraciones: `tenant`/`region` obligatorios, RLS, `OneToOneField` de baja, `unique(devolucion, serie)` y ningún cambio a tablas de stock o series fuera de `INACTIVA`
+- [X] T065 [P] Revisar `logistica_inversa/views.py`, `logistica_inversa/urls.py` y `templates/logistica_inversa/`: sin lógica de negocio, sin datos de otro tenant, sin `POST` para el acta y con CSRF
+- [X] T066 [P] Actualizar `05-especificaciones/011-logistica-inversa-y-devoluciones/quickstart.md` con los comandos y resultados reales de la suite, sin duplicar contratos ni modelos
+- [X] T067 [P] Verificar que las correcciones de 004/009/012 y `04-contratos/acta-devoluciones.md` siguen aplicadas
+- [X] T068 Ejecutar `python manage.py check` y `python manage.py migrate --check`; confirmar que no hay migraciones pendientes ni errores de configuración
 - [ ] T069 Recorrer los escenarios de `quickstart.md` para CA-01…CA-06 y registrar el resultado; corregir implementación o documento antes de cerrar
-- [ ] T070 Revisar `logistica_inversa/services.py`, `logistica_inversa/views.py`, `config/settings/base.py` y `requirements-dev.txt`: 011 no agrega dependencias, correo, Celery ni permisos Django, y ninguna serie se elimina
+- [X] T070 Revisar `logistica_inversa/services.py`, `logistica_inversa/views.py`, `config/settings/base.py` y `requirements-dev.txt`: 011 no agrega dependencias, correo, Celery ni permisos Django, y ninguna serie se elimina
 
 ---
 
