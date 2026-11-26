@@ -2,40 +2,99 @@
 {% block title %}Registrar materiales · Lari{% endblock %}
 {% block contenido %}
   <h1>Registrar materiales</h1>
+
   <form method="get" action="{% url 'registrar_materiales' %}" class="buscador">
     <label>Técnico
-      <select name="tecnico">
-        {% for item in tecnicos %}<option value="{{ item.pk }}" {% if tecnico and tecnico.pk == item.pk %}selected{% endif %}>{{ item.nif }}</option>{% endfor %}
+      <select name="tecnico" required>
+        <option value="">Selecciona un técnico</option>
+        {% for item in tecnicos %}
+          <option value="{{ item.pk }}" {% if tecnico and tecnico.pk == item.pk %}selected{% endif %}>
+            {{ item.nif }} - {{ item.nombre }}
+          </option>
+        {% endfor %}
       </select>
     </label>
-    <label>Periodo <input type="month" name="periodo" value="{{ periodo }}"></label>
-    <label>Número de orden <input type="text" name="numero_orden" value="{{ numero }}"></label>
-    <button type="submit">Buscar</button>
+    <label>Periodo
+      <input type="month" name="periodo" value="{{ periodo }}" required>
+    </label>
+    <button type="submit">Ver órdenes</button>
   </form>
-  {% if orden %}
-    <p>Orden {{ orden.numero_normalizado }} · {{ orden.tecnico.nif }} · {{ orden.periodo }}</p>
-    <p><a href="{% url 'historial_orden' orden.pk %}">Ver historial</a></p>
-  {% endif %}
-  <form method="post" action="{% url 'guardar_materiales' %}">
-    {% csrf_token %}
-    <input type="hidden" name="tecnico" value="{{ tecnico.pk }}">
-    <input type="hidden" name="periodo" value="{{ periodo }}">
-    <input type="hidden" name="numero_orden" value="{{ numero }}">
-    <label>Fecha de instalación <input type="date" name="fecha_instalacion" required></label>
+
+  {% if not tecnico %}
+    <p class="ayuda">Selecciona un técnico para ver sus órdenes pendientes de materiales.</p>
+  {% elif orden %}
+    <div class="cabecera-seccion">
+      <div>
+        <h2>Orden {{ orden.numero_normalizado }}</h2>
+        <p class="ayuda">
+          {{ orden.tecnico.nif }} · {{ orden.periodo }}
+          <span aria-hidden="true">·</span>
+          <a href="{% url 'historial_orden' orden.pk %}">Ver historial</a>
+        </p>
+      </div>
+      <a class="boton boton-secundario" href="{% url 'registrar_materiales' %}?tecnico={{ tecnico.pk }}&periodo={{ periodo }}">
+        Volver a las órdenes
+      </a>
+    </div>
+
+    <form method="post" action="{% url 'guardar_materiales' %}">
+      {% csrf_token %}
+      <input type="hidden" name="tecnico" value="{{ tecnico.pk }}">
+      <input type="hidden" name="periodo" value="{{ periodo }}">
+      <input type="hidden" name="numero_orden" value="{{ numero }}">
+      <label>Fecha de instalación
+        <input type="date" name="fecha_instalacion" required>
+      </label>
+      <table class="tabla">
+        <thead><tr><th>Material</th><th>Disponible</th><th>Cantidad usada</th></tr></thead>
+        <tbody>
+          {% for fila in filas %}
+            <tr>
+              <td>{{ fila.material.codigo }} - {{ fila.material.descripcion }}</td>
+              <td>{{ fila.disponible }}</td>
+              <td><input type="number" min="0" name="cantidades[{{ fila.material.pk }}]" value="{{ fila.cantidad }}"></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3">No hay materiales habilitados.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <button type="submit">Guardar materiales</button>
+    </form>
+  {% else %}
+    <h2>Órdenes por cargar</h2>
+    {% if numero %}
+      <p class="mensaje mensaje-aviso">
+        La orden {{ numero }} no existe para este técnico y periodo.
+      </p>
+    {% endif %}
     <table class="tabla">
-      <thead><tr><th>Material</th><th>Disponible</th><th>Cantidad usada</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Orden</th>
+          <th>Periodo</th>
+          <th>Creada</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
       <tbody>
-        {% for fila in filas %}
+        {% for item in ordenes %}
           <tr>
-            <td>{{ fila.material.codigo }} - {{ fila.material.descripcion }}</td>
-            <td>{{ fila.disponible }}</td>
-            <td><input type="number" min="0" name="cantidades[{{ fila.material.pk }}]" value="{{ fila.cantidad }}"></td>
+            <td class="mono">{{ item.numero_normalizado }}</td>
+            <td>{{ item.periodo }}</td>
+            <td>{{ item.creado_en|date:"Y-m-d" }}</td>
+            <td class="acciones">
+              <a class="boton-accion" href="{% url 'registrar_materiales' %}?tecnico={{ tecnico.pk }}&periodo={{ item.periodo }}&numero_orden={{ item.numero_normalizado }}">Registrar</a>
+            </td>
           </tr>
         {% empty %}
-          <tr><td colspan="3">No hay materiales habilitados.</td></tr>
+          <tr>
+            <td colspan="4" class="sin-resultados">
+              No hay órdenes pendientes para este técnico en el periodo.
+            </td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
-    <button type="submit">Guardar materiales</button>
-  </form>
+  {% endif %}
 {% endblock %}

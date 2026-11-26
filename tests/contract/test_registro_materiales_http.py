@@ -8,6 +8,7 @@ from registro_materiales.services import (
     obtener_o_crear_orden,
     registrar_saldo_inicial,
 )
+from tecnicos.models import Tecnico
 
 PERIODO = "2026-11"
 
@@ -59,6 +60,33 @@ def test_flujo_http_carga_materiales_y_exportacion(
     )
     assert respuesta.status_code == 302
     assert OrdenLiquidacion.objects.count() == 2
+
+    otro = Tecnico.objects.create(
+        tenant=tenant,
+        nif="LA2222",
+        nombre="Otro técnico",
+        creado_por=usuario_tenant,
+    )
+    OrdenLiquidacion.objects.create(
+        tenant=tenant,
+        tecnico=otro,
+        numero_original="OTRA1",
+        numero_normalizado="OTRA1",
+        periodo=PERIODO,
+        creado_por=usuario_tenant,
+    )
+
+    listado = cliente_tenant.get(
+        reverse("registrar_materiales"),
+        {"tecnico": tecnico.pk, "periodo": PERIODO},
+    )
+    contenido_listado = listado.content.decode()
+    assert listado.status_code == 200
+    assert "Órdenes por cargar" in contenido_listado
+    assert "A1" in contenido_listado
+    assert "B2" in contenido_listado
+    assert "OTRA1" not in contenido_listado
+    assert "Guardar materiales" not in contenido_listado
 
     assert (
         cliente_tenant.get(

@@ -412,6 +412,9 @@ Toda tabla con operaciones por fila reserva una última columna «Acciones» ali
 
 `tecnicos/stock_tecnico.html` es el detalle: cabecera con nombre, NIF y estado; botones «Volver a Stock actual» y «Ver ficha»; resumen de materiales y unidades; y tabla de Material, Descripción, Lote, Tipo y Cantidad. Debajo, la sección **«Series en custodia»** lista las series `ASIGNADA` del técnico con Material, Descripción, Lote, Serie y fecha de asignación; el número de serie va en monoespaciada. Los códigos van en monoespaciada y la cantidad se alinea a la derecha con `font-variant-numeric: tabular-nums`. Solo se listan filas con cantidad mayor que cero; si no hay, se muestra el estado vacío. La entrada vive en Operación como «Stock actual» y también como botón secundario en la lista de Técnicos.
 
+### Registro de materiales
+`registro_materiales/materiales.html` usa un `.buscador` con selector de técnico y periodo; al enviarlo muestra la tabla **«Órdenes por cargar»** con las órdenes pendientes de ese técnico y periodo, su fecha de creación y el botón `Registrar` de cada fila. El formulario de materiales solo aparece después de elegir una orden y ofrece «Volver a las órdenes». No se escribe el número de orden a mano en el flujo principal: la lista es la fuente de selección.
+
 ### Signature: shell autenticado
 La estructura de todas las pantallas privadas. Sidebar de `15rem` en Tapa con la marca gráfica, grupos por rol, iconos de trazo único y «Mi perfil» al pie; topbar blanca de `3.5rem` con correo, rol y «Cerrar sesión» con icono; contenido sobre Papel con máximo `1100px`. No hay sombras: sidebar y topbar se separan del contenido por el cambio de superficie y el filete. En móvil la sidebar se convierte en drawer con overlay y el botón «Menú» queda en la topbar.
 

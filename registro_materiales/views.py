@@ -253,6 +253,11 @@ def materiales(request):
     ).first()
     numero = request.GET.get("numero_orden", "")
     orden, filas = _contexto_materiales(tenant, tecnico, periodo, numero)
+    ordenes = []
+    if tecnico is not None and orden is None:
+        ordenes = services.ordenes_pendientes(
+            tenant, periodo, tecnico=tecnico
+        )
     return render(
         request,
         "registro_materiales/materiales.html",
@@ -262,6 +267,7 @@ def materiales(request):
             "tecnico": tecnico,
             "numero": numero,
             "orden": orden,
+            "ordenes": ordenes,
             "filas": filas,
         },
     )
