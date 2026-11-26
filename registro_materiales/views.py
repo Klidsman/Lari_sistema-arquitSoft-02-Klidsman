@@ -11,11 +11,12 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 from materiales.models import Material
 from series.models import EstadoSerie, Serie
+from stock.models import StockTecnico
 from stock.services import obtener_stock_tecnico
 from tecnicos.models import Tecnico
 
 from . import exportacion, services
-from .models import CierreMensual, MaterialHabilitado
+from .models import CierreMensual
 
 
 def _respuesta(mensaje, status):
@@ -197,42 +198,6 @@ def pendientes(request):
     )
 
 
-@login_required
-@require_http_methods(["GET", "POST"])
-def catalogo(request):
-    tenant, error = _tenant_o_error(request)
-    if error is not None:
-        return error
-    if request.method == "POST":
-        try:
-            material = Material.objects.filter(
-                pk=request.POST.get("material")
-            ).first()
-            services.habilitar_material(
-                tenant,
-                material,
-                request.POST.get("activo") == "1",
-                request.usuario,
-                int(request.POST.get("orden") or 0),
-            )
-        except services.ErrorRegistro as exc:
-            return _error(exc)
-        messages.success(request, "Catálogo actualizado")
-        return redirect("catalogo_materiales")
-    return render(
-        request,
-        "registro_materiales/catalogo.html",
-        {
-            "habilitados": MaterialHabilitado.objects.filter(
-                tenant=tenant
-            ).select_related("material"),
-            "materiales": Material.objects.filter(activo=True).order_by(
-                "codigo"
-            ),
-        },
-    )
-
-
 def _contexto_materiales(tenant, tecnico, periodo, numero):
     orden = None
     if tecnico is not None and numero:
@@ -272,9 +237,20 @@ def _contexto_materiales(tenant, tecnico, periodo, numero):
             if all(opcion.pk != serie.pk for opcion in opciones_material):
                 opciones_material.append(serie)
 
+    ids_materiales = set(series_por_material) | set(usos)
+    if tecnico is not None:
+        ids_materiales.update(
+            StockTecnico.objects.filter(
+                tenant=tenant,
+                tecnico=tecnico,
+                cantidad__gt=0,
+            ).values_list("material_id", flat=True)
+        )
+
     filas = []
-    for habilitado in services.materiales_habilitados(tenant):
-        material = habilitado.material
+    for material in Material.objects.filter(
+        pk__in=ids_materiales
+    ).order_by("codigo"):
         uso = usos.get(material.pk)
         opciones = [
             {"serie": serie, "usada": serie.pk in usadas}

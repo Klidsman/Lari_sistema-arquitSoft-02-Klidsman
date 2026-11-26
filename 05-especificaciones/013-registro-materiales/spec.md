@@ -43,7 +43,7 @@ El módulo descuenta el stock del técnico al registrar el consumo. No modifica 
 
 | Término | Significado |
 |---|---|
-| Catálogo habilitado | Materiales del catálogo compartido que el tenant puede usar en el módulo |
+| Materiales disponibles | Materiales que el técnico tiene en `StockTecnico` o que ya tienen uso en la orden |
 | Saldo inicial | Cantidad de un material al inicio de un mes |
 | Despacho del almacén | Cantidad de material recogida en el mes, registrada en `DespachoAlmacen` |
 | Orden | Orden de instalación identificada por número, técnico y mes |
@@ -55,13 +55,13 @@ El módulo descuenta el stock del técnico al registrar el consumo. No modifica 
 
 ## 5. Datos
 
-### 5.1 Catálogo habilitado
+### 5.1 Materiales disponibles
 
-- Cada tenant tiene una lista fija de materiales habilitados.
-- Solo se pueden registrar usos y saldos de materiales habilitados y activos.
-- Un material deshabilitado conserva su historial, pero no se ofrece en nuevas órdenes.
-- El tenant puede activar o desactivar materiales desde la pantalla de catálogo.
+- No hay habilitación manual de materiales: el catálogo de trabajo es el stock del técnico.
+- El formulario muestra los materiales con `StockTecnico.cantidad > 0` o series `ASIGNADA` del técnico.
+- Si una orden ya tiene uso de un material, ese material sigue visible aunque su stock haya bajado a 0.
 - El catálogo referencia `materiales.Material`; no duplica códigos, descripciones ni lotes.
+- `MaterialHabilitado` queda como dato histórico de versiones anteriores y no se usa en el flujo nuevo.
 
 ### 5.2 Despacho del almacén
 
@@ -171,7 +171,7 @@ El módulo descuenta el stock del técnico al registrar el consumo. No modifica 
 1. El tenant elige **Registrar materiales**.
 2. Selecciona el técnico y el mes (por defecto el actual).
 3. Busca la orden por número exacto dentro de ese mes, sin distinguir mayúsculas/minúsculas.
-4. Si no existe en ese mes, se muestra el catálogo habilitado con cantidades en 0; al guardar se crea la orden.
+4. Si no existe en ese mes, se muestra el stock actual del técnico; al guardar se crea la orden.
 5. Si existe, se abre para editar.
 6. Si el número existe para el mismo técnico en otro mes, no se muestra: es otra orden. Para abrirla, se selecciona ese otro mes.
 7. Ingresa una sola fecha de instalación; por defecto hoy y editable.
@@ -242,8 +242,8 @@ manuales existentes se conservan solo como dato histórico para los meses ya reg
 ### CA-01: Menú y aislamiento
 Dada la cuenta del tenant, cuando entra al módulo, entonces ve las opciones del módulo y solo opera con técnicos, materiales, órdenes y saldos de su tenant.
 
-### CA-02: Catálogo habilitado
-Dado un tenant con materiales habilitados, cuando registra una orden nueva, entonces ve solo los materiales activos de su catálogo con cantidades en 0.
+### CA-02: Materiales disponibles por stock
+Dado un técnico con stock en `StockTecnico`, cuando abre una orden nueva, entonces ve solo los materiales que tiene en custodia, con su cantidad disponible.
 
 ### CA-03: Carga masiva normalizada
 Dada una lista con espacios, líneas vacías, mayúsculas/minúsculas y duplicados, cuando se procesa, entonces se normaliza, se descartan vacías y se eliminan duplicados.

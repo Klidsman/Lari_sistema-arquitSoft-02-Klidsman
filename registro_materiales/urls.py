@@ -25,7 +25,6 @@ urlpatterns = [
         views.historial,
         name="historial_orden",
     ),
-    path("catalogo/", views.catalogo, name="catalogo_materiales"),
     path("materiales/", views.materiales, name="registrar_materiales"),
     path(
         "materiales/contexto/",

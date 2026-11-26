@@ -221,7 +221,7 @@ cantidades atípicas y guardar historial.
 - [X] T042 [US2] Implementar en `registro_materiales/services.py` el cálculo de disponible/uso total y el bloqueo `SaldoInsuficiente` con disponible, usado y faltante
 - [X] T043 [US2] Implementar en `registro_materiales/services.py` la detección de cantidad atípica con promedio mensual de los últimos 3 meses cerrados, `AdvertenciaUso` y `resolver_advertencia`; sin historial no advertir
 - [X] T044 [US2] Implementar en `registro_materiales/services.py` la persistencia de usos (conservar 0), actualización de fecha/periodo y auditoría
-- [X] T045 [US2] Implementar formularios, vistas, URLs y plantillas `templates/registro_materiales/registrar_materiales.html`, `_catalogo_orden.html`, `catalogo.html` e `historial.html`
+- [X] T045 [US2] Implementar formularios, vistas, URLs y plantillas de materiales, contexto e historial; `catalogo.html` y la habilitación manual se retiraron el 2026-11-26
 - [X] T046 [US2] Ejecutar `pytest tests/integration/test_materiales_uso.py tests/integration/test_bloqueo_negativo.py tests/integration/test_auditoria.py tests/contract/test_registro_http.py` y corregir hasta que US2 esté en verde
 
 **Checkpoint**: US2 funcional; el uso se registra, se bloquea el negativo y se advierte lo atípico.

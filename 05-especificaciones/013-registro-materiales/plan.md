@@ -33,7 +33,7 @@ asignaciones, traspasos ni recojos, y la conciliación del Excel del almacén qu
 | Base de datos | PostgreSQL 16+; sin SQLite, tampoco en pruebas |
 | Interfaz | Django + HTMX; carga masiva, materiales, entradas, dashboard, cierre y exportación |
 | App | `registro_materiales` (013) |
-| Catálogo | `materiales.Material`; habilitación por tenant |
+| Catálogo | `materiales.Material`; los materiales visibles salen de `StockTecnico` |
 | Despachos | `DespachoAlmacen` existente en 013; solo lectura para el cálculo |
 | Stock | **Descuenta `StockTecnico`; no toca `StockGeneral`** |
 | Conciliación | **No se lee, genera ni modifica** |
@@ -52,7 +52,7 @@ asignaciones, traspasos ni recojos, y la conciliación del Excel del almacén qu
   `auditoria.RegistroCambio` con `tenant`.
 - **002**: `materiales.Material` con `codigo`, `descripcion`, `lote` y `es_seriado`.
 - **003**: `tecnicos.Tecnico` con `tenant`, `nif` y `activo`.
-- **013 base**: `MaterialHabilitado`, `SaldoInicialPeriodo`, `DespachoAlmacen`,
+- **013 base histórica**: `MaterialHabilitado`, `SaldoInicialPeriodo`, `DespachoAlmacen`,
   `OrdenLiquidacion` y `UsoMaterialOrden` existentes o creados una sola vez en este módulo.
 - **Infraestructura**: PostgreSQL con rol sin `SUPERUSER` ni `BYPASSRLS`.
 
@@ -502,7 +502,6 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 | `/registro-materiales/ordenes/cargar/preview/` | POST | Resumen antes de guardar |
 | `/registro-materiales/ordenes/cargas/<id>/deshacer/` | POST | Deshacer carga |
 | `/registro-materiales/ordenes/pendientes/` | GET | Panel de pendientes |
-| `/registro-materiales/catalogo/` | GET/POST | Catálogo habilitado; activar/desactivar |
 | `/registro-materiales/materiales/` | GET/POST | Buscar orden y registrar materiales |
 | `/registro-materiales/materiales/contexto/` | GET | Fragmento HTMX con orden o catálogo |
 | `/registro-materiales/materiales/guardar/` | POST | Guardar uso |
@@ -523,9 +522,7 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 
 ### Pantallas
 
-- **Menú**: Cargar órdenes, Registrar materiales, Órdenes pendientes, Dashboard, Cierre,
-  Catálogo habilitado.
-- **Catálogo**: materiales habilitados con activar/desactivar.
+- **Menú**: Cargar órdenes, Registrar materiales, Órdenes pendientes, Dashboard y Cierre.
 - **Cargar órdenes**: técnico, mes, textarea, resumen, confirmar, deshacer.
 - **Registrar materiales**: técnico, mes, búsqueda, fecha, catálogo y cantidades.
 - **Pendientes**: órdenes sin materiales, filtro por antigüedad.
@@ -583,7 +580,7 @@ Un caso por criterio de aceptación, más cálculos, concurrencia y aislamiento.
 | CA | Prueba principal |
 |---|---|
 | CA-01 | `test_menu_y_aislamiento` |
-| CA-02 | `test_catalogo_habilitado_en_orden` |
+| CA-02 | `test_stock_actual_lista_materiales_para_registro` |
 | CA-03 | `test_normalizacion_lista` |
 | CA-04 | `test_carga_idempotente` |
 | CA-05 | `test_orden_otro_tecnico_se_crea` |

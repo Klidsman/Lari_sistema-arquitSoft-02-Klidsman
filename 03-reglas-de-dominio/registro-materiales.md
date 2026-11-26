@@ -36,13 +36,13 @@ El saldo final de un mes es el saldo inicial del mes siguiente. El saldo inicial
 | Orden | Orden identificada por número, técnico y mes |
 | Periodo | Mes de la orden o saldo, en formato `YYYY-MM` |
 
-## 4. Catálogo habilitado
+## 4. Materiales disponibles
 
-- El catálogo es fijo por tenant.
-- Solo se puede registrar uso o saldo de materiales habilitados y activos.
-- Deshabilitar un material no borra su historial.
-- Un material deshabilitado no se puede usar en nuevas órdenes.
+- No hay habilitación manual de materiales.
+- El formulario muestra los materiales con stock en `StockTecnico` del técnico o series `ASIGNADA`.
+- Un material que ya tiene uso en la orden sigue visible para poder editarlo.
 - El catálogo referencia `materiales.Material`; no duplica códigos ni descripciones.
+- `MaterialHabilitado` queda como dato histórico y no participa del flujo nuevo.
 
 ## 5. Carga masiva de órdenes
 

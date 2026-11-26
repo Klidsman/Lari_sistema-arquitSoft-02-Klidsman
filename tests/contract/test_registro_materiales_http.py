@@ -199,11 +199,6 @@ def test_guardar_material_seriado_desde_http(
     material_seriado,
     almacen,
 ):
-    MaterialHabilitado.objects.create(
-        tenant=tenant,
-        material=material_seriado,
-        creado_por=usuario_tenant,
-    )
     StockTecnico.objects.create(
         tenant=tenant,
         tecnico=tecnico,
@@ -250,14 +245,6 @@ def test_guardar_material_seriado_desde_http(
 
 
 @pytest.mark.django_db
-def test_catalogo_habilitado_http(
-    cliente_tenant, usuario_tenant, tenant, material_no_seriado, almacen
-):
-    respuesta = cliente_tenant.post(
-        reverse("catalogo_materiales"),
-        {"material": material_no_seriado.pk, "activo": "1", "orden": "1"},
-    )
-    assert respuesta.status_code == 302
-    assert MaterialHabilitado.objects.filter(
-        tenant=tenant, material=material_no_seriado, activo=True
-    ).exists()
+def test_catalogo_habilitado_retirado(cliente_tenant):
+    respuesta = cliente_tenant.get("/registro-materiales/catalogo/")
+    assert respuesta.status_code == 404

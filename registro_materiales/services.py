@@ -771,7 +771,6 @@ def guardar_uso(
             material = materiales.get(material_id)
             if material is None:
                 raise MaterialNoHabilitado
-            obtener_habilitado(tenant, material)
 
         anterior_periodo = orden.periodo
         anterior_fecha = orden.fecha_instalacion
