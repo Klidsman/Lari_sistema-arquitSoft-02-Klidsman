@@ -25,6 +25,30 @@ pruebas, las ve fallar y luego implementa.
 explícita; se agrupan en seis historias derivadas para permitir entregas incrementales e
 independientes.
 
+## Estado real (2026-11-25)
+
+Las casillas de este archivo son históricas y no se marcaron una por una durante la implementación.
+El estado verificado es:
+
+| Bloque | Tareas | Estado |
+|---|---|---|
+| Prerrequisitos, settings, URLs, menú y fixtures | T001–T011 | Implementado |
+| `EnvioCorreo`, migraciones, servicios y auditoría | T016–T027, T029–T030 | Implementado |
+| Notificaciones por región y eventos | T025, T054, T057, T059 | Implementado; `flujo_eventos_region` se llama `suscribir_region` |
+| Bandeja, SSE, polling, toast, sonido y silencio | T028, T047–T063 | Implementado; el toast vive en `bandeja.html` |
+| Detalle, previsualización, descarga y hash | T064–T078 | Implementado |
+| Confirmación y stock | T079–T091 | Implementado |
+| Rechazo, motivo y aviso al tenant | T092–T107 | Implementado |
+| Históricos y descargas | T108–T119 | Implementado |
+| Pruebas de correo/reintentos | T031–T038 | Cubierto por `tests/integration/test_almacen_correo.py` |
+| Cambio de estado en tiempo real | T156–T157 | Implementado y probado |
+| Verificación manual y cobertura | T120, T123, T125–T126, T130 | Pendiente de cierre |
+
+Las tareas de prueba que nombran archivos como `test_envio_registro.py`, `test_almacen_sse_http.py` o
+`test_almacen_notificaciones.py` no se crearon con esos nombres; su cobertura vive en
+`test_almacen_correo.py`, `test_almacen_tiempo_real_http.py`, `test_almacen_tiempo_real.py` y
+`test_almacen_notificaciones.py`. Por eso quedan sin marcar aunque el flujo esté cubierto.
+
 ## Formato: `[ID] [P?] [Story] Descripción`
 
 - **[P]**: puede ejecutarse en paralelo (archivos distintos, sin dependencias pendientes)
@@ -458,6 +482,8 @@ Task: "Integración de notificaciones en tests/integration/test_almacen_notifica
 - [X] T153 Añadir a la bandeja los atributos `data-sse-url`, `data-poll-url` y `data-tabla-url`, el refresco de tabla, el badge, el toast, el sonido y el botón de silencio
 - [X] T154 Añadir la ruta de fragmento de tabla y pruebas de canal, publicación, SSE, región, polling y eventos
 - [X] T155 Notificar al tenant el rechazo con su motivo por correo y mostrar el motivo en el detalle de la solicitud
+- [X] T156 Publicar `cambio_estado` al confirmar o rechazar, con `transaction.on_commit`
+- [X] T157 Cubrir con pruebas el evento de cambio de estado y la publicación después del commit
 
 ## Notas
 

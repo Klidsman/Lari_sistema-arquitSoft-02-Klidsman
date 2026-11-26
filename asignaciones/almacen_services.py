@@ -165,6 +165,16 @@ def confirmar_solicitud(solicitud, actor):
             actor,
             tenant=bloqueada.tenant,
         )
+        transaction.on_commit(
+            lambda: __import__(
+                "asignaciones.notificaciones",
+                fromlist=["publicar_cambio_estado"],
+            ).publicar_cambio_estado(
+                bloqueada,
+                EstadoSolicitud.ENVIADA,
+                EstadoSolicitud.CONFIRMADA,
+            )
+        )
 
     return bloqueada
 
@@ -278,6 +288,16 @@ def rechazar_solicitud(solicitud, motivo, actor):
         )
         transaction.on_commit(
             lambda: _notificar_tenant_rechazo(bloqueada)
+        )
+        transaction.on_commit(
+            lambda: __import__(
+                "asignaciones.notificaciones",
+                fromlist=["publicar_cambio_estado"],
+            ).publicar_cambio_estado(
+                bloqueada,
+                EstadoSolicitud.ENVIADA,
+                EstadoSolicitud.RECHAZADA,
+            )
         )
 
     return bloqueada
