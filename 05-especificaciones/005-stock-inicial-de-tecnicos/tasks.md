@@ -262,10 +262,10 @@ no se aplica ninguna.
 **Propósito**: cerrar el reinicio de implementación, rendimiento, RLS, seguridad, documentación y
 validación extremo a extremo.
 
-- [ ] T079 [P] Escribir las pruebas de integración del reinicio en `tests/integration/test_stock_inicial_reinicio.py`: deshabilitado por defecto, solo `ADMIN_PLATAFORMA`, `--confirmar` obligatorio, borra carga/líneas/series y descuenta stock, conserva auditoría, falla si el stock o las series ya cambiaron y no tiene ruta HTTP
+- [X] T079 [P] Escribir las pruebas de integración del reinicio en `tests/integration/test_stock_inicial_reinicio.py`: deshabilitado por defecto, solo `ADMIN_PLATAFORMA`, `--confirmar` obligatorio, borra carga/líneas/series y descuenta stock, conserva auditoría, falla si el stock o las series ya cambiaron y no tiene ruta HTTP
 - [ ] T080 [P] Escribir las pruebas de rendimiento en `tests/integration/test_stock_inicial_rendimiento.py` con `django_assert_num_queries`: validación de 100 filas con una consulta de técnicos, una de materiales y una de series existentes; carga sin consultas por fila; detalle sin N+1; vista previa sin escrituras ni consultas por fila
 - [X] T081 Implementar `reiniciar_stock_inicial(tenant, actor)` en `stock_inicial/services.py`: exigir `settings.PERMITIR_REINICIO_STOCK_INICIAL is True`, actor `ADMIN_PLATAFORMA`, bloqueo de tenant/carga, validación de series `ASIGNADA` y stock suficiente, descuento con `decrementar_stock_tecnico`, auditoría de bajas/carga/tenant y limpieza de `stock_inicial_cargado`/`fecha_stock_inicial`
-- [ ] T082 Crear `stock_inicial/management/commands/reiniciar_stock_inicial.py` con argumentos `--tenant`, `--usuario` y `--confirmar`, que sin `--confirmar` no ejecute nada y muestre la advertencia, y que no se registre en rutas HTTP ni en el Admin de Django
+- [X] T082 Crear `stock_inicial/management/commands/reiniciar_stock_inicial.py` con argumentos `--tenant`, `--usuario` y `--confirmar`, que sin `--confirmar` no ejecute nada y muestre la advertencia, y que no se registre en rutas HTTP ni en el Admin de Django
 - [ ] T083 [P] Revisar y corregir las referencias documentales que contradigan 005 antes de cerrar: `04-contratos/excel-stock-inicial.md` (solo `.xlsx`, lote/descripción del catálogo), `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/plan.md`, `05-especificaciones/004-recojo-de-materiales/plan.md`, `research.md` y `data-model.md`, `06-plan-implementacion/desglose-tareas.md`, `03-reglas-de-dominio/series.md` y `03-reglas-de-dominio/stock.md`
 - [X] T084 [P] Verificar que no existe ninguna ruta de borrado ni de reinicio por HTTP en `stock_inicial/urls.py`, que `DELETE`/`PUT`/`PATCH` responden `405`, que no se crea superusuario de Django y que no se escriben contraseñas, tokens ni secretos en `auditoria.RegistroCambio`
 - [X] T085 Ejecutar `python manage.py makemigrations --check --dry-run` y `python manage.py migrate` sobre PostgreSQL; corregir cualquier migración pendiente en `tenants/migrations/` o `stock_inicial/migrations/`
@@ -281,7 +281,7 @@ validación extremo a extremo.
 - `openpyxl` agregado a `requirements.txt`.
 - Pendientes de pruebas/cierre: T015, T030, T039–T044, T049–T052, T057, T059–T062, T067, T071–T072, T079–T080, T082–T083, T086–T087.
 - Hotfix 2026-11-20: T088 corrige la validación HTMX y la carga rechazada para mostrar fila, campo y mensaje de cada error.
-- El comando `reiniciar_stock_inicial` y los escenarios manuales aún no se ejecutan.
+- El comando `reiniciar_stock_inicial` ya está implementado y probado; los escenarios manuales siguen pendientes.
 
 ## Dependencias y orden de ejecución
 

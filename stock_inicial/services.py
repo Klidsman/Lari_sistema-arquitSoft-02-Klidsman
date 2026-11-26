@@ -836,13 +836,17 @@ def reiniciar_stock_inicial(tenant, actor):
         )
     with transaction.atomic():
         Tenant.objects.select_for_update().get(pk=tenant.pk)
-        for linea in carga.lineas.select_related("tecnico", "material", "serie"):
+        lineas = list(
+            carga.lineas.select_related("tecnico", "material", "serie")
+        )
+        series = [linea.serie for linea in lineas if linea.serie_id]
+        for linea in lineas:
             decrementar_stock_tecnico(
                 linea.tecnico, linea.material, linea.cantidad, actor
             )
-            if linea.serie_id:
-                linea.serie.delete()
         carga.lineas.all().delete()
+        for serie in series:
+            serie.delete()
         carga.delete()
         tenant.stock_inicial_cargado = False
         tenant.fecha_stock_inicial = None
