@@ -121,6 +121,33 @@ def stock_actual_tecnico(tecnico):
     )
 
 
+def listar_stock_actual(tenant, q="", incluir_sin_stock=False):
+    """Vista transversal del stock en custodia, acotada al tenant."""
+    from stock.models import StockTecnico
+
+    filas = (
+        StockTecnico.objects.filter(tenant=tenant)
+        .select_related("tecnico", "material")
+    )
+    if not incluir_sin_stock:
+        filas = filas.filter(cantidad__gt=0)
+
+    texto = " ".join((q or "").split())
+    if texto:
+        filas = filas.filter(
+            Q(tecnico__nif__icontains=texto)
+            | Q(tecnico__nombre__icontains=texto)
+            | Q(material__codigo__icontains=texto)
+            | Q(material__descripcion__icontains=texto)
+        )
+
+    return filas.order_by(
+        "tecnico__nombre",
+        "tecnico__nif",
+        "material__codigo",
+    )
+
+
 def validar_tecnico_para_operacion(tenant, tecnico_id) -> Tecnico:
     tecnico = obtener_tecnico(tenant, tecnico_id)
     if not tecnico.activo:

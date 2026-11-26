@@ -3,6 +3,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
@@ -66,6 +67,38 @@ def listar_tecnicos(request):
             "tecnicos": pagina.object_list,
             "q": request.GET.get("q", ""),
             "estado": estado,
+        },
+    )
+
+
+@login_required
+@require_GET
+def stock_actual_tecnicos(request):
+    tenant, error = _tenant_o_error(request)
+    if error is not None:
+        return error
+
+    q = request.GET.get("q", "")
+    incluir_sin_stock = request.GET.get("incluir") == "1"
+    filas = services.listar_stock_actual(
+        tenant, q=q, incluir_sin_stock=incluir_sin_stock
+    )
+    resumen = filas.aggregate(
+        tecnicos=Count("tecnico", distinct=True),
+        materiales=Count("material", distinct=True),
+        unidades=Sum("cantidad"),
+    )
+    pagina = Paginator(filas, 100).get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "tecnicos/stock_actual.html",
+        {
+            "pagina": pagina,
+            "filas": pagina.object_list,
+            "q": q,
+            "incluir_sin_stock": incluir_sin_stock,
+            "resumen": resumen,
         },
     )
 

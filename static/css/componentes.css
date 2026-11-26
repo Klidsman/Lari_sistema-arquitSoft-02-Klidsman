@@ -234,6 +234,12 @@ a.boton-secundario {
   margin: 0;
 }
 
+.acciones-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 /* Buscadores y filtros */
 
 .buscador {
@@ -264,6 +270,36 @@ a.boton-secundario {
 
 .buscador input[type="search"] {
   min-width: 16rem;
+}
+
+.buscador .campo-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0 0.2rem;
+}
+
+.resumen-linea {
+  margin: 0 0 1rem;
+  color: var(--texto-tenue);
+  font-size: 0.875rem;
+}
+
+.resumen-linea strong {
+  color: var(--texto);
+  font-weight: 600;
+}
+
+.mono {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+}
+
+.tabla .columna-numero {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Tablas */

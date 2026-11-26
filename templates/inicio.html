@@ -61,6 +61,16 @@
             </a>
           </li>
           <li>
+            <a class="acceso" href="{% url 'stock_actual_tecnicos' %}">
+              <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-inventario"></use></svg></span>
+              <span class="acceso__texto">
+                <span class="acceso__titulo">Stock actual</span>
+                <span class="acceso__desc">Custodia vigente por técnico</span>
+              </span>
+              <span class="acceso__accion" aria-hidden="true"><svg class="icono" focusable="false"><use href="#i-flecha"></use></svg></span>
+            </a>
+          </li>
+          <li>
             <a class="acceso" href="{% url 'lista_asignaciones' %}">
               <span class="acceso__icono"><svg class="icono" aria-hidden="true" focusable="false"><use href="#i-asignacion"></use></svg></span>
               <span class="acceso__texto">

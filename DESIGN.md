@@ -405,6 +405,9 @@ El componente más usado: fondo Hoja, borde de 1 px, `border-collapse: separate`
 ### Inicio y accesos rápidos
 `templates/inicio.html` deja de ser una bienvenida y pasa a ser un panel de trabajo: `h1` «Inicio», una línea de sesión con correo y rol, y un único panel blanco con filete. Dentro, `.accesos` es una lista en dos columnas separada por filetes tenues, sin tarjetas repetidas ni sombras. Cada `.acceso` alinea un icono en caja de `2rem`, título y descripción breve, y un botón decorativo `.acceso__accion` de `2rem` con chevron al final. En hover la fila se tiñe con `--hoja-hover`, el icono toma borde y fondo de acento, y el botón decorativo se rellena de Azul sello y avanza `2px`. Si el rol tiene un número impar de accesos, el último ocupa las dos columnas. En móvil la lista pasa a una columna. Los enlaces se generan por rol: el tenant ve operación; el almacén, bandeja y traspasos; el administrador, plataforma y catálogo.
 
+### Stock actual
+`tecnicos/stock_actual.html` es la vista transversal de custodia: `h1` «Stock actual», subtítulo de `62ch`, un `.buscador` con búsqueda por NIF, técnico, código o material y la casilla «Incluir sin stock». Debajo, `.resumen-linea` resume técnicos, materiales y unidades; la tabla plana usa las columnas Técnico (enlazado a su detalle), NIF, Material, Descripción, Lote, Tipo y Cantidad. NIF y código van en monoespaciada; la cantidad se alinea a la derecha con `font-variant-numeric: tabular-nums`. Por defecto solo aparecen filas con cantidad mayor que cero; los técnicos desactivados conservan su stock y llevan la etiqueta «Inactivo». La entrada vive en Operación como «Stock actual» y también como botón secundario en la lista de Técnicos.
+
 ### Signature: shell autenticado
 La estructura de todas las pantallas privadas. Sidebar de `15rem` en Tapa con la marca gráfica, grupos por rol, iconos de trazo único y «Mi perfil» al pie; topbar blanca de `3.5rem` con correo, rol y «Cerrar sesión» con icono; contenido sobre Papel con máximo `1100px`. No hay sombras: sidebar y topbar se separan del contenido por el cambio de superficie y el filete. En móvil la sidebar se convierte en drawer con overlay y el botón «Menú» queda en la topbar.
 
@@ -443,6 +446,7 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - **Do** usar el sprite `parciales/iconos.html` y la marca `parciales/marca.html` antes de dibujar un símbolo nuevo.
 - **Do** mantener el trazo de `1.75px`, `currentColor` y `stroke-linecap="round"` en cualquier icono nuevo.
 - **Do** dar al último acceso de una lista impar el ancho completo para no dejar una celda vacía.
+- **Do** usar `.resumen-linea` y `.columna-numero` en vistas de inventario en lugar de métricas grandes o tarjetas de totales.
 - **Do** usar el botón decorativo `.acceso__accion` como affordance, no como acción independiente: toda la fila sigue siendo el enlace.
 - **Do** respetar `prefers-reduced-motion` en cualquier animación nueva y mantenerla por debajo de `420ms`.
 

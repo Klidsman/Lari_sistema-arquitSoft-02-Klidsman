@@ -18,7 +18,7 @@
       </style>
     </noscript>
   {% endif %}
-  <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=6">
   <script src="{% static 'js/htmx.min.js' %}?v=2.0.4" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
@@ -45,7 +45,8 @@
           {% if request.rol == "USUARIO_TENANT" %}
             <p class="shell-grupo">Operación</p>
             {% enlace_nav 'listar_materiales' 'Materiales' '/materiales/' None 'material' %}
-            {% enlace_nav 'listar_tecnicos' 'Técnicos' '/tecnicos/' None 'tecnicos' %}
+            {% enlace_nav 'listar_tecnicos' 'Técnicos' '/tecnicos/' '/tecnicos/stock/' 'tecnicos' %}
+            {% enlace_nav 'stock_actual_tecnicos' 'Stock actual' '/tecnicos/stock/' None 'inventario' %}
             {% enlace_nav 'lista_recojos' 'Recojos' '/recojos/' None 'recojo' %}
             {% enlace_nav 'estado_stock_inicial' 'Stock inicial' '/stock-inicial/' None 'stock' %}
             {% enlace_nav 'lista_asignaciones' 'Asignaciones' '/asignaciones/' None 'asignacion' %}

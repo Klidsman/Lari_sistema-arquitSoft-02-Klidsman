@@ -14,6 +14,7 @@ ICONOS = {
     "tecnicos",
     "recojo",
     "stock",
+    "inventario",
     "asignacion",
     "traspaso",
     "conciliacion",
