@@ -62,7 +62,7 @@ El saldo final de un mes es el saldo inicial del mes siguiente, salvo carga manu
 ## 6. Orden de liquidación
 
 - Se identifica por tenant, técnico, periodo y número.
-- El número es obligatorio, de 1 a 30 caracteres alfanuméricos, con guiones simples entre bloques, sin espacios internos ni guiones consecutivos.
+- El número es obligatorio, de 1 a 30 caracteres alfanuméricos, con guiones o guiones bajos simples entre bloques, sin espacios internos ni separadores consecutivos.
 - La orden es única por técnico y mes; el mismo número puede existir para otro técnico o en otro mes.
 - Al registrar materiales se selecciona técnico y mes; la búsqueda es exacta dentro de ese mes.
 - Si el número existe para el mismo técnico en otro mes, es otra orden y no se muestra.
@@ -162,7 +162,7 @@ final = inicial + despachos - usado
 
 - Cantidad entera ≥ 0.
 - Periodo con formato `YYYY-MM`.
-- Número de orden obligatorio, 1–30 alfanumérico con guiones simples.
+- Número de orden obligatorio, 1–30 alfanumérico con guiones o guiones bajos simples.
 - Técnico del tenant.
 - Material habilitado y activo.
 - Orden única por técnico/mes/número.

@@ -30,7 +30,7 @@ from .models import (
     UsoMaterialOrden,
 )
 
-ORDEN_RE = re.compile(r"^[A-Z0-9]+(?:-[A-Z0-9]+)*$")
+ORDEN_RE = re.compile(r"^[A-Z0-9]+(?:[-_][A-Z0-9]+)*$")
 PERIODO_RE = re.compile(r"^[0-9]{4}-(0[1-9]|1[0-2])$")
 
 
@@ -67,7 +67,7 @@ class CantidadInvalida(ErrorRegistro):
 class NumeroOrdenInvalido(ErrorRegistro):
     mensaje = (
         "El número de orden es obligatorio y debe tener entre 1 y 30 "
-        "caracteres alfanuméricos y guiones simples"
+        "caracteres alfanuméricos, guiones y guiones bajos simples"
     )
 
 

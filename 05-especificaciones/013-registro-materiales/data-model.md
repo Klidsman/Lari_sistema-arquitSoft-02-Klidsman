@@ -131,7 +131,7 @@ erDiagram
 **Restricciones**
 
 - `UniqueConstraint(tenant, tecnico, periodo, numero_normalizado, name="orden_unica_por_tecnico_mes_numero")`.
-- `CheckConstraint(numero_normalizado regex ^[A-Z0-9]+(-[A-Z0-9]+)*$)`; el largo máximo de 30 lo impone el `CharField`.
+- `CheckConstraint(numero_normalizado regex ^[A-Z0-9]+([-_][A-Z0-9]+)*$)`; el largo máximo de 30 lo impone el `CharField`.
 - `CheckConstraint(periodo regex)`.
 - Índices `(tenant, tecnico, periodo)`, `(tenant, periodo)`, `(numero_normalizado)`.
 

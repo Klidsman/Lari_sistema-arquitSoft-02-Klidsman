@@ -22,13 +22,17 @@ def test_procesar_lista_normaliza_mayusculas_e_ignora_vacias():
     assert lista.rechazadas == []
 
 
-def test_procesar_lista_acepta_guiones_simples():
-    lista = procesar_lista("FE-1133926298\nfe-1133926298\n")
-    assert lista.ordenes == ["FE-1133926298"]
+def test_procesar_lista_acepta_guiones_y_guiones_bajos_simples():
+    lista = procesar_lista(
+        "FE-1133926298\nfe-1133926298\nTT_5960190\ntt_5960190\n"
+    )
+    assert lista.ordenes == ["FE-1133926298", "TT_5960190"]
     assert lista.rechazadas == []
 
 
-def test_procesar_lista_rechaza_caracteres_invalidos_y_guiones_consecutivos():
-    lista = procesar_lista("FE--1133926298\nFE$1133926298\nFE-1133926298")
-    assert lista.ordenes == ["FE-1133926298"]
-    assert len(lista.rechazadas) == 2
+def test_procesar_lista_rechaza_caracteres_invalidos_y_separadores_dobles():
+    lista = procesar_lista(
+        "FE--1133926298\nFE$1133926298\nTT__5960190\nTT_5960190"
+    )
+    assert lista.ordenes == ["TT_5960190"]
+    assert len(lista.rechazadas) == 3

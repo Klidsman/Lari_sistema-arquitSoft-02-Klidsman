@@ -114,15 +114,21 @@ def test_carga_acepta_ordenes_con_guion(
         tenant,
         tecnico,
         PERIODO,
-        "FE-1133926298\nfe-1133926298",
+        "FE-1133926298\nfe-1133926298\nTT_5960190",
         usuario_tenant,
     )
-    assert carga.total_nuevas == 1
+    assert carga.total_nuevas == 2
     assert OrdenLiquidacion.objects.filter(
         tenant=tenant,
         tecnico=tecnico,
         periodo=PERIODO,
         numero_normalizado="FE-1133926298",
+    ).exists()
+    assert OrdenLiquidacion.objects.filter(
+        tenant=tenant,
+        tecnico=tecnico,
+        periodo=PERIODO,
+        numero_normalizado="TT_5960190",
     ).exists()
 
 

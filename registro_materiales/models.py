@@ -229,7 +229,7 @@ class OrdenLiquidacion(models.Model):
             ),
             models.CheckConstraint(
                 condition=Q(
-                    numero_normalizado__regex=r"^[A-Z0-9]+(-[A-Z0-9]+)*$"
+                    numero_normalizado__regex=r"^[A-Z0-9]+([-_][A-Z0-9]+)*$"
                 ),
                 name="orden_numero_formato",
             ),
