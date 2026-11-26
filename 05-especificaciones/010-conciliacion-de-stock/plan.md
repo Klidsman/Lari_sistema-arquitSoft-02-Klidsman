@@ -200,8 +200,8 @@ class Conciliacion(models.Model):
 | `tecnico` | FK `Tecnico` | Técnico del tenant según el reporte |
 | `material` | FK `Material` | `PROTECT`; material del catálogo |
 | `numero` | `CharField(12)` | Serie normalizada; formato `^[A-Z0-9]{12}$` |
-| `tipo` | `CharField(24)` | `EN_REPORTE_NO_SISTEMA`, `EN_SISTEMA_NO_REPORTE`, `EN_OTRO_TECNICO` |
-| `tecnico_sistema` | FK `Tecnico` | Nulo salvo `EN_OTRO_TECNICO`; técnico actual |
+| `tipo` | `CharField(24)` | `EN_REPORTE_NO_SISTEMA`, `EN_SISTEMA_NO_REPORTE`, `EN_OTRO_TECNICO`, `EN_SISTEMA_SIN_TECNICO` |
+| `tecnico_sistema` | FK `Tecnico` | Obligatorio en `EN_OTRO_TECNICO`; nulo en el resto |
 | `lote` | `CharField(50)` | Copia del reporte; informativo |
 
 - `UniqueConstraint(conciliacion, tipo, numero)` para no repetir la misma serie en el mismo grupo.
@@ -336,6 +336,7 @@ Viven en `conciliaciones/services.py`; las vistas solo orquestan.
   - `EN_SISTEMA_NO_REPORTE`: serie `ASIGNADA` de un técnico presente que no aparece en el reporte;
     se marcará `INSTALADA`.
   - `EN_OTRO_TECNICO`: número existe en el sistema, pero con otro técnico; se reasignará.
+- `EN_SISTEMA_SIN_TECNICO`: número existe como `DISPONIBLE`; se asignará al técnico reportado. Si está `INACTIVA` o `RESERVADA`, se aborta con `SerieInactiva`/`SerieReservada`.
   - Una serie `INSTALADA` reportada produce `SerieInstalada`.
 - `comparar_cantidades(tenant, tecnicos_presentes, filas) -> list[DiferenciaCantidad]`:
   - Solo no seriados.
@@ -377,7 +378,7 @@ Viven en `conciliaciones/services.py`; las vistas solo orquestan.
      - Revalidar técnicos, materiales, series y cuadre.
      - Series del reporte que no existen: crear con `series.services.crear_serie(...,
        estado=ASIGNADA, tecnico=tecnico, asignada_en=ahora)`; auditar `Serie/alta`.
-     - Series existentes en otro técnico: reasignar `tecnico` y reiniciar `asignada_en`; auditar
+     - Series existentes en otro técnico o disponibles sin técnico: reasignar/asignar `tecnico` y reiniciar `asignada_en`; auditar
        `Serie/tecnico` y `Serie/asignada_en`.
      - Series `ASIGNADA` de técnicos presentes no reportadas: `INSTALADA`, limpiar
        `tecnico`/`asignada_en`; auditar `Serie/estado`.
@@ -543,8 +544,10 @@ Además:
 - **Sin correo/Celery**: la spec no lo pide; la operación es síncrona.
 - **Materiales no catalogados**: se registran al cargar y bloquean la aprobación; no se rechaza la
   carga para permitir corregir el catálogo.
-- **Series en otro técnico**: se reasignan al técnico reportado; se muestran como inconsistencia y
-  ajustan el stock de ambos técnicos.
+- **Series en otro técnico o disponibles sin técnico**: se reasignan/asignan al técnico reportado;
+  se muestran como inconsistencia y ajustan el stock correspondiente.
+- **Series inactivas o reservadas reportadas**: bloquean la conciliación con un error de dominio;
+  no se resucita una serie dada de baja ni se pisa una reserva.
 - **Riesgo de reportes grandes**: lectura por lotes, índices y pruebas de rendimiento.
 - **Riesgo de series instaladas reportadas**: se rechaza la fila; no se resucita una serie liquidada.
 
@@ -554,6 +557,7 @@ Además:
 |---|---|
 | Estado terminal `INSTALADA` | No elimina series ni duplica identidad; agrega el estado de liquidación que 012 ya espera. |
 | Tercer tipo `EN_OTRO_TECNICO` | No crea una serie nueva: reasigna la existente y mantiene la unicidad global. |
+| Cuarto tipo `EN_SISTEMA_SIN_TECNICO` | Asigna una serie `DISPONIBLE` sin crear otra fila; conserva la unicidad global. |
 | Huella de stock | No duplica el stock; solo detecta cambios para exigir revisión. |
 | Persistir diferencias | No duplica el stock; es una vista materializada de la comparación, regenerable desde el archivo. |
 | Sin correo/Celery | La spec no lo pide; evita duplicar 007 y mantiene la simplicidad. |

@@ -86,7 +86,7 @@ erDiagram
 | `tecnico` | FK `tecnicos.Tecnico` | No | `PROTECT`; técnico del reporte (tenant) |
 | `material` | FK `materiales.Material` | No | `PROTECT`; material del catálogo |
 | `numero` | `CharField(12)` | No | Serie normalizada `^[A-Z0-9]{12}$` |
-| `tipo` | `CharField(24)` | No | `EN_REPORTE_NO_SISTEMA`, `EN_SISTEMA_NO_REPORTE`, `EN_OTRO_TECNICO` |
+| `tipo` | `CharField(24)` | No | `EN_REPORTE_NO_SISTEMA`, `EN_SISTEMA_NO_REPORTE`, `EN_OTRO_TECNICO`, `EN_SISTEMA_SIN_TECNICO` |
 | `tecnico_sistema` | FK `tecnicos.Tecnico` | Sí | `PROTECT`; técnico actual, solo para `EN_OTRO_TECNICO` |
 | `lote` | `CharField(50)` | No | `blank=True, default=""`; copia del reporte |
 
@@ -94,7 +94,7 @@ erDiagram
 
 - `UniqueConstraint(fields=["conciliacion","tipo","numero"], name="diferencia_serie_unica_por_tipo")`.
 - `CheckConstraint` de formato de `numero`.
-- `CheckConstraint` de `tipo` válido y `tecnico_sistema` coherente: nulo salvo `EN_OTRO_TECNICO`.
+- `CheckConstraint` de `tipo` válido y `tecnico_sistema` coherente: obligatorio en `EN_OTRO_TECNICO` y nulo en el resto.
 
 **Índices**
 
@@ -106,6 +106,7 @@ erDiagram
 - `EN_SISTEMA_NO_REPORTE`: serie `ASIGNADA` de un técnico presente que no aparece; se marcará
   `INSTALADA`.
 - `EN_OTRO_TECNICO`: existe, pero con otro técnico; se reasignará.
+- `EN_SISTEMA_SIN_TECNICO`: existe como `DISPONIBLE`, sin técnico; se asignará al técnico reportado. Si la serie está `INACTIVA` o `RESERVADA`, la conciliación se bloquea con un error de dominio y no se modifica nada.
 - Una serie `INSTALADA` reportada no genera diferencia: rechaza el archivo con `SerieInstalada`.
 - Una serie que pertenece a otro tenant rechaza el archivo con `SerieFueraTenant`; no se revela su
   propietario ni se reasigna.
@@ -205,6 +206,7 @@ Huella = SHA-256(JSON canónico ordenado de:
 En reporte, no en sistema: numero no existe en Serie.
 En sistema, no en reporte: Serie.estado=ASIGNADA, Serie.tecnico=presente y numero no está en el reporte.
 En otro técnico: numero existe, Serie.tecnico != técnico del reporte.
+En sistema sin técnico: numero existe como DISPONIBLE, Serie.tecnico es nulo.
 ```
 
 ### Cantidad no seriada

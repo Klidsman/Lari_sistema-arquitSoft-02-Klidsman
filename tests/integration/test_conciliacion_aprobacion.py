@@ -12,6 +12,7 @@ from conciliaciones.models import (
 from conciliaciones.services import (
     AprobacionBloqueada,
     HuboCambios,
+    SerieInactiva,
     aprobar_conciliacion,
     crear_conciliacion,
     rechazar_conciliacion,
@@ -232,6 +233,73 @@ def test_aprobacion_todo_o_nada(
         ).cantidad
         == 0
     )
+
+
+@pytest.mark.django_db
+def test_aprobar_serie_disponible_la_asigna_al_tecnico(
+    usuario_tenant, tenant, tecnico, material_seriado, almacen
+):
+    serie = Serie.objects.create(
+        numero="SER000000001",
+        tenant=tenant,
+        region=tenant.region,
+        material=material_seriado,
+        lote=material_seriado.lote,
+        estado=EstadoSerie.DISPONIBLE,
+        creado_por=usuario_tenant,
+    )
+    conciliacion = crear_conciliacion(
+        usuario_tenant,
+        archivo_xlsx(
+            [fila_seriada(material_seriado, tecnico.nif, "SER000000001")]
+        ),
+    )
+    diferencia = conciliacion.diferencias_series.get()
+    assert (
+        diferencia.tipo == TipoDiferenciaSerie.EN_SISTEMA_SIN_TECNICO
+    )
+    assert diferencia.tecnico_sistema_id is None
+
+    aprobar_conciliacion(conciliacion, usuario_tenant)
+
+    serie.refresh_from_db()
+    conciliacion.refresh_from_db()
+    assert conciliacion.estado == EstadoConciliacion.APROBADA
+    assert serie.estado == EstadoSerie.ASIGNADA
+    assert serie.tecnico_id == tecnico.pk
+    assert serie.asignada_en is not None
+
+
+@pytest.mark.django_db
+def test_serie_inactiva_aparece_despues_de_cargar_no_rompe_la_aprobacion(
+    usuario_tenant, tenant, tecnico, material_seriado, almacen
+):
+    destino = _destino(tenant, usuario_tenant)
+    serie = _serie(
+        tenant, material_seriado, destino, "SER000000001", usuario_tenant
+    )
+    conciliacion = crear_conciliacion(
+        usuario_tenant,
+        archivo_xlsx(
+            [fila_seriada(material_seriado, tecnico.nif, "SER000000001")]
+        ),
+    )
+    assert conciliacion.diferencias_series.get().tipo == (
+        TipoDiferenciaSerie.EN_OTRO_TECNICO
+    )
+
+    Serie.objects.filter(pk=serie.pk).update(
+        estado=EstadoSerie.INACTIVA,
+        tecnico=None,
+        asignada_en=None,
+    )
+    with pytest.raises(SerieInactiva):
+        aprobar_conciliacion(conciliacion, usuario_tenant)
+
+    conciliacion.refresh_from_db()
+    assert conciliacion.estado == EstadoConciliacion.EN_REVISION
+    serie.refresh_from_db()
+    assert serie.estado == EstadoSerie.INACTIVA
 
 
 @pytest.mark.django_db

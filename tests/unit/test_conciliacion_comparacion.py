@@ -4,7 +4,10 @@ import pytest
 from django.utils import timezone
 
 from conciliaciones.excel import FilaReporte
+from conciliaciones.models import TipoDiferenciaSerie
 from conciliaciones.services import (
+    SerieInactiva,
+    SerieReservada,
     calcular_huella_stock,
     clasificar_tecnicos,
     comparar_cantidades,
@@ -92,6 +95,59 @@ def test_serie_en_otro_tecnico(
     assert len(diferencias) == 1
     assert diferencias[0].tipo == "EN_OTRO_TECNICO"
     assert diferencias[0].tecnico_sistema.pk == otro.pk
+
+
+def test_serie_disponible_reportada_queda_sin_tecnico(
+    db, tenant, tecnico, material_seriado, usuario_tenant
+):
+    _serie(
+        tenant,
+        material_seriado,
+        tecnico,
+        "ABC123456789",
+        estado=EstadoSerie.DISPONIBLE,
+    )
+    filas = [_fila(material_seriado, tecnico.nif, serie="ABC123456789")]
+    clasificacion, valido = _preparar(tenant, filas)
+    diferencias = comparar_series(tenant, clasificacion, valido)
+    assert len(diferencias) == 1
+    assert (
+        diferencias[0].tipo
+        == TipoDiferenciaSerie.EN_SISTEMA_SIN_TECNICO
+    )
+    assert diferencias[0].tecnico_sistema is None
+
+
+def test_serie_inactiva_reportada_bloquea_la_comparacion(
+    db, tenant, tecnico, material_seriado, usuario_tenant
+):
+    _serie(
+        tenant,
+        material_seriado,
+        tecnico,
+        "ABC123456789",
+        estado=EstadoSerie.INACTIVA,
+    )
+    filas = [_fila(material_seriado, tecnico.nif, serie="ABC123456789")]
+    clasificacion, valido = _preparar(tenant, filas)
+    with pytest.raises(SerieInactiva):
+        comparar_series(tenant, clasificacion, valido)
+
+
+def test_serie_reservada_reportada_bloquea_la_comparacion(
+    db, tenant, tecnico, material_seriado, usuario_tenant
+):
+    _serie(
+        tenant,
+        material_seriado,
+        tecnico,
+        "ABC123456789",
+        estado=EstadoSerie.RESERVADA,
+    )
+    filas = [_fila(material_seriado, tecnico.nif, serie="ABC123456789")]
+    clasificacion, valido = _preparar(tenant, filas)
+    with pytest.raises(SerieReservada):
+        comparar_series(tenant, clasificacion, valido)
 
 
 def test_serie_instalada_no_se_reutiliza(

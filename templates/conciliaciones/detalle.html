@@ -46,6 +46,13 @@
     {% empty %}<li>Sin diferencias.</li>{% endfor %}
   </ul>
 
+  <h2>Series en sistema, sin técnico</h2>
+  <ul>
+    {% for diferencia in detalle.series.en_sistema_sin_tecnico %}
+      <li>{{ diferencia.numero }} · reporte: {{ diferencia.tecnico.nif }} · {{ diferencia.material.codigo }}</li>
+    {% empty %}<li>Sin diferencias.</li>{% endfor %}
+  </ul>
+
   <h2>Diferencias de cantidades</h2>
   <table class="tabla">
     <thead><tr><th>Técnico</th><th>Material</th><th>Sistema</th><th>Reporte</th><th>Diferencia</th></tr></thead>

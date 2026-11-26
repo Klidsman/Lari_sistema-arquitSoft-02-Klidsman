@@ -15,6 +15,10 @@ class TipoDiferenciaSerie(models.TextChoices):
     EN_REPORTE_NO_SISTEMA = "EN_REPORTE_NO_SISTEMA", "En reporte, no en sistema"
     EN_SISTEMA_NO_REPORTE = "EN_SISTEMA_NO_REPORTE", "En sistema, no en reporte"
     EN_OTRO_TECNICO = "EN_OTRO_TECNICO", "En otro técnico"
+    EN_SISTEMA_SIN_TECNICO = (
+        "EN_SISTEMA_SIN_TECNICO",
+        "En sistema, sin técnico",
+    )
 
 
 class Conciliacion(models.Model):
@@ -142,6 +146,7 @@ class DiferenciaSerie(models.Model):
                         "EN_REPORTE_NO_SISTEMA",
                         "EN_SISTEMA_NO_REPORTE",
                         "EN_OTRO_TECNICO",
+                        "EN_SISTEMA_SIN_TECNICO",
                     ]
                 ),
                 name="diferencia_serie_tipo_valido",
@@ -149,7 +154,14 @@ class DiferenciaSerie(models.Model):
             models.CheckConstraint(
                 condition=(
                     Q(tipo="EN_OTRO_TECNICO", tecnico_sistema__isnull=False)
-                    | (~Q(tipo="EN_OTRO_TECNICO") & Q(tecnico_sistema__isnull=True))
+                    | Q(
+                        tipo__in=[
+                            "EN_REPORTE_NO_SISTEMA",
+                            "EN_SISTEMA_NO_REPORTE",
+                            "EN_SISTEMA_SIN_TECNICO",
+                        ],
+                        tecnico_sistema__isnull=True,
+                    )
                 ),
                 name="diferencia_serie_tecnico_sistema_coherente",
             ),

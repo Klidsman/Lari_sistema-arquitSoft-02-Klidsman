@@ -88,6 +88,14 @@ class SerieInstalada(ErrorConciliacion):
     mensaje = "La serie está instalada y no puede reasignarse"
 
 
+class SerieInactiva(ErrorConciliacion):
+    mensaje = "La serie está inactiva y no puede conciliarse"
+
+
+class SerieReservada(ErrorConciliacion):
+    mensaje = "La serie está reservada para otra operación"
+
+
 class SerieFueraTenant(ErrorConciliacion):
     mensaje = "La serie no pertenece a este tenant"
 
@@ -329,6 +337,24 @@ def comparar_series(tenant, clasificacion, valido):
                     material=material,
                     numero=numero,
                     tipo=TipoDiferenciaSerie.EN_REPORTE_NO_SISTEMA,
+                    lote=lote,
+                )
+            )
+        elif serie.tecnico_id is None:
+            if serie.estado == EstadoSerie.RESERVADA:
+                raise SerieReservada(
+                    f"La serie {numero} está reservada para otra operación"
+                )
+            if serie.estado == EstadoSerie.INACTIVA:
+                raise SerieInactiva(
+                    f"La serie {numero} está inactiva y no se puede conciliar"
+                )
+            diferencias.append(
+                DiferenciaSerieCalc(
+                    tecnico=tecnico,
+                    material=material,
+                    numero=numero,
+                    tipo=TipoDiferenciaSerie.EN_SISTEMA_SIN_TECNICO,
                     lote=lote,
                 )
             )
@@ -779,9 +805,18 @@ def aprobar_conciliacion(conciliacion, actor):
                     actor,
                     tenant=tenant,
                 )
-            elif diferencia.tipo == TipoDiferenciaSerie.EN_OTRO_TECNICO:
+            elif diferencia.tipo in {
+                TipoDiferenciaSerie.EN_OTRO_TECNICO,
+                TipoDiferenciaSerie.EN_SISTEMA_SIN_TECNICO,
+            }:
                 serie = series_bloqueadas.get(diferencia.numero)
                 if serie is None:
+                    raise HuboCambios
+                if (
+                    diferencia.tipo
+                    == TipoDiferenciaSerie.EN_SISTEMA_SIN_TECNICO
+                    and serie.estado != EstadoSerie.DISPONIBLE
+                ):
                     raise HuboCambios
                 anterior = serie.tecnico_id
                 anterior_fecha = serie.asignada_en
@@ -1037,6 +1072,13 @@ def detalle_conciliacion(conciliacion):
             )
             .select_related("tecnico", "material", "tecnico_sistema")
             .order_by("numero"),
+            "en_sistema_sin_tecnico": (
+                conciliacion.diferencias_series.filter(
+                    tipo=TipoDiferenciaSerie.EN_SISTEMA_SIN_TECNICO
+                )
+                .select_related("tecnico", "material")
+                .order_by("numero")
+            ),
         },
         "cantidades": conciliacion.diferencias_cantidades.select_related(
             "tecnico", "material"
