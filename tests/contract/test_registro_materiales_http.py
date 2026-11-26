@@ -133,12 +133,6 @@ def test_flujo_http_carga_materiales_y_exportacion(
 
     assert (
         cliente_tenant.get(
-            reverse("entradas_materiales"), {"periodo": PERIODO}
-        ).status_code
-        == 200
-    )
-    assert (
-        cliente_tenant.get(
             reverse("dashboard_materiales"), {"periodo": PERIODO}
         ).status_code
         == 200
@@ -185,10 +179,15 @@ def test_acciones_no_aceptan_get(cliente_tenant, usuario_tenant, tenant, almacen
         "cerrar_mes",
         "reabrir_mes",
         "justificar_pendiente",
-        "guardar_saldo_inicial",
         "guardar_materiales",
     ):
         assert cliente_tenant.get(reverse(nombre)).status_code == 405
+
+
+@pytest.mark.django_db
+def test_entradas_y_saldos_retirada(cliente_tenant):
+    respuesta = cliente_tenant.get("/registro-materiales/entradas/")
+    assert respuesta.status_code == 404
 
 
 @pytest.mark.django_db

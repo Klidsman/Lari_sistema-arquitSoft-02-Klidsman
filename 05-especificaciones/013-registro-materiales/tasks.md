@@ -239,14 +239,14 @@ material/técnico y exportación Excel/CSV.
 - [X] T048 [US3] Prueba de **CA-17** en `tests/integration/test_dashboard.py`: los despachos suman desde `DespachoAlmacen` sin doble registro
 - [X] T049 [US3] Prueba de dashboard en `tests/integration/test_dashboard.py`: filtros, detalle por técnico y alerta de saldo negativo
 - [X] T050 [US3] Prueba de **CA-23** en `tests/integration/test_dashboard.py`/`tests/unit/test_registro_exportacion.py`: Excel/CSV con datos del tenant
-- [X] T051 [P] [US3] Prueba de contrato HTTP en `tests/contract/test_registro_http.py`: entradas, dashboard y exportación
+- [X] T051 [P] [US3] Prueba de contrato HTTP en `tests/contract/test_registro_http.py`: dashboard y exportación; `/entradas/` responde 404 desde el 2026-11-26
 
 ### Implementación de US3
 
 - [X] T052 [US3] Implementar en `services.py` `registrar_saldo_inicial` (con bloqueo si deja el mes negativo), `saldo_inicial_efectivo`, `saldo_final` y `despachos_del_periodo`
 - [X] T053 [US3] Implementar `dashboard_mensual` y las consultas de detalle por técnico en `dashboard.py`
 - [X] T054 [US3] Implementar `exportar_reporte_mensual` y `exportar_detalle_ordenes` en `exportacion.py` para `.xlsx` y `.csv`
-- [X] T055 [US3] Implementar vistas, URLs y plantillas `templates/registro_materiales/entradas.html`, `dashboard.html` y `_exportacion.html`; no agregar formulario de despacho
+- [X] T055 [US3] Implementar vistas, URLs y plantillas de dashboard y exportación; `entradas.html` y el formulario de saldo manual se retiraron el 2026-11-26
 - [X] T056 [US3] Ejecutar `pytest tests/integration/test_dashboard.py tests/unit/test_registro_exportacion.py tests/contract/test_registro_http.py` y corregir hasta que US3 esté en verde
 
 **Checkpoint**: US3 funcional; saldos, despachos, dashboard y exportación operan sin doble registro.

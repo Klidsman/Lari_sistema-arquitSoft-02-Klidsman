@@ -12,7 +12,7 @@ disponible = saldo inicial + despachos del almacén
 saldo final = disponible - uso del mes
 ```
 
-El saldo final de un mes es el saldo inicial del mes siguiente, salvo carga manual.
+El saldo final de un mes es el saldo inicial del mes siguiente. El saldo inicial operativo se carga en Stock inicial; el saldo manual queda solo como dato histórico.
 
 ## 2. Independencia de la conciliación y alcance del stock
 
@@ -95,15 +95,15 @@ El saldo final de un mes es el saldo inicial del mes siguiente, salvo carga manu
 ## 9. Saldo inicial y cálculo mensual
 
 ```text
-inicial = saldo manual del mes, si existe
+inicial = saldo manual histórico del mes, si existe
 si no, saldo final del cierre anterior
-si no hay anterior, 0
+si no hay anterior, stock actual + usado - despachos
 
 despachos = suma de DespachoAlmacen del mes
 
 usado = suma de uso de las órdenes del mes
 
-final = inicial + despachos - usado
+final = inicial + despachos - usado = stock actual
 ```
 
 - Un saldo final negativo se muestra con alerta.
@@ -116,7 +116,7 @@ final = inicial + despachos - usado
 - Se calcula el uso total del mes, incluyendo otros técnicos.
 - Si el uso nuevo supera el disponible, no se guarda.
 - Se muestra material, disponible, usado y faltante.
-- No se permite un saldo inicial que deje el mes en negativo si ya hay uso.
+- El saldo inicial operativo se carga en Stock inicial; ya no se registra manualmente desde este módulo.
 
 ## 11. Advertencias
 

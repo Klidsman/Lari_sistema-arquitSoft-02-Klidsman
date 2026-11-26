@@ -186,13 +186,11 @@ El módulo descuenta el stock del técnico al registrar el consumo. No modifica 
 13. Al guardar, el uso se descuenta del disponible y queda asociado al técnico.
 14. Cada cambio guarda historial.
 
-### 7.3 Entradas y saldos
+### 7.3 Entradas y saldos (retirada 2026-11-26)
 
-1. El tenant carga el saldo inicial manual por material y mes.
-2. El sistema muestra los despachos del mes desde `DespachoAlmacen` en modo lectura.
-3. No se registran despachos en esta pantalla.
-4. Si se corrige un despacho en su pantalla de origen, el dashboard se recalcula.
-5. Si el mes está cerrado, se exige reapertura para modificar el saldo.
+La pantalla de entradas y el formulario de saldo inicial manual se retiraron. El stock inicial
+operativo se carga en **Stock inicial**, que crea `StockTecnico` y sus movimientos. Los saldos
+manuales existentes se conservan solo como dato histórico para los meses ya registrados.
 
 ### 7.4 Dashboard
 
@@ -286,8 +284,8 @@ Dado un mes con inicial 100, despachos 20 y usado 30, cuando se consulta el repo
 ### CA-15: Herencia de saldo
 Dado un mes sin saldo manual y un mes anterior con final 90, cuando se consulta, entonces el inicial es 90.
 
-### CA-16: Saldo manual prevalece
-Dado un saldo inicial manual, cuando se consulta, entonces prevalece sobre la herencia y el cambio se audita.
+### CA-16: Saldo manual histórico prevalece
+Dado un saldo inicial manual ya registrado antes del 2026-11-26, cuando se consulta, entonces prevalece sobre la herencia; ya no se crean nuevos saldos manuales desde la interfaz.
 
 ### CA-17: Despachos existentes
 Dado un despacho registrado en `DespachoAlmacen`, cuando se consulta el mes, entonces su cantidad suma sin volver a registrarse.

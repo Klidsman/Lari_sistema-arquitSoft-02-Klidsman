@@ -116,7 +116,6 @@ templates/
     ├── pendientes.html
     ├── registrar_materiales.html
     ├── _catalogo_orden.html
-    ├── entradas.html
     ├── dashboard.html
     ├── cierre.html
     ├── historial.html
@@ -508,9 +507,7 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 | `/registro-materiales/materiales/contexto/` | GET | Fragmento HTMX con orden o catálogo |
 | `/registro-materiales/materiales/guardar/` | POST | Guardar uso |
 | `/registro-materiales/ordenes/<id>/historial/` | GET | Historial |
-| `/registro-materiales/entradas/` | GET | Saldo inicial y despachos del mes |
-| `/registro-materiales/saldo-inicial/guardar/` | POST | Saldo inicial |
-| `/registro-materiales/dashboard/` | GET | Dashboard mensual |
+| `/registro-materiales/dashboard/` | GET | Dashboard mensual y enlaces de exportación |
 | `/registro-materiales/cierre/` | GET | Checklist y estado |
 | `/registro-materiales/cierre/cerrar/` | POST | Cerrar mes |
 | `/registro-materiales/cierre/reabrir/` | POST | Reabrir mes |
@@ -526,14 +523,14 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 
 ### Pantallas
 
-- **Menú**: Registrar órdenes, Registrar materiales, Catálogo, Pendientes, Entradas, Dashboard,
-  Cierre, Exportar.
+- **Menú**: Cargar órdenes, Registrar materiales, Órdenes pendientes, Dashboard, Cierre,
+  Catálogo habilitado.
 - **Catálogo**: materiales habilitados con activar/desactivar.
 - **Cargar órdenes**: técnico, mes, textarea, resumen, confirmar, deshacer.
 - **Registrar materiales**: técnico, mes, búsqueda, fecha, catálogo y cantidades.
 - **Pendientes**: órdenes sin materiales, filtro por antigüedad.
-- **Entradas**: saldo inicial editable y despachos del mes en solo lectura.
-- **Dashboard**: tarjetas, tabla por material, detalle por técnico, filtros y alertas.
+- **Dashboard**: tarjetas, tabla por material, detalle por técnico, filtros, alertas y enlaces de
+  exportación. La pantalla de Entradas y saldos se retiró; el stock inicial se carga en Stock inicial.
 - **Cierre**: checklist, justificaciones, respaldo, cerrar/reabrir.
 - **Historial**: cambios de orden y usos.
 

@@ -7,6 +7,14 @@
     Saldo del registro mensual de materiales. El detalle por técnico está en
     Stock actual.
   </p>
+  <p class="acciones-cabecera">
+    <a class="boton boton-secundario" href="{% url 'exportar_reporte_mensual' %}?periodo={{ datos.periodo }}&formato=xlsx">
+      Exportar reporte mensual
+    </a>
+    <a class="boton boton-secundario" href="{% url 'exportar_detalle_ordenes' %}?periodo={{ datos.periodo }}&formato=csv">
+      Exportar detalle de órdenes
+    </a>
+  </p>
   <table class="tabla">
     <thead><tr><th>Material</th><th>Inicial</th><th>Despachos</th><th>Usado</th><th>Final</th></tr></thead>
     <tbody>

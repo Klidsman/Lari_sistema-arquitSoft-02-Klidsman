@@ -406,56 +406,6 @@ def historial(request, orden_id):
 
 @login_required
 @require_GET
-def entradas(request):
-    tenant, error = _tenant_o_error(request)
-    if error is not None:
-        return error
-    periodo = _periodo(request)
-    despachos = services.despachos_del_periodo(tenant, periodo)
-    filas = [
-        {
-            "material": habilitado.material,
-            "saldo": services.saldo_inicial_efectivo(
-                tenant, habilitado.material, periodo
-            ),
-            "despachos": despachos.get(habilitado.material_id, 0),
-        }
-        for habilitado in services.materiales_habilitados(tenant)
-    ]
-    return render(
-        request,
-        "registro_materiales/entradas.html",
-        {"periodo": periodo, "filas": filas},
-    )
-
-
-@login_required
-@require_POST
-def guardar_saldo(request):
-    tenant, error = _tenant_o_error(request)
-    if error is not None:
-        return error
-    try:
-        material = Material.objects.filter(
-            pk=request.POST.get("material")
-        ).first()
-        services.registrar_saldo_inicial(
-            tenant,
-            material,
-            request.POST.get("periodo") or services.periodo_actual(),
-            request.POST.get("cantidad", ""),
-            request.usuario,
-        )
-    except services.ErrorRegistro as exc:
-        return _error(exc)
-    messages.success(request, "Saldo inicial registrado")
-    return redirect(
-        f"/registro-materiales/entradas/?periodo={request.POST.get('periodo', '')}"
-    )
-
-
-@login_required
-@require_GET
 def dashboard(request):
     tenant, error = _tenant_o_error(request)
     if error is not None:
