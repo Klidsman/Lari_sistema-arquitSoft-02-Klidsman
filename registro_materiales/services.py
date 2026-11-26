@@ -30,7 +30,6 @@ from .models import (
     AdvertenciaUso,
     CargaOrdenes,
     CierreMensual,
-    DespachoAlmacen,
     JustificacionCierre,
     MaterialHabilitado,
     OrdenLiquidacion,
@@ -469,13 +468,27 @@ def obtener_o_crear_orden(tenant, tecnico, periodo, numero, actor):
     return orden
 
 
-def despachos_del_periodo(tenant, periodo, material=None):
+def asignaciones_confirmadas_del_periodo(
+    tenant, periodo, material=None
+):
+    """Cantidad confirmada por el almacén en el mes, agrupada por material."""
     validar_periodo(periodo)
+    from asignaciones.models import EstadoSolicitud, LineaAsignacion
+
     anio, mes = (int(parte) for parte in periodo.split("-"))
     inicio = date(anio, mes, 1)
     fin = date(anio + (mes == 12), (mes % 12) + 1, 1)
-    qs = DespachoAlmacen.objects.filter(
-        tenant=tenant, fecha__gte=inicio, fecha__lt=fin
+    desde = timezone.make_aware(
+        datetime.combine(inicio, datetime.min.time())
+    )
+    hasta = timezone.make_aware(
+        datetime.combine(fin, datetime.min.time())
+    )
+    qs = LineaAsignacion.objects.filter(
+        tenant=tenant,
+        solicitud__estado=EstadoSolicitud.CONFIRMADA,
+        solicitud__confirmada_en__gte=desde,
+        solicitud__confirmada_en__lt=hasta,
     )
     if material is not None:
         qs = qs.filter(material=material)
@@ -483,6 +496,10 @@ def despachos_del_periodo(tenant, periodo, material=None):
         fila["material_id"]: fila["total"]
         for fila in qs.values("material_id").annotate(total=Sum("cantidad"))
     }
+
+
+# Alias de compatibilidad para código interno heredado.
+despachos_del_periodo = asignaciones_confirmadas_del_periodo
 
 
 def usado_del_periodo(tenant, periodo, material=None, tecnico=None):
@@ -1051,14 +1068,7 @@ def _materiales_con_datos(tenant, periodo):
             tenant=tenant, orden__periodo=periodo
         ).values_list("material_id", flat=True)
     )
-    anio, mes = (int(parte) for parte in periodo.split("-"))
-    ids.update(
-        DespachoAlmacen.objects.filter(
-            tenant=tenant,
-            fecha__gte=date(anio, mes, 1),
-            fecha__lt=date(anio + (mes == 12), (mes % 12) + 1, 1),
-        ).values_list("material_id", flat=True)
-    )
+    ids.update(asignaciones_confirmadas_del_periodo(tenant, periodo))
     ids.update(
         StockTecnico.objects.filter(tenant=tenant).values_list(
             "material_id", flat=True
@@ -1089,7 +1099,7 @@ def dashboard_mensual(
             cierre__estado=CierreMensual.CERRADO,
         ).values_list("material_id", "saldo_final")
     )
-    despachos = despachos_del_periodo(tenant, periodo)
+    asignaciones = asignaciones_confirmadas_del_periodo(tenant, periodo)
     usos = usado_del_periodo(tenant, periodo, tecnico=tecnico)
     filas = []
     for mat in materiales:
@@ -1100,13 +1110,13 @@ def dashboard_mensual(
             inicial = heredados[mat.pk]
         else:
             inicial = saldo_inicial_efectivo(tenant, mat, periodo)
-        despacho = despachos.get(mat.pk, 0)
-        final = inicial + despacho - usado
+        asignacion = asignaciones.get(mat.pk, 0)
+        final = inicial + asignacion - usado
         filas.append(
             {
                 "material": mat,
                 "inicial": inicial,
-                "despachos": despacho,
+                "asignaciones_confirmadas": asignacion,
                 "usado": usado,
                 "final": final,
                 "alerta": final < 0,
@@ -1310,7 +1320,7 @@ def cerrar_mes(tenant, periodo, backup_ref, actor):
                     tenant=tenant,
                     material=fila["material"],
                     saldo_inicial=fila["inicial"],
-                    despachos=fila["despachos"],
+                    despachos=fila["asignaciones_confirmadas"],
                     usado=fila["usado"],
                     saldo_final=fila["final"],
                 )

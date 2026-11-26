@@ -4,11 +4,11 @@ Reglas de dominio para el registro de materiales usados por los técnicos y el s
 
 ## 1. Propósito
 
-Permitir que cada tenant controle, mes a mes, el material que entra por los despachos del almacén,
+Permitir que cada tenant controle, mes a mes, el material que entra por las asignaciones confirmadas del almacén,
 el que usan sus técnicos en las órdenes y el saldo resultante.
 
 ```text
-disponible = saldo inicial + despachos del almacén
+disponible = saldo inicial + asignaciones confirmadas del almacén
 saldo final = disponible - uso del mes
 ```
 
@@ -29,9 +29,9 @@ El saldo final de un mes es el saldo inicial del mes siguiente. El saldo inicial
 |---|---|
 | Material habilitado | Material del catálogo que un tenant puede usar en este módulo |
 | Saldo inicial | Cantidad de un material al inicio de un mes |
-| Despacho | Cantidad recogida en el mes, registrada en `DespachoAlmacen` |
+| Asignación confirmada | Cantidad confirmada por el almacén en el mes |
 | Uso | Cantidad de material consumida por un técnico en una orden |
-| Disponible | Saldo inicial + despachos del mes |
+| Disponible | Saldo inicial + asignaciones confirmadas del mes |
 | Saldo final | Disponible - uso del mes |
 | Orden | Orden identificada por número, técnico y mes |
 | Periodo | Mes de la orden o saldo, en formato `YYYY-MM` |
@@ -82,28 +82,27 @@ El saldo final de un mes es el saldo inicial del mes siguiente. El saldo inicial
 - El periodo de uso se obtiene de la fecha de instalación de la orden.
 - El uso se descuenta del disponible del mes.
 
-## 8. Despachos del almacén
+## 8. Asignaciones confirmadas del almacén
 
-- Los despachos ya se registran en `DespachoAlmacen`.
-- El módulo solo lee `tenant`, `material`, `fecha` y `cantidad`.
-- No se registra el despacho otra vez desde la pantalla de materiales.
-- La fecha define el mes al que suma.
-- Un despacho con cantidad 0 se conserva, pero no suma.
-- No se modifica la estructura de `DespachoAlmacen` desde este flujo.
-- El alta/edición existente de `DespachoAlmacen` valida `PeriodoCerrado`; no se edita un despacho de un mes cerrado.
+- La fuente es `LineaAsignacion` de solicitudes con estado `CONFIRMADA`.
+- El mes se determina por `SolicitudAsignacion.confirmada_en`.
+- Para cada material se suma `LineaAsignacion.cantidad`.
+- Las solicitudes enviadas, rechazadas o canceladas no suman.
+- No se registra la asignación otra vez desde la pantalla de materiales.
+- `DespachoAlmacen` queda como tabla histórica y no participa del cálculo.
 
 ## 9. Saldo inicial y cálculo mensual
 
 ```text
 inicial = saldo manual histórico del mes, si existe
 si no, saldo final del cierre anterior
-si no hay anterior, stock actual + usado - despachos
+si no hay anterior, stock actual + usado - asignaciones_confirmadas
 
-despachos = suma de DespachoAlmacen del mes
+asignaciones_confirmadas = suma de LineaAsignacion de solicitudes CONFIRMADA del mes
 
 usado = suma de uso de las órdenes del mes
 
-final = inicial + despachos - usado = stock actual
+final = inicial + asignaciones_confirmadas - usado = stock actual
 ```
 
 - Un saldo final negativo se muestra con alerta.

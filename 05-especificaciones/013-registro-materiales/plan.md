@@ -11,11 +11,11 @@ Mejorar el módulo **013 Registro de Materiales** para que el tenant cargue órd
 registre el material usado por orden y controle el saldo mensual:
 
 ```text
-disponible = saldo inicial + despachos del almacén
+disponible = saldo inicial + asignaciones confirmadas del almacén
 saldo final = disponible − material usado en órdenes
 ```
 
-Los despachos ya existen en `DespachoAlmacen` dentro de 013 y son la única fuente de entradas; no se
+Las asignaciones confirmadas por el almacén son la única fuente de entradas; no se
 registran de nuevo desde la pantalla de materiales. El módulo agrega bloqueo de saldos negativos,
 advertencias por cantidades atípicas, panel de pendientes, dashboard, cierre mensual con checklist,
 reapertura con motivo y exportación a Excel/CSV.
@@ -34,7 +34,7 @@ asignaciones, traspasos ni recojos, y la conciliación del Excel del almacén qu
 | Interfaz | Django + HTMX; carga masiva, materiales, entradas, dashboard, cierre y exportación |
 | App | `registro_materiales` (013) |
 | Catálogo | `materiales.Material`; los materiales visibles salen de `StockTecnico` |
-| Despachos | `DespachoAlmacen` existente en 013; solo lectura para el cálculo |
+| Asignaciones confirmadas | `LineaAsignacion` de solicitudes `CONFIRMADA`; solo lectura para el cálculo |
 | Stock | **Descuenta `StockTecnico`; no toca `StockGeneral`** |
 | Conciliación | **No se lee, genera ni modifica** |
 | Saldo | Inicial manual o heredado del cierre anterior |
@@ -81,9 +81,9 @@ Si falta cualquiera, la implementación se detiene y se reporta.
 | VII. Autoridad del reporte de Lari | PASA | 013 no procesa el reporte de Lari ni conciliaciones. |
 | VIII. Spec-driven, pruebas y simplicidad | PASA | Cada CA tiene prueba; sin dependencias nuevas; lógica en `services.py`. |
 
-**Post-design re-check**: PASA. Se reutiliza `DespachoAlmacen`, no se duplica el registro de
-despachos, se bloquea el negativo, se agrega cierre auditable, se descuenta `StockTecnico` y no se
-toca `StockGeneral` ni la conciliación retirada.
+**Post-design re-check**: PASA. Se leen asignaciones confirmadas sin duplicar su registro, se
+bloquea el negativo, se agrega cierre auditable, se descuenta `StockTecnico` y no se toca
+`StockGeneral` ni la conciliación retirada.
 
 ## Project Structure
 
@@ -431,22 +431,22 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
   - `inicial + despachos - usado`; puede ser negativo para alerta, pero el guardado de uso bloquea
     que se genere por uso nuevo.
 
-### Despachos
+### Asignaciones confirmadas
 
-- `despachos_del_periodo(tenant, periodo)`:
-  - Agrega `DespachoAlmacen` por material y mes.
+- `asignaciones_confirmadas_del_periodo(tenant, periodo)`:
+  - Agrega `LineaAsignacion.cantidad` por material y mes de `confirmada_en`.
   - Solo lectura.
-  - No crea, edita ni borra despachos.
+  - No crea, edita ni borra asignaciones.
 - `validar_periodo_abierto(tenant, periodo)`:
-  - Se invoca desde el servicio existente de alta/edición de `DespachoAlmacen`.
+  - Se invoca desde la confirmación de asignaciones.
   - Si el mes está `CERRADO`, lanza `PeriodoCerrado`.
-- Si `DespachoAlmacen` tiene campos adicionales, se ignoran para el cálculo.
+- `DespachoAlmacen` queda como tabla histórica y no participa del cálculo.
 
 ### Dashboard
 
 - `dashboard_mensual(tenant, periodo, tecnico=None, material=None, desde=None, hasta=None)`:
-  - Materiales habilitados activos más los que tengan datos.
-  - Inicial, despachos, usado, final y alerta.
+  - Materiales con stock o asignaciones confirmadas en el periodo.
+  - Inicial, asignaciones confirmadas, usado, final y alerta.
   - Detalle por técnico.
   - Totales de órdenes y técnicos con uso.
   - Sin N+1.
@@ -488,7 +488,7 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 ### Exportación
 
 - `exportar_reporte_mensual(tenant, periodo, formato) -> ArchivoReporte`:
-  - Excel/CSV con inicial, despachos, usado, final y detalle por técnico.
+  - Excel/CSV con inicial, asignaciones confirmadas, usado, final y detalle por técnico.
 - `exportar_detalle_ordenes(tenant, periodo, formato) -> ArchivoReporte`:
   - Excel/CSV con técnico, orden, fecha, materiales y cantidades.
 - `formato` en `xlsx`/`csv`; sin archivos persistidos.
@@ -515,8 +515,8 @@ Viven en `registro_materiales/services.py`, `carga.py`, `dashboard.py`, `cierre.
 | `/registro-materiales/exportar/reporte/` | GET | Excel/CSV del reporte |
 | `/registro-materiales/exportar/ordenes/` | GET | Excel/CSV de órdenes |
 
-- No hay formulario de despacho en este módulo; los despachos se consultan desde
-  `DespachoAlmacen`.
+- No hay formulario de despacho en este módulo; las asignaciones confirmadas se consultan desde
+  `SolicitudAsignacion` y `LineaAsignacion`.
 - No hay `GET` para acciones de escritura.
 - Un recurso ajeno devuelve `404`; un rol incorrecto `403`; un mes cerrado `409`.
 
@@ -595,7 +595,7 @@ Un caso por criterio de aceptación, más cálculos, concurrencia y aislamiento.
 | CA-14 | `test_saldo_final` |
 | CA-15 | `test_herencia_saldo` |
 | CA-16 | `test_saldo_manual_prevalece` |
-| CA-17 | `test_despachos_desde_despachoalmacen` |
+| CA-17 | `test_dashboard_suma_solo_asignaciones_confirmadas` |
 | CA-18 | `test_historial_edicion` |
 | CA-19 | `test_ordenes_pendientes` |
 | CA-20 | `test_cierre_bloqueado_por_pendientes` |
@@ -630,8 +630,8 @@ Además:
 
 ## Decisiones y riesgos
 
-- **DespachoAlmacen reutilizado**: no hay doble registro. Alternativa descartada: nueva tabla de
-  despachos.
+- **Asignaciones confirmadas como despacho**: no hay doble registro. Alternativa descartada: nueva
+  tabla de despachos.
 - **Orden por técnico/mes/número**: permite el mismo número para otros técnicos y meses.
 - **Carga masiva idempotente**: pegar la lista completa cada día es seguro.
 - **Deshacer solo sin materiales**: protege la integridad; se audita.
@@ -646,7 +646,7 @@ Además:
 
 | Decisión | Por qué no viola la constitución |
 |---|---|
-| Reutilizar `DespachoAlmacen` | No duplica datos ni funciones; solo lee cantidades existentes. |
+| Leer asignaciones confirmadas | No duplica datos ni funciones; solo lee cantidades confirmadas. |
 | Carga masiva con lote | Permite deshacer sin borrar órdenes con materiales; queda auditado. |
 | Cierre con snapshot | Congela el periodo y conserva el saldo histórico; no toca `StockGeneral` ni la conciliación retirada. |
 | Advertencia sin bloqueo | La revisión humana decide; el cierre exige resolver o justificar. |

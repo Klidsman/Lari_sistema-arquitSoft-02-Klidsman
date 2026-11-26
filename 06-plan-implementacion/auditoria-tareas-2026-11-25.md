@@ -38,4 +38,4 @@ Para dar una spec por cerrada:
 3. `python manage.py check`, `makemigrations --check` y la suite completa están en verde.
 4. Se recorrió el `quickstart.md` o se documentó la deuda.
 
-La suite actual tiene **910 pruebas en verde**.
+La suite actual tiene **911 pruebas en verde**.

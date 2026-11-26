@@ -274,17 +274,18 @@ erDiagram
 periodo = YYYY-MM de fecha_instalacion, o el mes seleccionado en la carga
 ```
 
-### Despachos
+### Asignaciones confirmadas
 
 ```text
-despachos(tenant, material, periodo) =
-    suma de DespachoAlmacen.cantidad
-    donde tenant coincide, material coincide y fecha está en el periodo
+asignaciones_confirmadas(tenant, material, periodo) =
+    suma de LineaAsignacion.cantidad
+    donde tenant coincide, material coincide,
+    solicitud.estado = CONFIRMADA y confirmada_en está en el periodo
 ```
 
 - Solo lectura.
-- Cantidad 0 no suma.
-- Materiales sin despacho: 0.
+- Las solicitudes ENVIADA, RECHAZADA, CANCELADA o BORRADOR no suman.
+- Materiales sin asignación confirmada: 0.
 
 ### Saldo inicial efectivo
 
@@ -304,11 +305,11 @@ si no:
 usado(tenant, material, periodo) =
     suma de UsoMaterialOrden.cantidad de órdenes con periodo
 
-final = inicial + despachos - usado
+final = inicial + asignaciones_confirmadas - usado
 ```
 
 - Para el dashboard se puede mostrar negativo con alerta.
-- Para el guardado de un uso nuevo, el total no puede superar `inicial + despachos`.
+- Para el guardado de un uso nuevo, el total no puede superar el stock actual del técnico.
 - Un uso 0 no suma.
 
 ### Ejemplo
@@ -316,7 +317,7 @@ final = inicial + despachos - usado
 | Concepto | Valor |
 |---|---:|
 | Saldo inicial | 15 |
-| Despachos | 30 |
+| Asignaciones confirmadas | 30 |
 | Disponible | 45 |
 | Técnico A | 10 |
 | Técnico B | 5 |
@@ -425,7 +426,7 @@ ABIERTO → CERRADO (nueva versión)
 | CA-14 | `saldo_final` | 100+20−30=90 |
 | CA-15 | `saldo_inicial_efectivo` | Herencia |
 | CA-16 | `registrar_saldo` | Manual prevalece |
-| CA-17 | `DespachoAlmacen` | Suma sin doble registro |
+| CA-17 | `LineaAsignacion` confirmada | Suma sin doble registro |
 | CA-18 | `RegistroCambio` | Historial |
 | CA-19 | `ordenes_pendientes` | Panel |
 | CA-20 | `lista_chequeo` | Cierre bloqueado |

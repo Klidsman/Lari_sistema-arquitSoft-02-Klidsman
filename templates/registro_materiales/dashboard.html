@@ -22,13 +22,13 @@
     </a>
   </p>
   <table class="tabla">
-    <thead><tr><th>Material</th><th>Inicial</th><th>Despachos</th><th>Usado</th><th>Final</th></tr></thead>
+    <thead><tr><th>Material</th><th>Inicial</th><th>Asignaciones confirmadas</th><th>Usado</th><th>Final</th></tr></thead>
     <tbody>
       {% for fila in datos.filas %}
         <tr class="{% if fila.alerta %}fila-alerta{% endif %}">
           <td>{{ fila.material.codigo }} - {{ fila.material.descripcion }}</td>
           <td>{{ fila.inicial }}</td>
-          <td>{{ fila.despachos }}</td>
+          <td>{{ fila.asignaciones_confirmadas }}</td>
           <td>{{ fila.usado }}</td>
           <td>{{ fila.final }}{% if fila.alerta %} (negativo){% endif %}</td>
         </tr>

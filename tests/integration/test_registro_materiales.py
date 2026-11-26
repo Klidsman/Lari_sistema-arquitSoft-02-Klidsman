@@ -1,10 +1,15 @@
 """Registro de materiales: órdenes, saldos y cierre."""
 
-from datetime import date
+from datetime import date, datetime
 
 import pytest
 from django.utils import timezone
 
+from asignaciones.models import (
+    EstadoSolicitud,
+    LineaAsignacion,
+    SolicitudAsignacion,
+)
 from materiales.models import Material
 from registro_materiales.exportacion import (
     exportar_detalle_ordenes,
@@ -14,7 +19,6 @@ from registro_materiales.models import (
     AdvertenciaUso,
     CargaOrdenes,
     CierreMensual,
-    DespachoAlmacen,
     MaterialHabilitado,
     OrdenLiquidacion,
     SaldoMensualMaterial,
@@ -31,6 +35,7 @@ from registro_materiales.services import (
     buscar_orden,
     cerrar_mes,
     confirmar_carga,
+    dashboard_mensual,
     deshacer_carga,
     guardar_uso,
     historial_orden,
@@ -377,7 +382,7 @@ def test_advertencia_atipica_no_bloquea(
 
 
 @pytest.mark.django_db
-def test_saldo_final_herencia_y_manual_y_despachos(
+def test_saldo_final_herencia_y_manual_y_asignaciones_confirmadas(
     usuario_tenant, tenant, tecnico, material_no_seriado, almacen
 ):
     _habilitar(tenant, material_no_seriado, usuario_tenant)
@@ -385,12 +390,20 @@ def test_saldo_final_herencia_y_manual_y_despachos(
         tenant, material_no_seriado, PERIODO, 100, usuario_tenant
     )
     _stock(tenant, tecnico, material_no_seriado, 100)
-    DespachoAlmacen.objects.create(
+    solicitud = SolicitudAsignacion.objects.create(
         tenant=tenant,
-        material=material_no_seriado,
+        region=tenant.region,
         fecha=date(2026, 11, 5),
-        cantidad=20,
+        estado=EstadoSolicitud.CONFIRMADA,
+        confirmada_en=timezone.make_aware(datetime(2026, 11, 5, 12, 0)),
         creado_por=usuario_tenant,
+    )
+    LineaAsignacion.objects.create(
+        tenant=tenant,
+        solicitud=solicitud,
+        tecnico=tecnico,
+        material=material_no_seriado,
+        cantidad=20,
     )
     orden = obtener_o_crear_orden(
         tenant, tecnico, PERIODO, "A1", usuario_tenant
@@ -417,6 +430,53 @@ def test_saldo_final_herencia_y_manual_y_despachos(
     assert (
         saldo_inicial_efectivo(tenant, material_no_seriado, "2026-12") == 90
     )
+
+
+@pytest.mark.django_db
+def test_dashboard_suma_solo_asignaciones_confirmadas(
+    usuario_tenant, tenant, tecnico, material_no_seriado, almacen
+):
+    _stock(tenant, tecnico, material_no_seriado, 20)
+    confirmada = SolicitudAsignacion.objects.create(
+        tenant=tenant,
+        region=tenant.region,
+        fecha=date(2026, 11, 5),
+        estado=EstadoSolicitud.CONFIRMADA,
+        confirmada_en=timezone.make_aware(datetime(2026, 11, 5, 12, 0)),
+        creado_por=usuario_tenant,
+    )
+    LineaAsignacion.objects.create(
+        tenant=tenant,
+        solicitud=confirmada,
+        tecnico=tecnico,
+        material=material_no_seriado,
+        cantidad=20,
+    )
+    enviada = SolicitudAsignacion.objects.create(
+        tenant=tenant,
+        region=tenant.region,
+        fecha=date(2026, 11, 6),
+        estado=EstadoSolicitud.ENVIADA,
+        enviada_en=timezone.make_aware(datetime(2026, 11, 6, 12, 0)),
+        creado_por=usuario_tenant,
+    )
+    LineaAsignacion.objects.create(
+        tenant=tenant,
+        solicitud=enviada,
+        tecnico=tecnico,
+        material=material_no_seriado,
+        cantidad=5,
+    )
+
+    datos = dashboard_mensual(tenant, PERIODO)
+    fila = next(
+        item
+        for item in datos["filas"]
+        if item["material"].pk == material_no_seriado.pk
+    )
+    assert fila["asignaciones_confirmadas"] == 20
+    assert fila["inicial"] == 0
+    assert fila["final"] == 20
 
 
 @pytest.mark.django_db

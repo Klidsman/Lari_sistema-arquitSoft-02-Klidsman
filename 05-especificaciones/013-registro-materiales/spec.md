@@ -5,7 +5,7 @@
 Permitir que cada tenant controle, mes a mes, el material disponible y el material usado por sus técnicos en las órdenes de instalación.
 
 ```text
-disponible = saldo inicial + despachos del almacén
+disponible = saldo inicial + asignaciones confirmadas del almacén
 saldo final = disponible − material usado en órdenes
 ```
 
@@ -17,7 +17,7 @@ El módulo descuenta el stock del técnico al registrar el consumo. No modifica 
 
 - **Historias:** HU-30, HU-31, HU-32 y HU-33.
 - **Requisitos:** RF-70 a RF-78.
-- **Cobertura:** carga masiva de órdenes, registro de materiales, saldos, despachos existentes, dashboard, cierre mensual y exportación.
+- **Cobertura:** carga masiva de órdenes, registro de materiales, saldos, asignaciones confirmadas, dashboard, cierre mensual y exportación.
 
 ## 2. Alcance
 
@@ -25,7 +25,7 @@ El módulo descuenta el stock del técnico al registrar el consumo. No modifica 
 - Carga masiva de órdenes por técnico y mes.
 - Registro de materiales usados por orden.
 - Saldo inicial mensual manual.
-- Lectura de los despachos del almacén ya registrados en `DespachoAlmacen`.
+- Lectura de las asignaciones confirmadas por el almacén (`SolicitudAsignacion` + `LineaAsignacion`).
 - Dashboard mensual por material y detalle por técnico.
 - Panel de órdenes pendientes de materiales.
 - Advertencias por cantidades atípicas.
@@ -45,10 +45,10 @@ El módulo descuenta el stock del técnico al registrar el consumo. No modifica 
 |---|---|
 | Materiales disponibles | Materiales que el técnico tiene en `StockTecnico` o que ya tienen uso en la orden |
 | Saldo inicial | Cantidad de un material al inicio de un mes |
-| Despacho del almacén | Cantidad de material recogida en el mes, registrada en `DespachoAlmacen` |
+| Asignación confirmada | Cantidad de material confirmada por el almacén en el mes, sumada desde `LineaAsignacion` |
 | Orden | Orden de instalación identificada por número, técnico y mes |
 | Uso | Cantidad de material consumida por un técnico en una orden |
-| Disponible | Saldo inicial + despachos del mes |
+| Disponible | Saldo inicial + asignaciones confirmadas del mes |
 | Saldo final | Disponible − uso del mes |
 | Periodo | Mes `YYYY-MM` |
 | Cierre | Congelamiento del saldo final de un mes y traspaso al mes siguiente |
@@ -65,13 +65,13 @@ El módulo descuenta el stock del técnico al registrar el consumo. No modifica 
 
 ### 5.2 Despacho del almacén
 
-- `DespachoAlmacen` ya forma parte de 013 y es la única fuente de despachos.
-- Para el cálculo se usan `tenant`, `material`, `fecha` y `cantidad`.
-- Los despachos no se registran de nuevo desde la pantalla de materiales.
+- La fuente de despachos es `LineaAsignacion` de solicitudes `CONFIRMADA`.
+- Se usa el mes de `SolicitudAsignacion.confirmada_en` y la cantidad de cada línea.
+- Las asignaciones no se registran de nuevo desde la pantalla de materiales.
 - La fecha del despacho define el mes al que suma.
 - La cantidad es un entero mayor o igual a 0.
 - Un despacho con cantidad 0 se conserva, pero no suma.
-- La guarda de mes cerrado se aplica también al alta/edición existente de `DespachoAlmacen`; no se modifica su estructura.
+- La guarda de mes cerrado se aplica también a la confirmación de asignaciones; una asignación de un mes cerrado no se confirma.
 - El respaldo previo al cierre es una operación externa; la aplicación exige y registra su referencia.
 
 ### 5.3 Saldo inicial
@@ -133,8 +133,8 @@ El módulo descuenta el stock del técnico al registrar el consumo. No modifica 
 7. **Edición de orden existente.** Se abre para editar y se registra historial.
 8. **Cantidades válidas.** Enteros mayores o iguales a 0; no se aceptan negativos, decimales ni texto.
 9. **Saldo inicial mensual.** Manual si existe; si no, se hereda del final anterior.
-10. **Cálculo del saldo final.** `inicial + despachos − uso`.
-11. **Despachos existentes.** Se leen de `DespachoAlmacen`; no se registran dos veces.
+10. **Cálculo del saldo final.** `inicial + asignaciones confirmadas − uso`.
+11. **Asignaciones confirmadas.** Se leen de `LineaAsignacion`; no se registran dos veces.
 12. **Bloqueo de negativo.** No se guarda un uso que deje el saldo del mes en negativo.
 13. **Advertencia atípica.** Una cantidad muy alta se advierte, pero no se bloquea.
 14. **Historial.** Toda edición de orden, uso o saldo registra usuario, fecha, valor anterior y valor nuevo.
@@ -197,7 +197,7 @@ manuales existentes se conservan solo como dato histórico para los meses ya reg
 1. El tenant filtra por mes, técnico, material o rango de fechas.
 2. El sistema muestra:
    - saldo inicial;
-   - despachos;
+   - asignaciones confirmadas;
    - usado;
    - saldo final;
    - órdenes;
@@ -279,7 +279,7 @@ Dado un disponible de 45 y un uso total de 40, cuando se intenta usar 10, entonc
 Dada una cantidad muy superior al promedio del material, cuando se guarda, entonces se advierte pero no se bloquea.
 
 ### CA-14: Saldo final
-Dado un mes con inicial 100, despachos 20 y usado 30, cuando se consulta el reporte, entonces el saldo final es 90.
+Dado un mes con inicial 100, asignaciones confirmadas 20 y usado 30, cuando se consulta el reporte, entonces el saldo final es 90.
 
 ### CA-15: Herencia de saldo
 Dado un mes sin saldo manual y un mes anterior con final 90, cuando se consulta, entonces el inicial es 90.
@@ -287,8 +287,8 @@ Dado un mes sin saldo manual y un mes anterior con final 90, cuando se consulta,
 ### CA-16: Saldo manual histórico prevalece
 Dado un saldo inicial manual ya registrado antes del 2026-11-26, cuando se consulta, entonces prevalece sobre la herencia; ya no se crean nuevos saldos manuales desde la interfaz.
 
-### CA-17: Despachos existentes
-Dado un despacho registrado en `DespachoAlmacen`, cuando se consulta el mes, entonces su cantidad suma sin volver a registrarse.
+### CA-17: Asignaciones confirmadas
+Dada una asignación confirmada por el almacén, cuando se consulta el mes, entonces la cantidad de sus líneas suma sin volver a registrarse.
 
 ### CA-18: Historial de edición
 Dada una edición de orden, uso o saldo, cuando se guarda, entonces queda un registro con usuario, fecha, valor anterior y valor nuevo.
@@ -326,7 +326,7 @@ Dado un reporte mensual o detalle de órdenes, cuando se exporta, entonces se ge
 
 ## 10. Decisiones confirmadas
 
-1. `DespachoAlmacen` ya existe en 013 y es la fuente única de despachos.
+1. `SolicitudAsignacion` y `LineaAsignacion` son la fuente única de asignaciones confirmadas.
 2. El despacho solo aporta `tenant`, `material`, `fecha` y `cantidad`; no se vuelve a registrar.
 3. La carga masiva pide el mes de las órdenes y permite cambiarlo al registrar materiales.
 4. El mismo número de orden puede existir para otro técnico o en otro mes.
