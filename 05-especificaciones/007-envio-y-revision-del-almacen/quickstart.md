@@ -73,6 +73,28 @@ pytest --cov=asignaciones --cov-report=term-missing
 Las pruebas usan `django.core.mail.backends.locmem.EmailBackend`, Celery en modo eager y PostgreSQL
 real. No se acepta SQLite.
 
+Archivos principales de 007:
+
+```text
+tests/unit/test_almacen_servicios.py
+tests/unit/test_almacen_hash.py
+tests/unit/test_almacen_notificaciones.py
+tests/integration/test_envio_registro.py
+tests/integration/test_almacen_correo.py
+tests/integration/test_almacen_bandeja.py
+tests/integration/test_almacen_confirmacion.py
+tests/integration/test_almacen_concurrencia.py
+tests/integration/test_almacen_auditoria.py
+tests/integration/test_almacen_historicos.py
+tests/integration/test_almacen_tiempo_real.py
+tests/contract/test_almacen_http.py
+tests/contract/test_almacen_acciones_http.py
+tests/contract/test_almacen_tiempo_real_http.py
+```
+
+Cobertura al cierre del 2026-11-25: **66 pruebas en verde**; `almacen_services.py` 89 %,
+`almacen_views.py` 85 %.
+
 ## Escenarios de validación
 
 ### 1. CA-01 — Envío exitoso y registro

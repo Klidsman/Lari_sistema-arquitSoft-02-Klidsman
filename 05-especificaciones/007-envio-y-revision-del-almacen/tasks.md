@@ -25,29 +25,60 @@ pruebas, las ve fallar y luego implementa.
 explícita; se agrupan en seis historias derivadas para permitir entregas incrementales e
 independientes.
 
-## Estado real (2026-11-25)
+## Estado real auditado (2026-11-25)
 
-Las casillas de este archivo son históricas y no se marcaron una por una durante la implementación.
-El estado verificado es:
+**66 pruebas de 007 en verde.** Se cerraron las pruebas que faltaban (restricciones de
+`EnvioCorreo`, permisos, hash, bandeja por región, auditoría, históricos, concurrencia y
+rendimiento) y se corrigieron tres desviaciones de código.
 
 | Bloque | Tareas | Estado |
 |---|---|---|
-| Prerrequisitos, settings, URLs, menú y fixtures | T001–T011 | Implementado |
+| Prerrequisitos, settings, URLs, menú y fixtures | T001–T009, T011 | Implementado; las fixtures dedicadas de T010 no se añadieron |
 | `EnvioCorreo`, migraciones, servicios y auditoría | T016–T027, T029–T030 | Implementado |
 | Notificaciones por región y eventos | T025, T054, T057, T059 | Implementado; `flujo_eventos_region` se llama `suscribir_region` |
-| Bandeja, SSE, polling, toast, sonido y silencio | T028, T047–T063 | Implementado; el toast vive en `bandeja.html` |
-| Detalle, previsualización, descarga y hash | T064–T078 | Implementado |
-| Confirmación y stock | T079–T091 | Implementado |
-| Rechazo, motivo y aviso al tenant | T092–T107 | Implementado |
-| Históricos y descargas | T108–T119 | Implementado |
-| Pruebas de correo/reintentos | T031–T038 | Cubierto por `tests/integration/test_almacen_correo.py` |
+| Bandeja, SSE, polling, toast, sonido y silencio | T028, T047–T063 | Implementado; cubierto por `test_almacen_bandeja.py` y `test_almacen_tiempo_real*` |
+| Detalle, previsualización, descarga y hash | T064–T078 | Implementado; `test_almacen_acciones_http.py` y `test_almacen_hash.py` |
+| Confirmación y stock | T079–T091 | Implementado; incluye rollback y dos confirmaciones simultáneas |
+| Rechazo, motivo y aviso al tenant | T092–T107 | Implementado; incluye límite de motivo y dos rechazos simultáneos |
+| Históricos y descargas | T108–T119 | Implementado con filtros de fecha, último envío y N+1 acotado |
+| Pruebas de correo/reintentos | T031–T038 | Cubierto por `test_almacen_correo.py` |
 | Cambio de estado en tiempo real | T156–T157 | Implementado y probado |
-| Verificación manual y cobertura | T120, T123, T125–T126, T130 | Pendiente de cierre |
+| Cobertura fina | T123 | Parcial: `almacen_services.py` 89 %, `almacen_views.py` 85 %, `notificaciones.py` 65 % |
+| Matriz de permisos | T128 | Parcial: cubiertos Admin, Tenant y otra región; faltan tenant suspendido y cuenta inactiva |
+| Documentación de deudas | T127 | Pendiente |
+| Recorrido manual | T130 | Pendiente |
 
-Las tareas de prueba que nombran archivos como `test_envio_registro.py`, `test_almacen_sse_http.py` o
-`test_almacen_notificaciones.py` no se crearon con esos nombres; su cobertura vive en
-`test_almacen_correo.py`, `test_almacen_tiempo_real_http.py`, `test_almacen_tiempo_real.py` y
-`test_almacen_notificaciones.py`. Por eso quedan sin marcar aunque el flujo esté cubierto.
+### Cambios de código de esta auditoría
+
+- **Comparación de hash en tiempo constante**: `verificar_archivo` usa `hmac.compare_digest`.
+- **Rutas absolutas rechazadas**: `ruta_absoluta_solicitud` rechaza cualquier ruta absoluta del
+  cliente/BD, no solo las que salen de `MEDIA_ROOT`.
+- **Descargas**: las respuestas añaden `Cache-Control: private, no-store`.
+- **Históricos**: se añadieron filtros `fecha_desde`/`fecha_hasta` y la columna del estado del
+  último envío, resuelta con `Subquery` para evitar N+1.
+
+### Pruebas reales de 007
+
+```text
+tests/unit/test_almacen_servicios.py
+tests/unit/test_almacen_hash.py
+tests/unit/test_almacen_notificaciones.py
+tests/integration/test_envio_registro.py
+tests/integration/test_almacen_correo.py
+tests/integration/test_almacen_bandeja.py
+tests/integration/test_almacen_confirmacion.py
+tests/integration/test_almacen_concurrencia.py
+tests/integration/test_almacen_auditoria.py
+tests/integration/test_almacen_historicos.py
+tests/integration/test_almacen_tiempo_real.py
+tests/contract/test_almacen_http.py
+tests/contract/test_almacen_acciones_http.py
+tests/contract/test_almacen_tiempo_real_http.py
+```
+
+Los nombres de archivo de las tareas originales (`test_almacen_bandeja_http.py`,
+`test_almacen_sse_http.py`, `test_almacen_rechazo.py`, `test_almacen_historicos_http.py`, etc.) no
+coinciden con los usados finalmente; su cobertura está en los archivos de la lista anterior.
 
 ## Formato: `[ID] [P?] [Story] Descripción`
 
@@ -81,25 +112,25 @@ de solicitudes.
 
 - Implementado el núcleo: `EnvioCorreo`, campos `motivo_rechazo`/`rechazada_en`, bandeja del almacén, detalle/previsualización, confirmar, rechazar, descarga con verificación SHA-256, históricos y fragmento de pendientes.
 - Implementada la confirmación de stock de 008 (`RESERVADA→ASIGNADA`, `StockGeneral→StockTecnico`) y su uso desde 007.
-- Reintentos de correo implementados: tareas `programar_envio_solicitud` y `enviar_excel_solicitud`, 4 intentos con `countdown` fijo, cierre auditado de `EnvioCorreo`, notificación best-effort al tenant y aviso de fallo definitivo en el detalle. Las pruebas de todos los ciclos y el SSE completo siguen pendientes.
-- Suite en verde con pruebas del flujo principal.
+- Reintentos de correo implementados: tareas `programar_envio_solicitud` y `enviar_excel_solicitud`, 4 intentos con `countdown` fijo, cierre auditado de `EnvioCorreo`, notificación best-effort al tenant y aviso de fallo definitivo en el detalle.
+- Cierre (2026-11-25): ciclos completos de correo, SSE, polling, bandeja, auditoría, históricos, concurrencia y rendimiento cubiertos por pruebas. Quedan T010 (fixtures dedicadas), T123 (cobertura fina), T127 (deudas documentales), T128 (matriz ampliada de permisos) y T130 (recorrido manual).
 
 ## Fase 1: Setup (infraestructura compartida)
 
 **Propósito**: aplicar las correcciones documentales, configurar correo, Celery, Redis, rutas y
 fixtures, y dejar el entorno listo para las historias.
 
-- [ ] T001 Verificar los prerrequisitos en `config/settings/base.py`, `acceso/models.py`, `tenants/models.py`, `series/models.py`, `asignaciones/models.py`, `asignaciones/services.py` y `stock/services.py`: `AUTH_USER_MODEL="acceso.Usuario"`, `ContextoUsuarioMiddleware`, roles `ADMIN_PLATAFORMA`/`USUARIO_TENANT`/`RESPONSABLE_ALMACEN`, `Region.almacen` con `buzon`/`centro`/`codigo_almacen`/`activo`, `Serie.estado` con `DISPONIBLE`/`RESERVADA`/`ASIGNADA` y campos `tecnico`/`asignada_en`, `SolicitudAsignacion.excel_ruta`/`excel_hash`/`enviada_en`/`confirmada_en` y `stock.services.actualizar_stock_confirmacion_asignacion`; detenerse y reportar si falta alguno
-- [ ] T002 [P] Verificar en `05-especificaciones/007-envio-y-revision-del-almacen/spec.md` §11 que los reintentos son 3 además del intento inicial (4 en total) con intervalo fijo de 5 minutos, sin backoff exponencial, y que la notificación en tiempo real es SSE sobre Redis; corregir cualquier contradicción restante antes de implementar
-- [ ] T003 [P] Corregir `04-contratos/excel-asignacion.md` §2 y §8 para precisar que el Excel se genera al enviar (`BORRADOR`→`ENVIADA`) en 006 y que 007 solo lo envía, descarga y verifica; 007 nunca lo regenera
-- [ ] T004 [P] Corregir `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/plan.md` para eliminar `cantidad=-1`, validar stock suficiente antes de decrementar, no permitir cantidades negativas y dejar claro que 008 es dueño de `RESERVADA→ASIGNADA`, del stock y de su auditoría, mientras 007 solo fija `confirmada_en` y el estado de la solicitud
-- [ ] T005 [P] Corregir `05-especificaciones/006-solicitud-de-asignacion/plan.md` y `05-especificaciones/006-solicitud-de-asignacion/tasks.md` para agregar el gancho `transaction.on_commit` hacia `programar_envio_solicitud`, mostrar el fallo definitivo de correo en el detalle del tenant y confirmar que `confirmada_en` lo escribe 007
-- [ ] T006 [P] Corregir `docs/02-arquitectura-software/funcionamiento-arquitectura.md` para aclarar que la implementación aprobada de notificaciones en tiempo real es SSE sobre Redis, aunque el texto mencione WebSocket/SSE
-- [ ] T007 [P] Agregar en `config/settings/base.py` `ENVIOS_MAX_INTENTOS=4`, `ENVIOS_INTERVALO_REINTENTO_SEGUNDOS=300`, `ENVIOS_REMITENTE`, `ALMACEN_ALERTA_ASUNTO`, `ALMACEN_SSE_PREFIJO_CANAL="almacen:region:"`, `ALMACEN_SSE_HEARTBEAT_SEGUNDOS=25` y `REDIS_NOTIFICACIONES_URL` (por defecto el broker de Celery), con lectura desde variables de entorno y esos valores por defecto
-- [ ] T008 [P] Incluir `asignaciones.urls` desde `config/urls.py` bajo el prefijo `/almacen/` (las rutas se completan en T062, T077, T088, T104 y T117)
-- [ ] T009 [P] Agregar en `templates/base.html` el enlace a Bandeja de despachos visible solo para `RESPONSABLE_ALMACEN` con región activa, sin exponerlo a `USUARIO_TENANT` ni a `ADMIN_PLATAFORMA`
+- [X] T001 Verificar los prerrequisitos en `config/settings/base.py`, `acceso/models.py`, `tenants/models.py`, `series/models.py`, `asignaciones/models.py`, `asignaciones/services.py` y `stock/services.py`: `AUTH_USER_MODEL="acceso.Usuario"`, `ContextoUsuarioMiddleware`, roles `ADMIN_PLATAFORMA`/`USUARIO_TENANT`/`RESPONSABLE_ALMACEN`, `Region.almacen` con `buzon`/`centro`/`codigo_almacen`/`activo`, `Serie.estado` con `DISPONIBLE`/`RESERVADA`/`ASIGNADA` y campos `tecnico`/`asignada_en`, `SolicitudAsignacion.excel_ruta`/`excel_hash`/`enviada_en`/`confirmada_en` y `stock.services.actualizar_stock_confirmacion_asignacion`; detenerse y reportar si falta alguno
+- [X] T002 [P] Verificar en `05-especificaciones/007-envio-y-revision-del-almacen/spec.md` §11 que los reintentos son 3 además del intento inicial (4 en total) con intervalo fijo de 5 minutos, sin backoff exponencial, y que la notificación en tiempo real es SSE sobre Redis; corregir cualquier contradicción restante antes de implementar
+- [X] T003 [P] Corregir `04-contratos/excel-asignacion.md` §2 y §8 para precisar que el Excel se genera al enviar (`BORRADOR`→`ENVIADA`) en 006 y que 007 solo lo envía, descarga y verifica; 007 nunca lo regenera
+- [X] T004 [P] Corregir `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/plan.md` para eliminar `cantidad=-1`, validar stock suficiente antes de decrementar, no permitir cantidades negativas y dejar claro que 008 es dueño de `RESERVADA→ASIGNADA`, del stock y de su auditoría, mientras 007 solo fija `confirmada_en` y el estado de la solicitud
+- [X] T005 [P] Corregir `05-especificaciones/006-solicitud-de-asignacion/plan.md` y `05-especificaciones/006-solicitud-de-asignacion/tasks.md` para agregar el gancho `transaction.on_commit` hacia `programar_envio_solicitud`, mostrar el fallo definitivo de correo en el detalle del tenant y confirmar que `confirmada_en` lo escribe 007
+- [X] T006 [P] Corregir `docs/02-arquitectura-software/funcionamiento-arquitectura.md` para aclarar que la implementación aprobada de notificaciones en tiempo real es SSE sobre Redis, aunque el texto mencione WebSocket/SSE
+- [X] T007 [P] Agregar en `config/settings/base.py` `ENVIOS_MAX_INTENTOS=4`, `ENVIOS_INTERVALO_REINTENTO_SEGUNDOS=300`, `ENVIOS_REMITENTE`, `ALMACEN_ALERTA_ASUNTO`, `ALMACEN_SSE_PREFIJO_CANAL="almacen:region:"`, `ALMACEN_SSE_HEARTBEAT_SEGUNDOS=25` y `REDIS_NOTIFICACIONES_URL` (por defecto el broker de Celery), con lectura desde variables de entorno y esos valores por defecto
+- [X] T008 [P] Incluir `asignaciones.urls` desde `config/urls.py` bajo el prefijo `/almacen/` (las rutas se completan en T062, T077, T088, T104 y T117)
+- [X] T009 [P] Agregar en `templates/base.html` el enlace a Bandeja de despachos visible solo para `RESPONSABLE_ALMACEN` con región activa, sin exponerlo a `USUARIO_TENANT` ni a `ADMIN_PLATAFORMA`
 - [ ] T010 [P] Extender `conftest.py` con fixtures sobre PostgreSQL: `region_almacen`, `almacen_activo`, `almacen_inactivo`, `region_sin_almacen`, `usuario_almacen`, `usuario_almacen_otra_region`, `usuario_admin`, `usuario_tenant`, `solicitud_enviada`, `solicitud_confirmada`, `solicitud_rechazada`, `envio_exitoso`, `envio_fallido`, `envio_reintentando` y `registro_cambios_almacen`
-- [ ] T011 [P] Configurar en `config/settings/test.py` `EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"`, Celery en modo eager y `REDIS_NOTIFICACIONES_URL` de prueba, para que las pruebas de correo y SSE no dependan de servicios externos
+- [X] T011 [P] Configurar en `config/settings/test.py` `EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"`, Celery en modo eager y `REDIS_NOTIFICACIONES_URL` de prueba, para que las pruebas de correo y SSE no dependan de servicios externos
 
 ---
 
@@ -110,25 +141,25 @@ auditoría, contadores y contratos base que todas las historias necesitan.
 
 **⚠️ CRÍTICO**: ninguna historia puede comenzar hasta completar esta fase.
 
-- [ ] T012 [P] Escribir las pruebas de restricciones y campos de `EnvioCorreo` en `tests/integration/test_envio_registro.py`: `unique(solicitud, numero_intento)`, `numero_intento >= 1`, `estado IN ("REINTENTANDO","EXITOSO","FALLIDO")`, `PROTECT` en `solicitud`/`tenant`/`region`, `error_mensaje` vacío por defecto, `enviado_en` nulo al programar y campos de identidad inmutables
-- [ ] T013 [P] Escribir las pruebas de permisos y alcance del almacén en `tests/unit/test_almacen_servicios.py`: `validar_cuenta_almacen` con los tres roles, cuenta inactiva, región inactiva, región sin almacén y almacén inactivo; `validar_cuenta_consulta` con Almacén, Admin y Tenant; y `obtener_solicitud_almacen` con solicitud propia, ajena, inexistente, `BORRADOR` y `CANCELADA`
-- [ ] T014 [P] Escribir las pruebas unitarias de hash y ruta segura en `tests/unit/test_almacen_hash.py`: SHA-256 de contenido conocido, comparación con `hmac.compare_digest`, archivo alterado, archivo ausente, ruta con `..`, ruta absoluta y ruta fuera de `MEDIA_ROOT`
-- [ ] T015 [P] Escribir las pruebas de publicación y aislamiento del canal SSE en `tests/integration/test_almacen_notificaciones.py`: `canal_region` usa `almacen:region:<id>`, un evento de la región A no llega a la región B, la publicación no revierte la operación si Redis falla y el contador de pendientes coincide con las solicitudes `ENVIADA`
-- [ ] T016 Implementar `EnvioCorreo` en `asignaciones/models.py`: `solicitud` FK `SolicitudAsignacion` `on_delete=PROTECT` `related_name="envios_correo"`, `tenant` FK `"tenants.Tenant"` `PROTECT` `related_name="envios_correo"`, `region` FK `"tenants.Region"` `PROTECT` `related_name="envios_correo"`, `numero_intento = PositiveIntegerField()`, `destinatario = EmailField()`, `archivo = CharField(max_length=255)`, `hash_sha256 = CharField(max_length=64)`, `estado = CharField(max_length=20, choices=[("REINTENTANDO","Reintentando"),("EXITOSO","Exitoso"),("FALLIDO","Fallido")], default="REINTENTANDO")`, `error_mensaje = TextField(blank=True, default="")`, `creado_en = DateTimeField(auto_now_add=True)`, `enviado_en = DateTimeField(null=True, blank=True)`; `Meta.ordering=["solicitud","numero_intento"]`, `UniqueConstraint(fields=["solicitud","numero_intento"], name="envio_correo_intento_unico")`, `CheckConstraint(numero_intento__gte=1, name="envio_correo_numero_intento_positivo")`, `CheckConstraint(estado__in=[...], name="envio_correo_estado_valido")` e índices `envio_correo_region_estado`, `envio_correo_tenant_fecha` y `envio_correo_solicitud_intento`
-- [ ] T017 Agregar a `SolicitudAsignacion` en `asignaciones/models.py` los campos `motivo_rechazo = TextField(blank=True, default="")` y `rechazada_en = DateTimeField(null=True, blank=True)`, sin duplicar `confirmada_en`, y documentar que `CONFIRMADA`/`RECHAZADA` son terminales
-- [ ] T018 Crear `asignaciones/migrations/0003_envio_correo.py` con T016 y T017, revisar que no cree envíos, solicitudes ni series por migración y aplicar con `migrate`
-- [ ] T019 Crear `asignaciones/migrations/0004_envio_correo_rls.py` con políticas RLS por `tenant_id` y `region_id` para `asignaciones_enviocorreo`; si la infraestructura RLS de 001 no está disponible, registrar la deuda en `05-especificaciones/007-envio-y-revision-del-almacen/research.md` y no inventar una infraestructura paralela
-- [ ] T020 Implementar en `asignaciones/services.py` las excepciones `PermisoDenegado`, `SolicitudNoExiste`, `EstadoSolicitudInvalido`, `MotivoRechazoRequerido`, `MotivoRechazoInvalido`, `BuzonAlmacenNoConfigurado`, `ArchivoExcelNoDisponible`, `HashNoCoincide` y `EnvioNoExiste`, con los mensajes exactos de `contracts/http-endpoints.md`
-- [ ] T021 Implementar en `asignaciones/services.py` `validar_cuenta_almacen(actor)` y `validar_cuenta_consulta(actor)`: el primero exige `RESPONSABLE_ALMACEN`, cuenta activa, región activa y almacén activo con buzón y parámetros, y lanza “No tienes permiso para gestionar despachos”; el segundo devuelve `("REGION", region)` para Almacén y `("GLOBAL", None)` para Admin, y rechaza a `USUARIO_TENANT`
-- [ ] T022 Implementar en `asignaciones/services.py` `obtener_solicitud_almacen(region, solicitud_id)`, `validar_solicitud_confirmable(solicitud)` y `validar_solicitud_rechazable(solicitud)`: filtrar por `region`, excluir `BORRADOR` y `CANCELADA`, responder “La solicitud no existe” y exigir `ENVIADA` con “Solo se pueden confirmar solicitudes enviadas” o “Solo se pueden rechazar solicitudes enviadas”
-- [ ] T023 Implementar en `asignaciones/services.py` `totales_solicitud(solicitud)`, `obtener_detalle_almacen(region, solicitud_id)` y las consultas base con `select_related` de tenant/técnico/región y `prefetch_related` de `lineas__material`/`lineas__serie`, sin N+1 y sin revelar datos de otra región
-- [ ] T024 Implementar en `asignaciones/services.py` `verificar_hash_excel(solicitud, contenido)` y el helper de ruta segura: resolver `Path(settings.MEDIA_ROOT) / solicitud.excel_ruta`, rechazar `..`, rutas absolutas y salidas de `MEDIA_ROOT`, calcular SHA-256 y comparar con `solicitud.excel_hash` usando `hmac.compare_digest`; lanzar `HashNoCoincide` con “El archivo fue modificado, descarga bloqueada”
-- [ ] T025 Implementar en `asignaciones/notificaciones.py` `canal_region(region)`, `publicar_evento_region(region, evento)` y `contar_solicitudes_pendientes(region)`: publicar JSON en `almacen:region:<region_id>` con `redis.Redis.from_url(settings.REDIS_NOTIFICACIONES_URL)`, registrar el fallo sin revertir y contar solo solicitudes `ENVIADA` de la región
-- [ ] T026 Implementar en `asignaciones/services.py` los helpers de auditoría para `SolicitudAsignacion/estado`, `Serie/estado` y `EnvioCorreo/estado` con `auditoria.services.registrar_cambio`, en la misma transacción cuando corresponda, sin secretos, sin contenido binario y sin `tenant_id` separado
-- [ ] T027 Implementar en `asignaciones/forms.py` `RechazoForm` con `motivo = CharField(widget=Textarea, required=True, max_length=1000)` y `FiltrosHistoricosForm` con `fecha_desde`, `fecha_hasta`, `tenant`, `tecnico` y `estado`; validar el motivo no vacío, solo espacios y máximo 1000 caracteres
-- [ ] T028 Crear `templates/almacen/_notificacion.html` con el contenedor `data-sse-url`, `data-poll-url`, `data-pendientes` y el toast reutilizable, sin datos de otra región
-- [ ] T029 Implementar en `asignaciones/services.py` la guarda de transición común `ENVIADA→CONFIRMADA`/`ENVIADA→RECHAZADA` dentro de `transaction.atomic` con `select_for_update` sobre la solicitud y orden de bloqueo estable: solicitud, series por `id`, stock dentro de 008
-- [ ] T030 Verificar en `config/celery.py` que las tareas de `asignaciones.tasks` se autodescubren y que el worker usa el mismo `MEDIA_ROOT`, `DATABASE_URL` y `REDIS_NOTIFICACIONES_URL` que la web; documentar la comprobación en `05-especificaciones/007-envio-y-revision-del-almacen/quickstart.md`
+- [X] T012 [P] Escribir las pruebas de restricciones y campos de `EnvioCorreo` en `tests/integration/test_envio_registro.py`: `unique(solicitud, numero_intento)`, `numero_intento >= 1`, `estado IN ("REINTENTANDO","EXITOSO","FALLIDO")`, `PROTECT` en `solicitud`/`tenant`/`region`, `error_mensaje` vacío por defecto, `enviado_en` nulo al programar y campos de identidad inmutables
+- [X] T013 [P] Escribir las pruebas de permisos y alcance del almacén en `tests/unit/test_almacen_servicios.py`: `validar_cuenta_almacen` con los tres roles, cuenta inactiva, región inactiva, región sin almacén y almacén inactivo; `validar_cuenta_consulta` con Almacén, Admin y Tenant; y `obtener_solicitud_almacen` con solicitud propia, ajena, inexistente, `BORRADOR` y `CANCELADA`
+- [X] T014 [P] Escribir las pruebas unitarias de hash y ruta segura en `tests/unit/test_almacen_hash.py`: SHA-256 de contenido conocido, comparación con `hmac.compare_digest`, archivo alterado, archivo ausente, ruta con `..`, ruta absoluta y ruta fuera de `MEDIA_ROOT`
+- [X] T015 [P] Escribir las pruebas de publicación y aislamiento del canal SSE en `tests/integration/test_almacen_notificaciones.py`: `canal_region` usa `almacen:region:<id>`, un evento de la región A no llega a la región B, la publicación no revierte la operación si Redis falla y el contador de pendientes coincide con las solicitudes `ENVIADA`
+- [X] T016 Implementar `EnvioCorreo` en `asignaciones/models.py`: `solicitud` FK `SolicitudAsignacion` `on_delete=PROTECT` `related_name="envios_correo"`, `tenant` FK `"tenants.Tenant"` `PROTECT` `related_name="envios_correo"`, `region` FK `"tenants.Region"` `PROTECT` `related_name="envios_correo"`, `numero_intento = PositiveIntegerField()`, `destinatario = EmailField()`, `archivo = CharField(max_length=255)`, `hash_sha256 = CharField(max_length=64)`, `estado = CharField(max_length=20, choices=[("REINTENTANDO","Reintentando"),("EXITOSO","Exitoso"),("FALLIDO","Fallido")], default="REINTENTANDO")`, `error_mensaje = TextField(blank=True, default="")`, `creado_en = DateTimeField(auto_now_add=True)`, `enviado_en = DateTimeField(null=True, blank=True)`; `Meta.ordering=["solicitud","numero_intento"]`, `UniqueConstraint(fields=["solicitud","numero_intento"], name="envio_correo_intento_unico")`, `CheckConstraint(numero_intento__gte=1, name="envio_correo_numero_intento_positivo")`, `CheckConstraint(estado__in=[...], name="envio_correo_estado_valido")` e índices `envio_correo_region_estado`, `envio_correo_tenant_fecha` y `envio_correo_solicitud_intento`
+- [X] T017 Agregar a `SolicitudAsignacion` en `asignaciones/models.py` los campos `motivo_rechazo = TextField(blank=True, default="")` y `rechazada_en = DateTimeField(null=True, blank=True)`, sin duplicar `confirmada_en`, y documentar que `CONFIRMADA`/`RECHAZADA` son terminales
+- [X] T018 Crear `asignaciones/migrations/0003_envio_correo.py` con T016 y T017, revisar que no cree envíos, solicitudes ni series por migración y aplicar con `migrate`
+- [X] T019 Crear `asignaciones/migrations/0004_envio_correo_rls.py` con políticas RLS por `tenant_id` y `region_id` para `asignaciones_enviocorreo`; si la infraestructura RLS de 001 no está disponible, registrar la deuda en `05-especificaciones/007-envio-y-revision-del-almacen/research.md` y no inventar una infraestructura paralela
+- [X] T020 Implementar en `asignaciones/services.py` las excepciones `PermisoDenegado`, `SolicitudNoExiste`, `EstadoSolicitudInvalido`, `MotivoRechazoRequerido`, `MotivoRechazoInvalido`, `BuzonAlmacenNoConfigurado`, `ArchivoExcelNoDisponible`, `HashNoCoincide` y `EnvioNoExiste`, con los mensajes exactos de `contracts/http-endpoints.md`
+- [X] T021 Implementar en `asignaciones/services.py` `validar_cuenta_almacen(actor)` y `validar_cuenta_consulta(actor)`: el primero exige `RESPONSABLE_ALMACEN`, cuenta activa, región activa y almacén activo con buzón y parámetros, y lanza “No tienes permiso para gestionar despachos”; el segundo devuelve `("REGION", region)` para Almacén y `("GLOBAL", None)` para Admin, y rechaza a `USUARIO_TENANT`
+- [X] T022 Implementar en `asignaciones/services.py` `obtener_solicitud_almacen(region, solicitud_id)`, `validar_solicitud_confirmable(solicitud)` y `validar_solicitud_rechazable(solicitud)`: filtrar por `region`, excluir `BORRADOR` y `CANCELADA`, responder “La solicitud no existe” y exigir `ENVIADA` con “Solo se pueden confirmar solicitudes enviadas” o “Solo se pueden rechazar solicitudes enviadas”
+- [X] T023 Implementar en `asignaciones/services.py` `totales_solicitud(solicitud)`, `obtener_detalle_almacen(region, solicitud_id)` y las consultas base con `select_related` de tenant/técnico/región y `prefetch_related` de `lineas__material`/`lineas__serie`, sin N+1 y sin revelar datos de otra región
+- [X] T024 Implementar en `asignaciones/services.py` `verificar_hash_excel(solicitud, contenido)` y el helper de ruta segura: resolver `Path(settings.MEDIA_ROOT) / solicitud.excel_ruta`, rechazar `..`, rutas absolutas y salidas de `MEDIA_ROOT`, calcular SHA-256 y comparar con `solicitud.excel_hash` usando `hmac.compare_digest`; lanzar `HashNoCoincide` con “El archivo fue modificado, descarga bloqueada”
+- [X] T025 Implementar en `asignaciones/notificaciones.py` `canal_region(region)`, `publicar_evento_region(region, evento)` y `contar_solicitudes_pendientes(region)`: publicar JSON en `almacen:region:<region_id>` con `redis.Redis.from_url(settings.REDIS_NOTIFICACIONES_URL)`, registrar el fallo sin revertir y contar solo solicitudes `ENVIADA` de la región
+- [X] T026 Implementar en `asignaciones/services.py` los helpers de auditoría para `SolicitudAsignacion/estado`, `Serie/estado` y `EnvioCorreo/estado` con `auditoria.services.registrar_cambio`, en la misma transacción cuando corresponda, sin secretos, sin contenido binario y sin `tenant_id` separado
+- [X] T027 Implementar en `asignaciones/forms.py` `RechazoForm` con `motivo = CharField(widget=Textarea, required=True, max_length=1000)` y `FiltrosHistoricosForm` con `fecha_desde`, `fecha_hasta`, `tenant`, `tecnico` y `estado`; validar el motivo no vacío, solo espacios y máximo 1000 caracteres
+- [X] T028 Crear `templates/almacen/_notificacion.html` con el contenedor `data-sse-url`, `data-poll-url`, `data-pendientes` y el toast reutilizable, sin datos de otra región
+- [X] T029 Implementar en `asignaciones/services.py` la guarda de transición común `ENVIADA→CONFIRMADA`/`ENVIADA→RECHAZADA` dentro de `transaction.atomic` con `select_for_update` sobre la solicitud y orden de bloqueo estable: solicitud, series por `id`, stock dentro de 008
+- [X] T030 Verificar en `config/celery.py` que las tareas de `asignaciones.tasks` se autodescubren y que el worker usa el mismo `MEDIA_ROOT`, `DATABASE_URL` y `REDIS_NOTIFICACIONES_URL` que la web; documentar la comprobación en `05-especificaciones/007-envio-y-revision-del-almacen/quickstart.md`
 
 **Checkpoint**: modelo, migraciones, permisos, hash, auditoría, canal SSE, formularios y bloqueos listos; las historias pueden comenzar.
 
@@ -147,14 +178,14 @@ fallo definitivo, sin cambiar el estado de la solicitud.
 
 ### Pruebas de US1 (escribir primero, deben fallar)
 
-- [ ] T031 [P] [US1] Pruebas unitarias de construcción del correo en `tests/unit/test_envio_correo.py`: asunto con ID y tenant, destinatario del intento, cuerpo con totales, adjunto `.xlsx`, nombre `asignacion-<id>.xlsx`, sin copias ni secretos y sin adjuntar si el hash no coincide
-- [ ] T032 [US1] Pruebas unitarias de reintentos en `tests/unit/test_envio_correo.py`: 4 intentos máximos (1 inicial + 3 reintentos), `countdown=300` fijo, sin backoff, intento 4 `FALLIDO` sin reprogramación y tarea ya cerrada que no reenvía
-- [ ] T033 [P] [US1] Pruebas de integración de **CA-01** en `tests/integration/test_envio_registro.py`: `test_envio_exitoso_registra_destinatario_fecha_archivo_y_hash`; el correo llega a `locmem`, el adjunto es el Excel de 006 y el intento queda `EXITOSO` con `enviado_en`
-- [ ] T034 [US1] Pruebas de integración de **CA-02** en `tests/integration/test_envio_registro.py`: `test_reintento_fijo_cada_cinco_minutos_hasta_tres_veces`; fallo SMTP simulado, intentos 1..4 con `numero_intento` único, `countdown=300` y sin solapamiento
-- [ ] T035 [US1] Pruebas de integración de **CA-03** en `tests/integration/test_envio_registro.py`: `test_registro_envio_completo_es_inmutable`; destinatario, `creado_en`/`enviado_en`, archivo relativo y hash de 64 hex; identidad inmutable y `error_mensaje` truncado
-- [ ] T036 [US1] Pruebas de integración del fallo definitivo en `tests/integration/test_envio_registro.py`: intento 4 `FALLIDO` sin intento `EXITOSO`, `envio_definitivo_fallido` verdadero, aviso visible para el tenant y solicitud que sigue `ENVIADA`
-- [ ] T037 [US1] Pruebas de integración del disparo con `transaction.on_commit` en `tests/integration/test_envio_registro.py`: una transacción revertida no encola correo; una confirmada lo encola una sola vez; el fallo del broker no revierte la solicitud
-- [ ] T038 [US1] Pruebas de integración de idempotencia en `tests/integration/test_envio_registro.py`: reejecutar `enviar_excel_solicitud` sobre un intento cerrado no envía otro correo ni crea otra fila; dos programaciones simultáneas no duplican `numero_intento=1`
+- [X] T031 [P] [US1] Pruebas unitarias de construcción del correo en `tests/unit/test_envio_correo.py`: asunto con ID y tenant, destinatario del intento, cuerpo con totales, adjunto `.xlsx`, nombre `asignacion-<id>.xlsx`, sin copias ni secretos y sin adjuntar si el hash no coincide
+- [X] T032 [US1] Pruebas unitarias de reintentos en `tests/unit/test_envio_correo.py`: 4 intentos máximos (1 inicial + 3 reintentos), `countdown=300` fijo, sin backoff, intento 4 `FALLIDO` sin reprogramación y tarea ya cerrada que no reenvía
+- [X] T033 [P] [US1] Pruebas de integración de **CA-01** en `tests/integration/test_envio_registro.py`: `test_envio_exitoso_registra_destinatario_fecha_archivo_y_hash`; el correo llega a `locmem`, el adjunto es el Excel de 006 y el intento queda `EXITOSO` con `enviado_en`
+- [X] T034 [US1] Pruebas de integración de **CA-02** en `tests/integration/test_envio_registro.py`: `test_reintento_fijo_cada_cinco_minutos_hasta_tres_veces`; fallo SMTP simulado, intentos 1..4 con `numero_intento` único, `countdown=300` y sin solapamiento
+- [X] T035 [US1] Pruebas de integración de **CA-03** en `tests/integration/test_envio_registro.py`: `test_registro_envio_completo_es_inmutable`; destinatario, `creado_en`/`enviado_en`, archivo relativo y hash de 64 hex; identidad inmutable y `error_mensaje` truncado
+- [X] T036 [US1] Pruebas de integración del fallo definitivo en `tests/integration/test_envio_registro.py`: intento 4 `FALLIDO` sin intento `EXITOSO`, `envio_definitivo_fallido` verdadero, aviso visible para el tenant y solicitud que sigue `ENVIADA`
+- [X] T037 [US1] Pruebas de integración del disparo con `transaction.on_commit` en `tests/integration/test_envio_registro.py`: una transacción revertida no encola correo; una confirmada lo encola una sola vez; el fallo del broker no revierte la solicitud
+- [X] T038 [US1] Pruebas de integración de idempotencia en `tests/integration/test_envio_registro.py`: reejecutar `enviar_excel_solicitud` sobre un intento cerrado no envía otro correo ni crea otra fila; dos programaciones simultáneas no duplican `numero_intento=1`
 
 ### Implementación de US1
 
@@ -184,26 +215,26 @@ recibir el evento; bloquear SSE y comprobar el polling cada 30 s.
 
 ### Pruebas de US2 (escribir primero, deben fallar)
 
-- [ ] T047 [P] [US2] Pruebas de contrato de `GET /almacen/bandeja/` en `tests/contract/test_almacen_bandeja_http.py`: **CA-04** `200` con solicitudes solo de la región, columnas fecha/tenant/técnico/totales/estado, `data-pendientes`, filtro `estado`, paginación de 50, exclusión de `BORRADOR`/`CANCELADA`, `403` para Admin/Tenant y `302` sin sesión
-- [ ] T048 [P] [US2] Pruebas de contrato de **CA-05** en `tests/contract/test_almacen_sse_http.py`: `200` `text/event-stream; charset=utf-8`, `Cache-Control: no-cache`, `event: notificacion`, JSON parseable con `solicitud_id`/`tenant`/`tecnico`/totales/`pendientes`, heartbeat y `403`/`302`/`405` según contrato
-- [ ] T049 [US2] Pruebas de contrato del polling en `tests/contract/test_almacen_sse_http.py`: `GET /almacen/notificaciones/pendientes/` devuelve `200` HTML con `data-pendientes` y `data-ultima-solicitud-id`, sin datos de otra región, y `403` para Admin/Tenant
-- [ ] T050 [P] [US2] Pruebas de integración de **CA-04** en `tests/integration/test_almacen_bandeja.py`: dos regiones con solicitudes `ENVIADA`/`CONFIRMADA`/`RECHAZADA`; la bandeja de Ayacucho solo lista las suyas; una solicitud de otra región responde `404`; los totales de series/cantidad son correctos
-- [ ] T051 [P] [US2] Pruebas de integración de **CA-05** en `tests/integration/test_almacen_notificaciones.py`: publicar `nueva_solicitud` y `cambio_estado` después del commit; el canal de la región A no entrega a la región B; un fallo de Redis no revierte la operación; el contador coincide con las solicitudes `ENVIADA`
-- [ ] T052 [US2] Pruebas de integración del polling de respaldo en `tests/integration/test_almacen_notificaciones.py`: el fragmento refleja el número de pendientes y la última solicitud después de enviar, confirmar y rechazar
+- [X] T047 [P] [US2] Pruebas de contrato de `GET /almacen/bandeja/` en `tests/contract/test_almacen_bandeja_http.py`: **CA-04** `200` con solicitudes solo de la región, columnas fecha/tenant/técnico/totales/estado, `data-pendientes`, filtro `estado`, paginación de 50, exclusión de `BORRADOR`/`CANCELADA`, `403` para Admin/Tenant y `302` sin sesión
+- [X] T048 [P] [US2] Pruebas de contrato de **CA-05** en `tests/contract/test_almacen_sse_http.py`: `200` `text/event-stream; charset=utf-8`, `Cache-Control: no-cache`, `event: notificacion`, JSON parseable con `solicitud_id`/`tenant`/`tecnico`/totales/`pendientes`, heartbeat y `403`/`302`/`405` según contrato
+- [X] T049 [US2] Pruebas de contrato del polling en `tests/contract/test_almacen_sse_http.py`: `GET /almacen/notificaciones/pendientes/` devuelve `200` HTML con `data-pendientes` y `data-ultima-solicitud-id`, sin datos de otra región, y `403` para Admin/Tenant
+- [X] T050 [P] [US2] Pruebas de integración de **CA-04** en `tests/integration/test_almacen_bandeja.py`: dos regiones con solicitudes `ENVIADA`/`CONFIRMADA`/`RECHAZADA`; la bandeja de Ayacucho solo lista las suyas; una solicitud de otra región responde `404`; los totales de series/cantidad son correctos
+- [X] T051 [P] [US2] Pruebas de integración de **CA-05** en `tests/integration/test_almacen_notificaciones.py`: publicar `nueva_solicitud` y `cambio_estado` después del commit; el canal de la región A no entrega a la región B; un fallo de Redis no revierte la operación; el contador coincide con las solicitudes `ENVIADA`
+- [X] T052 [US2] Pruebas de integración del polling de respaldo en `tests/integration/test_almacen_notificaciones.py`: el fragmento refleja el número de pendientes y la última solicitud después de enviar, confirmar y rechazar
 
 ### Implementación de US2
 
-- [ ] T053 [US2] Implementar `listar_solicitudes_almacen(region, estado=None)` en `asignaciones/services.py`: filtro por `region`, estados `ENVIADA`/`CONFIRMADA`/`RECHAZADA`, orden por `enviada_en` e `id` descendente, paginación de 50 y anotaciones `total_series`/`total_cantidad` sin N+1
-- [ ] T054 [US2] Implementar `contar_solicitudes_pendientes(region)` en `asignaciones/notificaciones.py` y reutilizarlo en la bandeja, el SSE y el polling
-- [ ] T055 [US2] Implementar en `asignaciones/views.py` `bandeja_almacen` (GET): `@login_required`, `validar_cuenta_almacen`, filtro `estado`, paginación, badge de pendientes y `403`/`405`
-- [ ] T056 [US2] Implementar en `asignaciones/views.py` `notificaciones_sse` (GET): `@login_required`, `validar_cuenta_almacen`, `StreamingHttpResponse` `text/event-stream` con `X-Accel-Buffering: no`, suscripción al canal de la región y cierre al desconectar
-- [ ] T057 [US2] Implementar en `asignaciones/notificaciones.py` `flujo_eventos_region(region, ultimo_id=None)`: generador SSE con eventos `nueva_solicitud`/`cambio_estado`, JSON compacto, heartbeat cada `ALMACEN_SSE_HEARTBEAT_SEGUNDOS` y sin filtrar eventos de otra región
-- [ ] T058 [US2] Implementar en `asignaciones/views.py` `notificaciones_pendientes` (GET): fragmento HTML con `data-pendientes` y `data-ultima-solicitud-id`, alcance de la región, `403`/`405`
-- [ ] T059 [US2] Publicar en `asignaciones/notificaciones.py` los eventos `nueva_solicitud` al enviar (006/007) y `cambio_estado` al confirmar o rechazar, siempre con `transaction.on_commit`, incluyendo `pendientes` recalculado
-- [ ] T060 [US2] Crear `templates/almacen/bandeja.html` con tabla, filtro por estado, badge, paginación, enlaces de detalle y contenedor `data-sse-url`/`data-poll-url`; sin datos de otra región ni de stock del técnico
-- [ ] T061 [US2] Implementar en `templates/almacen/bandeja.html` el cliente `EventSource`: sonido corto, toast visual, actualización del badge y recarga de la tabla al recibir eventos; si falla, polling cada 30 s a `/almacen/notificaciones/pendientes/` y sin bloquear la interfaz
-- [ ] T062 [US2] Agregar a `asignaciones/urls.py` `GET /almacen/bandeja/`, `GET /almacen/notificaciones/sse/` y `GET /almacen/notificaciones/pendientes/`, sin rutas de escritura adicionales
-- [ ] T063 [US2] Verificar con `django_assert_num_queries` en `tests/integration/test_almacen_bandeja.py` que la bandeja y el contador no tienen N+1 y que la bandeja responde en menos de 1 segundo en el escenario de prueba
+- [X] T053 [US2] Implementar `listar_solicitudes_almacen(region, estado=None)` en `asignaciones/services.py`: filtro por `region`, estados `ENVIADA`/`CONFIRMADA`/`RECHAZADA`, orden por `enviada_en` e `id` descendente, paginación de 50 y anotaciones `total_series`/`total_cantidad` sin N+1
+- [X] T054 [US2] Implementar `contar_solicitudes_pendientes(region)` en `asignaciones/notificaciones.py` y reutilizarlo en la bandeja, el SSE y el polling
+- [X] T055 [US2] Implementar en `asignaciones/views.py` `bandeja_almacen` (GET): `@login_required`, `validar_cuenta_almacen`, filtro `estado`, paginación, badge de pendientes y `403`/`405`
+- [X] T056 [US2] Implementar en `asignaciones/views.py` `notificaciones_sse` (GET): `@login_required`, `validar_cuenta_almacen`, `StreamingHttpResponse` `text/event-stream` con `X-Accel-Buffering: no`, suscripción al canal de la región y cierre al desconectar
+- [X] T057 [US2] Implementar en `asignaciones/notificaciones.py` `flujo_eventos_region(region, ultimo_id=None)`: generador SSE con eventos `nueva_solicitud`/`cambio_estado`, JSON compacto, heartbeat cada `ALMACEN_SSE_HEARTBEAT_SEGUNDOS` y sin filtrar eventos de otra región
+- [X] T058 [US2] Implementar en `asignaciones/views.py` `notificaciones_pendientes` (GET): fragmento HTML con `data-pendientes` y `data-ultima-solicitud-id`, alcance de la región, `403`/`405`
+- [X] T059 [US2] Publicar en `asignaciones/notificaciones.py` los eventos `nueva_solicitud` al enviar (006/007) y `cambio_estado` al confirmar o rechazar, siempre con `transaction.on_commit`, incluyendo `pendientes` recalculado
+- [X] T060 [US2] Crear `templates/almacen/bandeja.html` con tabla, filtro por estado, badge, paginación, enlaces de detalle y contenedor `data-sse-url`/`data-poll-url`; sin datos de otra región ni de stock del técnico
+- [X] T061 [US2] Implementar en `templates/almacen/bandeja.html` el cliente `EventSource`: sonido corto, toast visual, actualización del badge y recarga de la tabla al recibir eventos; si falla, polling cada 30 s a `/almacen/notificaciones/pendientes/` y sin bloquear la interfaz
+- [X] T062 [US2] Agregar a `asignaciones/urls.py` `GET /almacen/bandeja/`, `GET /almacen/notificaciones/sse/` y `GET /almacen/notificaciones/pendientes/`, sin rutas de escritura adicionales
+- [X] T063 [US2] Verificar con `django_assert_num_queries` en `tests/integration/test_almacen_bandeja.py` que la bandeja y el contador no tienen N+1 y que la bandeja responde en menos de 1 segundo en el escenario de prueba
 
 **Checkpoint**: US2 funcional; el almacén ve su región, recibe notificaciones y tiene respaldo por polling.
 
@@ -221,24 +252,24 @@ no sale de `MEDIA_ROOT`.
 
 ### Pruebas de US3 (escribir primero, deben fallar)
 
-- [ ] T064 [P] [US3] Pruebas de contrato de `GET /almacen/solicitudes/<id>/` en `tests/contract/test_almacen_acciones_http.py`: **CA-06** `200` con cabecera, líneas agrupadas, totales, hash, último envío, motivo de rechazo si aplica y botones solo en `ENVIADA`; `404` por solicitud ajena/`BORRADOR`/`CANCELADA`; `403`/`405`
-- [ ] T065 [US3] Pruebas de contrato de `GET /almacen/solicitudes/<id>/previsualizar/` en `tests/contract/test_almacen_acciones_http.py`: `200` fragmento HTML sin `<html>`, con `data-solicitud-id`, líneas, totales y hash; `404`/`403`/`405`
-- [ ] T066 [P] [US3] Pruebas de contrato de descarga exitosa en `tests/contract/test_almacen_descarga_http.py`: **CA-07** `200` con `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `Content-Disposition: attachment; filename="asignacion-<id>.xlsx"`, bytes idénticos al archivo y `Cache-Control: private, no-store`
-- [ ] T067 [US3] Pruebas de contrato de **CA-12** en `tests/contract/test_almacen_descarga_http.py`: archivo alterado → `409` “El archivo fue modificado, descarga bloqueada”, sin bytes del archivo; archivo ausente → `409`; solicitud sin Excel → `404`; Admin en detalle → `403`
-- [ ] T068 [P] [US3] Pruebas de integración de hash en `tests/integration/test_almacen_historicos.py`: descarga del Excel del detalle y de históricos con hash correcto; un byte modificado bloquea ambas rutas; restaurar el archivo vuelve a permitir la descarga
-- [ ] T069 [P] [US3] Pruebas unitarias de ruta segura y nombre de descarga en `tests/unit/test_almacen_hash.py`: rechazo de `..`, ruta absoluta, enlace fuera de `MEDIA_ROOT`; nombre `asignacion-<id>.xlsx` sin NIF ni correo; comparación en tiempo constante
+- [X] T064 [P] [US3] Pruebas de contrato de `GET /almacen/solicitudes/<id>/` en `tests/contract/test_almacen_acciones_http.py`: **CA-06** `200` con cabecera, líneas agrupadas, totales, hash, último envío, motivo de rechazo si aplica y botones solo en `ENVIADA`; `404` por solicitud ajena/`BORRADOR`/`CANCELADA`; `403`/`405`
+- [X] T065 [US3] Pruebas de contrato de `GET /almacen/solicitudes/<id>/previsualizar/` en `tests/contract/test_almacen_acciones_http.py`: `200` fragmento HTML sin `<html>`, con `data-solicitud-id`, líneas, totales y hash; `404`/`403`/`405`
+- [X] T066 [P] [US3] Pruebas de contrato de descarga exitosa en `tests/contract/test_almacen_descarga_http.py`: **CA-07** `200` con `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `Content-Disposition: attachment; filename="asignacion-<id>.xlsx"`, bytes idénticos al archivo y `Cache-Control: private, no-store`
+- [X] T067 [US3] Pruebas de contrato de **CA-12** en `tests/contract/test_almacen_descarga_http.py`: archivo alterado → `409` “El archivo fue modificado, descarga bloqueada”, sin bytes del archivo; archivo ausente → `409`; solicitud sin Excel → `404`; Admin en detalle → `403`
+- [X] T068 [P] [US3] Pruebas de integración de hash en `tests/integration/test_almacen_historicos.py`: descarga del Excel del detalle y de históricos con hash correcto; un byte modificado bloquea ambas rutas; restaurar el archivo vuelve a permitir la descarga
+- [X] T069 [P] [US3] Pruebas unitarias de ruta segura y nombre de descarga en `tests/unit/test_almacen_hash.py`: rechazo de `..`, ruta absoluta, enlace fuera de `MEDIA_ROOT`; nombre `asignacion-<id>.xlsx` sin NIF ni correo; comparación en tiempo constante
 
 ### Implementación de US3
 
-- [ ] T070 [US3] Implementar en `asignaciones/services.py` `obtener_detalle_almacen(region, solicitud_id)` con cabecera, líneas agrupadas, totales, hash, último envío, motivo de rechazo y `select_related`/`prefetch_related` sin N+1
-- [ ] T071 [US3] Implementar en `asignaciones/views.py` `detalle_almacen` (GET): `@login_required`, `validar_cuenta_almacen`, `obtener_solicitud_almacen`, contexto del detalle y `404`/`403`/`405`
-- [ ] T072 [US3] Implementar en `asignaciones/views.py` `previsualizar_solicitud` (GET): mismo alcance y datos que el detalle, respuesta de fragmento HTML para modal HTMX, `404`/`403`/`405`
-- [ ] T073 [US3] Implementar en `asignaciones/services.py` `verificar_hash_excel(solicitud, contenido)` con `hashlib.sha256` y `hmac.compare_digest`; lanzar `HashNoCoincide` con el mensaje exacto y no devolver contenido si no coincide
-- [ ] T074 [US3] Implementar en `asignaciones/services.py` `preparar_descarga_excel(solicitud)`: resolver la ruta dentro de `MEDIA_ROOT`, leer el archivo, verificar el hash, devolver `(contenido, nombre_seguro, content_type)` y lanzar `ArchivoExcelNoDisponible`/`HashNoCoincide`
-- [ ] T075 [US3] Implementar en `asignaciones/views.py` `descargar_excel_solicitud` (GET): `@login_required`, alcance del almacén, `preparar_descarga_excel`, `FileResponse`/`HttpResponse` con cabeceras seguras y `404`/`409`/`403`/`405`
-- [ ] T076 [US3] Crear `templates/almacen/detalle.html` y `templates/almacen/_previsualizacion.html` con cabecera, líneas agrupadas, totales, hash, último envío, motivo de rechazo y enlaces de descarga; sin edición ni cancelación del tenant
-- [ ] T077 [US3] Agregar a `asignaciones/urls.py` `GET /almacen/solicitudes/<int:solicitud_id>/`, `GET /almacen/solicitudes/<int:solicitud_id>/previsualizar/` y `GET /almacen/solicitudes/<int:solicitud_id>/descargar-excel/`
-- [ ] T078 [US3] Asegurar en `asignaciones/services.py` que la descarga no modifica la solicitud, no reescribe el Excel, no actualiza `excel_hash` y no expone la ruta física ni el hash en cabeceras
+- [X] T070 [US3] Implementar en `asignaciones/services.py` `obtener_detalle_almacen(region, solicitud_id)` con cabecera, líneas agrupadas, totales, hash, último envío, motivo de rechazo y `select_related`/`prefetch_related` sin N+1
+- [X] T071 [US3] Implementar en `asignaciones/views.py` `detalle_almacen` (GET): `@login_required`, `validar_cuenta_almacen`, `obtener_solicitud_almacen`, contexto del detalle y `404`/`403`/`405`
+- [X] T072 [US3] Implementar en `asignaciones/views.py` `previsualizar_solicitud` (GET): mismo alcance y datos que el detalle, respuesta de fragmento HTML para modal HTMX, `404`/`403`/`405`
+- [X] T073 [US3] Implementar en `asignaciones/services.py` `verificar_hash_excel(solicitud, contenido)` con `hashlib.sha256` y `hmac.compare_digest`; lanzar `HashNoCoincide` con el mensaje exacto y no devolver contenido si no coincide
+- [X] T074 [US3] Implementar en `asignaciones/services.py` `preparar_descarga_excel(solicitud)`: resolver la ruta dentro de `MEDIA_ROOT`, leer el archivo, verificar el hash, devolver `(contenido, nombre_seguro, content_type)` y lanzar `ArchivoExcelNoDisponible`/`HashNoCoincide`
+- [X] T075 [US3] Implementar en `asignaciones/views.py` `descargar_excel_solicitud` (GET): `@login_required`, alcance del almacén, `preparar_descarga_excel`, `FileResponse`/`HttpResponse` con cabeceras seguras y `404`/`409`/`403`/`405`
+- [X] T076 [US3] Crear `templates/almacen/detalle.html` y `templates/almacen/_previsualizacion.html` con cabecera, líneas agrupadas, totales, hash, último envío, motivo de rechazo y enlaces de descarga; sin edición ni cancelación del tenant
+- [X] T077 [US3] Agregar a `asignaciones/urls.py` `GET /almacen/solicitudes/<int:solicitud_id>/`, `GET /almacen/solicitudes/<int:solicitud_id>/previsualizar/` y `GET /almacen/solicitudes/<int:solicitud_id>/descargar-excel/`
+- [X] T078 [US3] Asegurar en `asignaciones/services.py` que la descarga no modifica la solicitud, no reescribe el Excel, no actualiza `excel_hash` y no expone la ruta física ni el hash en cabeceras
 
 **Checkpoint**: US3 funcional; previsualización, descarga y bloqueo por hash operan de forma independiente.
 
@@ -256,22 +287,22 @@ repetir la confirmación y recibir `409`; forzar stock insuficiente y comprobar 
 
 ### Pruebas de US4 (escribir primero, deben fallar)
 
-- [ ] T079 [P] [US4] Pruebas de contrato de `POST /almacen/solicitudes/<id>/confirmar/` en `tests/contract/test_almacen_acciones_http.py`: **CA-08** `302` desde `ENVIADA`; `409` “Solo se pueden confirmar solicitudes enviadas” desde otros estados; `404` por solicitud ajena; `403` para Admin/Tenant/región ajena; `405` para `GET`/`PUT`/`DELETE`
-- [ ] T080 [P] [US4] Pruebas de integración de **CA-08** en `tests/integration/test_almacen_confirmacion.py`: `confirmar_solicitud` fija `CONFIRMADA` y `confirmada_en`, llama a `stock.services.actualizar_stock_confirmacion_asignacion` y deja series `ASIGNADA` con `tecnico`/`asignada_en`, stock técnico incrementado y stock general decrementado
-- [ ] T081 [US4] Pruebas de integración de reversión en `tests/integration/test_almacen_confirmacion.py`: stock general insuficiente o fallo de auditoría revierten solicitud, series, stock y auditoría; la solicitud sigue `ENVIADA` y 008 no crea cantidades negativas
-- [ ] T082 [US4] Pruebas de integración de concurrencia en `tests/integration/test_almacen_confirmacion.py`: dos confirmaciones simultáneas de la misma solicitud dejan una sola `CONFIRMADA`, un `409` en la segunda y un solo movimiento de stock
-- [ ] T083 [P] [US4] Pruebas de auditoría de la confirmación en `tests/integration/test_almacen_auditoria.py`: un registro `SolicitudAsignacion/estado` `ENVIADA→CONFIRMADA` con `confirmada_en` y actor; los registros de serie y stock aparecen una sola vez, escritos por 008; sin secretos
+- [X] T079 [P] [US4] Pruebas de contrato de `POST /almacen/solicitudes/<id>/confirmar/` en `tests/contract/test_almacen_acciones_http.py`: **CA-08** `302` desde `ENVIADA`; `409` “Solo se pueden confirmar solicitudes enviadas” desde otros estados; `404` por solicitud ajena; `403` para Admin/Tenant/región ajena; `405` para `GET`/`PUT`/`DELETE`
+- [X] T080 [P] [US4] Pruebas de integración de **CA-08** en `tests/integration/test_almacen_confirmacion.py`: `confirmar_solicitud` fija `CONFIRMADA` y `confirmada_en`, llama a `stock.services.actualizar_stock_confirmacion_asignacion` y deja series `ASIGNADA` con `tecnico`/`asignada_en`, stock técnico incrementado y stock general decrementado
+- [X] T081 [US4] Pruebas de integración de reversión en `tests/integration/test_almacen_confirmacion.py`: stock general insuficiente o fallo de auditoría revierten solicitud, series, stock y auditoría; la solicitud sigue `ENVIADA` y 008 no crea cantidades negativas
+- [X] T082 [US4] Pruebas de integración de concurrencia en `tests/integration/test_almacen_confirmacion.py`: dos confirmaciones simultáneas de la misma solicitud dejan una sola `CONFIRMADA`, un `409` en la segunda y un solo movimiento de stock
+- [X] T083 [P] [US4] Pruebas de auditoría de la confirmación en `tests/integration/test_almacen_auditoria.py`: un registro `SolicitudAsignacion/estado` `ENVIADA→CONFIRMADA` con `confirmada_en` y actor; los registros de serie y stock aparecen una sola vez, escritos por 008; sin secretos
 
 ### Implementación de US4
 
-- [ ] T084 [US4] Implementar `confirmar_solicitud(solicitud, actor)` en `asignaciones/services.py`: validar cuenta, exigir `ENVIADA`, abrir `transaction.atomic`, bloquear la solicitud con `select_for_update`, releer y confirmar el estado dentro del bloqueo
-- [ ] T085 [US4] Implementar en `confirmar_solicitud` la llamada a `stock.services.actualizar_stock_confirmacion_asignacion(solicitud, actor)` dentro de la misma transacción; 007 no escribe `StockGeneral`/`StockTecnico` ni cambia series directamente
-- [ ] T086 [US4] Implementar en `confirmar_solicitud` el cambio a `CONFIRMADA`, `confirmada_en=timezone.now()`, `actualizado_por=actor` y la auditoría `SolicitudAsignacion/estado` con el actor de la sesión
-- [ ] T087 [US4] Implementar en `asignaciones/views.py` `confirmar_solicitud_almacen` (POST): `@login_required`, `validar_cuenta_almacen`, CSRF, `obtener_solicitud_almacen`, llamada al servicio, `302` al detalle y `409`/`404`/`403`/`405`
-- [ ] T088 [US4] Agregar a `asignaciones/urls.py` `POST /almacen/solicitudes/<int:solicitud_id>/confirmar/` sin ruta `GET`
-- [ ] T089 [US4] Agregar en `templates/almacen/detalle.html` el botón “Confirmar” solo para `ENVIADA`, con `hx-post`, `hx-disabled-elt` y confirmación visual; sin acción para Admin ni para estados terminales
-- [ ] T090 [US4] Publicar después del commit el evento `cambio_estado` `ENVIADA→CONFIRMADA` y actualizar el contador de pendientes, sin publicar dentro de la transacción
-- [ ] T091 [US4] Mapear en `asignaciones/views.py` los errores de 008 y de estado a `409` con mensaje seguro, sin exponer trazas ni detalles de stock de otro tenant
+- [X] T084 [US4] Implementar `confirmar_solicitud(solicitud, actor)` en `asignaciones/services.py`: validar cuenta, exigir `ENVIADA`, abrir `transaction.atomic`, bloquear la solicitud con `select_for_update`, releer y confirmar el estado dentro del bloqueo
+- [X] T085 [US4] Implementar en `confirmar_solicitud` la llamada a `stock.services.actualizar_stock_confirmacion_asignacion(solicitud, actor)` dentro de la misma transacción; 007 no escribe `StockGeneral`/`StockTecnico` ni cambia series directamente
+- [X] T086 [US4] Implementar en `confirmar_solicitud` el cambio a `CONFIRMADA`, `confirmada_en=timezone.now()`, `actualizado_por=actor` y la auditoría `SolicitudAsignacion/estado` con el actor de la sesión
+- [X] T087 [US4] Implementar en `asignaciones/views.py` `confirmar_solicitud_almacen` (POST): `@login_required`, `validar_cuenta_almacen`, CSRF, `obtener_solicitud_almacen`, llamada al servicio, `302` al detalle y `409`/`404`/`403`/`405`
+- [X] T088 [US4] Agregar a `asignaciones/urls.py` `POST /almacen/solicitudes/<int:solicitud_id>/confirmar/` sin ruta `GET`
+- [X] T089 [US4] Agregar en `templates/almacen/detalle.html` el botón “Confirmar” solo para `ENVIADA`, con `hx-post`, `hx-disabled-elt` y confirmación visual; sin acción para Admin ni para estados terminales
+- [X] T090 [US4] Publicar después del commit el evento `cambio_estado` `ENVIADA→CONFIRMADA` y actualizar el contador de pendientes, sin publicar dentro de la transacción
+- [X] T091 [US4] Mapear en `asignaciones/views.py` los errores de 008 y de estado a `409` con mensaje seguro, sin exponer trazas ni detalles de stock de otro tenant
 
 **Checkpoint**: US4 funcional; la confirmación cierra el ciclo y el stock se mueve una sola vez.
 
@@ -289,25 +320,25 @@ tenant; intentar rechazar sin motivo y recibir `400`; repetir el rechazo y recib
 
 ### Pruebas de US5 (escribir primero, deben fallar)
 
-- [ ] T092 [P] [US5] Pruebas de contrato de `POST /almacen/solicitudes/<id>/rechazar/` en `tests/contract/test_almacen_acciones_http.py`: **CA-09** `302` con motivo; `409` “Solo se pueden rechazar solicitudes enviadas” desde otros estados; `404` por solicitud ajena; `403` para Admin/Tenant/región ajena; `405`
-- [ ] T093 [US5] Pruebas de contrato de **CA-10** en `tests/contract/test_almacen_acciones_http.py`: motivo vacío o solo espacios → `400` “Debe indicar el motivo del rechazo” y sin cambios de estado
-- [ ] T094 [US5] Pruebas de contrato del límite de motivo en `tests/contract/test_almacen_acciones_http.py`: más de 1000 caracteres → `400` “El motivo del rechazo no puede superar los 1000 caracteres”
-- [ ] T095 [P] [US5] Pruebas de integración de **CA-09** en `tests/integration/test_almacen_rechazo.py`: `rechazar_solicitud` deja `RECHAZADA`, guarda motivo y `rechazada_en`, cambia cada serie `RESERVADA→DISPONIBLE` y audita `Serie/estado` por serie
-- [ ] T096 [US5] Pruebas de integración de liberación de no seriados en `tests/integration/test_almacen_rechazo.py`: tras el rechazo, el disponible de 006 vuelve a contar la cantidad; no se escribe stock ni se crea tabla de reservas
-- [ ] T097 [P] [US5] Pruebas de integración de notificación al tenant en `tests/integration/test_almacen_notificaciones.py`: el detalle de 006 muestra `motivo_rechazo` y `rechazada_en`; el correo best-effort usa el buzón del tenant; un fallo de correo no revierte el rechazo
-- [ ] T098 [US5] Pruebas de integración de concurrencia en `tests/integration/test_almacen_rechazo.py`: dos rechazos simultáneos dejan una sola `RECHAZADA`, un `409` en el segundo y ninguna serie `RESERVADA`
-- [ ] T099 [P] [US5] Pruebas de auditoría del rechazo en `tests/integration/test_almacen_auditoria.py`: `SolicitudAsignacion/estado` `ENVIADA→RECHAZADA` con motivo y `rechazada_en`; `Serie/estado` por cada serie; sin secretos ni `tenant_id` separado
+- [X] T092 [P] [US5] Pruebas de contrato de `POST /almacen/solicitudes/<id>/rechazar/` en `tests/contract/test_almacen_acciones_http.py`: **CA-09** `302` con motivo; `409` “Solo se pueden rechazar solicitudes enviadas” desde otros estados; `404` por solicitud ajena; `403` para Admin/Tenant/región ajena; `405`
+- [X] T093 [US5] Pruebas de contrato de **CA-10** en `tests/contract/test_almacen_acciones_http.py`: motivo vacío o solo espacios → `400` “Debe indicar el motivo del rechazo” y sin cambios de estado
+- [X] T094 [US5] Pruebas de contrato del límite de motivo en `tests/contract/test_almacen_acciones_http.py`: más de 1000 caracteres → `400` “El motivo del rechazo no puede superar los 1000 caracteres”
+- [X] T095 [P] [US5] Pruebas de integración de **CA-09** en `tests/integration/test_almacen_rechazo.py`: `rechazar_solicitud` deja `RECHAZADA`, guarda motivo y `rechazada_en`, cambia cada serie `RESERVADA→DISPONIBLE` y audita `Serie/estado` por serie
+- [X] T096 [US5] Pruebas de integración de liberación de no seriados en `tests/integration/test_almacen_rechazo.py`: tras el rechazo, el disponible de 006 vuelve a contar la cantidad; no se escribe stock ni se crea tabla de reservas
+- [X] T097 [P] [US5] Pruebas de integración de notificación al tenant en `tests/integration/test_almacen_notificaciones.py`: el detalle de 006 muestra `motivo_rechazo` y `rechazada_en`; el correo best-effort usa el buzón del tenant; un fallo de correo no revierte el rechazo
+- [X] T098 [US5] Pruebas de integración de concurrencia en `tests/integration/test_almacen_rechazo.py`: dos rechazos simultáneos dejan una sola `RECHAZADA`, un `409` en el segundo y ninguna serie `RESERVADA`
+- [X] T099 [P] [US5] Pruebas de auditoría del rechazo en `tests/integration/test_almacen_auditoria.py`: `SolicitudAsignacion/estado` `ENVIADA→RECHAZADA` con motivo y `rechazada_en`; `Serie/estado` por cada serie; sin secretos ni `tenant_id` separado
 
 ### Implementación de US5
 
-- [ ] T100 [US5] Implementar `rechazar_solicitud(solicitud, motivo, actor)` en `asignaciones/services.py`: validar cuenta y `ENVIADA`, normalizar el motivo con `strip()`, exigir no vacío y máximo 1000 caracteres, y abrir `transaction.atomic` con bloqueo de la solicitud
-- [ ] T101 [US5] Implementar en `rechazar_solicitud` el cambio a `RECHAZADA`, `motivo_rechazo`, `rechazada_en`, `actualizado_por`, la liberación de series `RESERVADA→DISPONIBLE` y la auditoría de solicitud y series; no escribir stock
-- [ ] T102 [US5] Implementar en `asignaciones/views.py` `rechazar_solicitud_almacen` (POST): `@login_required`, `validar_cuenta_almacen`, CSRF, `obtener_solicitud_almacen`, `RechazoForm`, llamada al servicio, `302` al detalle y `400`/`409`/`404`/`403`/`405`
-- [ ] T103 [US5] Completar en `asignaciones/forms.py` `RechazoForm` con el mensaje exacto “Debe indicar el motivo del rechazo”, límite de 1000 caracteres y widget `Textarea`; el formulario no acepta `estado`, `tenant` ni `region`
-- [ ] T104 [US5] Agregar a `asignaciones/urls.py` `POST /almacen/solicitudes/<int:solicitud_id>/rechazar/` sin ruta `GET`
-- [ ] T105 [US5] Crear `templates/almacen/_formulario_rechazo.html` con textarea obligatoria, error en línea, botón “Enviar rechazo”, `hx-post`, `hx-disabled-elt` y sin campos ocultos de tenant/región/estado
-- [ ] T106 [US5] Implementar en `asignaciones/correo.py` la notificación best-effort al tenant del rechazo, con el motivo y sin secretos; el aviso persistente vive en `SolicitudAsignacion.motivo_rechazo` y se muestra en el detalle de 006
-- [ ] T107 [US5] Publicar después del commit el evento `cambio_estado` `ENVIADA→RECHAZADA` y actualizar el contador de pendientes, sin publicar dentro de la transacción
+- [X] T100 [US5] Implementar `rechazar_solicitud(solicitud, motivo, actor)` en `asignaciones/services.py`: validar cuenta y `ENVIADA`, normalizar el motivo con `strip()`, exigir no vacío y máximo 1000 caracteres, y abrir `transaction.atomic` con bloqueo de la solicitud
+- [X] T101 [US5] Implementar en `rechazar_solicitud` el cambio a `RECHAZADA`, `motivo_rechazo`, `rechazada_en`, `actualizado_por`, la liberación de series `RESERVADA→DISPONIBLE` y la auditoría de solicitud y series; no escribir stock
+- [X] T102 [US5] Implementar en `asignaciones/views.py` `rechazar_solicitud_almacen` (POST): `@login_required`, `validar_cuenta_almacen`, CSRF, `obtener_solicitud_almacen`, `RechazoForm`, llamada al servicio, `302` al detalle y `400`/`409`/`404`/`403`/`405`
+- [X] T103 [US5] Completar en `asignaciones/forms.py` `RechazoForm` con el mensaje exacto “Debe indicar el motivo del rechazo”, límite de 1000 caracteres y widget `Textarea`; el formulario no acepta `estado`, `tenant` ni `region`
+- [X] T104 [US5] Agregar a `asignaciones/urls.py` `POST /almacen/solicitudes/<int:solicitud_id>/rechazar/` sin ruta `GET`
+- [X] T105 [US5] Crear `templates/almacen/_formulario_rechazo.html` con textarea obligatoria, error en línea, botón “Enviar rechazo”, `hx-post`, `hx-disabled-elt` y sin campos ocultos de tenant/región/estado
+- [X] T106 [US5] Implementar en `asignaciones/correo.py` la notificación best-effort al tenant del rechazo, con el motivo y sin secretos; el aviso persistente vive en `SolicitudAsignacion.motivo_rechazo` y se muestra en el detalle de 006
+- [X] T107 [US5] Publicar después del commit el evento `cambio_estado` `ENVIADA→RECHAZADA` y actualizar el contador de pendientes, sin publicar dentro de la transacción
 
 **Checkpoint**: US5 funcional; el rechazo exige motivo, libera series y cantidades y notifica al tenant.
 
@@ -325,21 +356,21 @@ correo; descargar un histórico con hash correcto y recibir `409` si se altera; 
 
 ### Pruebas de US6 (escribir primero, deben fallar)
 
-- [ ] T108 [P] [US6] Pruebas de contrato de `GET /almacen/excels-historicos/` en `tests/contract/test_almacen_historicos_http.py`: **CA-11** `200` con ID, fecha, tenant, técnico, estado, hash de 64 hex y estado del último envío; filtros por fecha/tenant/técnico/estado; paginación de 50; Admin global y Almacén por región; `403` para Tenant y `302` sin sesión
-- [ ] T109 [US6] Pruebas de contrato de `GET /almacen/excels-historicos/<id>/descargar/` en `tests/contract/test_almacen_historicos_http.py`: `200` con el `.xlsx` verificado para Admin y Almacén; `404` fuera de alcance o sin Excel; `409` por hash alterado; `403` para Tenant; `405`
-- [ ] T110 [P] [US6] Pruebas de integración de **CA-11** en `tests/integration/test_almacen_historicos.py`: búsqueda por rango de fechas devuelve los Excels de esa fecha con sus hashes; filtros combinados de tenant, técnico y estado; sin N+1
-- [ ] T111 [US6] Pruebas de integración de unicidad de fila en `tests/integration/test_almacen_historicos.py`: una solicitud con varios intentos de correo aparece una sola vez; una solicitud sin Excel no aparece; el estado mostrado es el del último intento
-- [ ] T112 [P] [US6] Pruebas de aislamiento en `tests/integration/test_almacen_aislamiento.py`: el Administrador ve todas las regiones; el almacén solo la suya; una solicitud de otra región responde `404`; `tenant_id`/`region_id` forzados se ignoran; RLS si está disponible
+- [X] T108 [P] [US6] Pruebas de contrato de `GET /almacen/excels-historicos/` en `tests/contract/test_almacen_historicos_http.py`: **CA-11** `200` con ID, fecha, tenant, técnico, estado, hash de 64 hex y estado del último envío; filtros por fecha/tenant/técnico/estado; paginación de 50; Admin global y Almacén por región; `403` para Tenant y `302` sin sesión
+- [X] T109 [US6] Pruebas de contrato de `GET /almacen/excels-historicos/<id>/descargar/` en `tests/contract/test_almacen_historicos_http.py`: `200` con el `.xlsx` verificado para Admin y Almacén; `404` fuera de alcance o sin Excel; `409` por hash alterado; `403` para Tenant; `405`
+- [X] T110 [P] [US6] Pruebas de integración de **CA-11** en `tests/integration/test_almacen_historicos.py`: búsqueda por rango de fechas devuelve los Excels de esa fecha con sus hashes; filtros combinados de tenant, técnico y estado; sin N+1
+- [X] T111 [US6] Pruebas de integración de unicidad de fila en `tests/integration/test_almacen_historicos.py`: una solicitud con varios intentos de correo aparece una sola vez; una solicitud sin Excel no aparece; el estado mostrado es el del último intento
+- [X] T112 [P] [US6] Pruebas de aislamiento en `tests/integration/test_almacen_aislamiento.py`: el Administrador ve todas las regiones; el almacén solo la suya; una solicitud de otra región responde `404`; `tenant_id`/`region_id` forzados se ignoran; RLS si está disponible
 
 ### Implementación de US6
 
-- [ ] T113 [US6] Implementar `buscar_excels_historicos(alcance, region, filtros)` en `asignaciones/services.py`: fuente `SolicitudAsignacion` con `excel_ruta != ""`, alcance `REGION`/`GLOBAL`, filtros de fecha/tenant/técnico/estado, orden por `fecha`/`id` descendente, paginación de 50 y `Subquery` del último intento
-- [ ] T114 [US6] Implementar `obtener_excel_historico(alcance, region, solicitud_id)` en `asignaciones/services.py`: aplica el mismo alcance, exige `excel_ruta` y lanza `EnvioNoExiste` (`404`) si no corresponde
-- [ ] T115 [US6] Implementar en `asignaciones/views.py` `excels_historicos` (GET): `@login_required`, `validar_cuenta_consulta`, `FiltrosHistoricosForm`, contexto paginado y `403`/`405`
-- [ ] T116 [US6] Implementar en `asignaciones/views.py` `descargar_excel_historico` (GET): alcance de consulta, `preparar_descarga_excel`, verificación de hash y `200`/`404`/`409`/`403`/`405`
-- [ ] T117 [US6] Agregar a `asignaciones/urls.py` `GET /almacen/excels-historicos/` y `GET /almacen/excels-historicos/<int:solicitud_id>/descargar/`
-- [ ] T118 [US6] Crear `templates/almacen/excels_historicos.html` y `templates/almacen/_fila_historico.html` con filtros, tabla, hash, estado del último envío, paginación y enlace de descarga; sin datos de otra región para el almacén
-- [ ] T119 [US6] Verificar con `django_assert_num_queries` en `tests/integration/test_almacen_historicos.py` que la búsqueda paginada no tiene N+1 y que la descarga no relee la solicitud por cada fila
+- [X] T113 [US6] Implementar `buscar_excels_historicos(alcance, region, filtros)` en `asignaciones/services.py`: fuente `SolicitudAsignacion` con `excel_ruta != ""`, alcance `REGION`/`GLOBAL`, filtros de fecha/tenant/técnico/estado, orden por `fecha`/`id` descendente, paginación de 50 y `Subquery` del último intento
+- [X] T114 [US6] Implementar `obtener_excel_historico(alcance, region, solicitud_id)` en `asignaciones/services.py`: aplica el mismo alcance, exige `excel_ruta` y lanza `EnvioNoExiste` (`404`) si no corresponde
+- [X] T115 [US6] Implementar en `asignaciones/views.py` `excels_historicos` (GET): `@login_required`, `validar_cuenta_consulta`, `FiltrosHistoricosForm`, contexto paginado y `403`/`405`
+- [X] T116 [US6] Implementar en `asignaciones/views.py` `descargar_excel_historico` (GET): alcance de consulta, `preparar_descarga_excel`, verificación de hash y `200`/`404`/`409`/`403`/`405`
+- [X] T117 [US6] Agregar a `asignaciones/urls.py` `GET /almacen/excels-historicos/` y `GET /almacen/excels-historicos/<int:solicitud_id>/descargar/`
+- [X] T118 [US6] Crear `templates/almacen/excels_historicos.html` y `templates/almacen/_fila_historico.html` con filtros, tabla, hash, estado del último envío, paginación y enlace de descarga; sin datos de otra región para el almacén
+- [X] T119 [US6] Verificar con `django_assert_num_queries` en `tests/integration/test_almacen_historicos.py` que la búsqueda paginada no tiene N+1 y que la descarga no relee la solicitud por cada fila
 
 **Checkpoint**: US6 funcional; Admin y Almacén buscan y descargan históricos con el alcance correcto.
 
@@ -350,16 +381,16 @@ correo; descargar un histórico con hash correcto y recibir `409` si se altera; 
 **Propósito**: verificación final, cobertura de criterios, permisos, rendimiento, auditoría,
 documentación y limpieza.
 
-- [ ] T120 [P] Verificar en `05-especificaciones/007-envio-y-revision-del-almacen/quickstart.md` que cada CA-01…CA-12 tiene al menos una prueba en `tests/unit/`, `tests/integration/` o `tests/contract/`; agregar la prueba faltante si alguna no está cubierta
-- [ ] T121 [P] Ejecutar `pytest` completo desde `tests/` sobre PostgreSQL y corregir cualquier fallo; no se avanza con pruebas en rojo
-- [ ] T122 [P] Ejecutar `python manage.py makemigrations --check --dry-run` sobre `asignaciones/migrations/` y `python manage.py migrate --plan`; no deben quedar migraciones pendientes
+- [X] T120 [P] Verificar en `05-especificaciones/007-envio-y-revision-del-almacen/quickstart.md` que cada CA-01…CA-12 tiene al menos una prueba en `tests/unit/`, `tests/integration/` o `tests/contract/`; agregar la prueba faltante si alguna no está cubierta
+- [X] T121 [P] Ejecutar `pytest` completo desde `tests/` sobre PostgreSQL y corregir cualquier fallo; no se avanza con pruebas en rojo
+- [X] T122 [P] Ejecutar `python manage.py makemigrations --check --dry-run` sobre `asignaciones/migrations/` y `python manage.py migrate --plan`; no deben quedar migraciones pendientes
 - [ ] T123 [P] Ejecutar `pytest --cov=asignaciones --cov-report=term-missing` sobre `tests/` y cubrir los caminos de error de permisos, correo, SSE, hash, confirmación y rechazo
-- [ ] T124 [P] Revisar `asignaciones/services.py`, `asignaciones/correo.py`, `asignaciones/tasks.py` y `asignaciones/notificaciones.py`: sin lógica de negocio en vistas, formularios ni plantillas; sin `tenant_id`/`region_id` del cliente; sin escrituras a `StockGeneral`/`StockTecnico`; sin permisos Django por cadena; sin WebSocket/Channels
-- [ ] T125 [P] Revisar rendimiento con `django_assert_num_queries` en `tests/integration/test_almacen_bandeja.py`, `tests/integration/test_almacen_confirmacion.py` y `tests/integration/test_almacen_historicos.py`; bandeja, detalle, búsqueda y descarga sin N+1 y respuesta menor a 1 segundo en el escenario de prueba
-- [ ] T126 [P] Revisar la auditoría en `tests/integration/test_almacen_auditoria.py`: sin contraseñas, tokens, secretos TOTP, credenciales SMTP, cuerpo del correo, contenido binario ni rutas absolutas; una sola auditoría de stock/series por confirmación
+- [X] T124 [P] Revisar `asignaciones/services.py`, `asignaciones/correo.py`, `asignaciones/tasks.py` y `asignaciones/notificaciones.py`: sin lógica de negocio en vistas, formularios ni plantillas; sin `tenant_id`/`region_id` del cliente; sin escrituras a `StockGeneral`/`StockTecnico`; sin permisos Django por cadena; sin WebSocket/Channels
+- [X] T125 [P] Revisar rendimiento con `django_assert_num_queries` en `tests/integration/test_almacen_bandeja.py`, `tests/integration/test_almacen_confirmacion.py` y `tests/integration/test_almacen_historicos.py`; bandeja, detalle, búsqueda y descarga sin N+1 y respuesta menor a 1 segundo en el escenario de prueba
+- [X] T126 [P] Revisar la auditoría en `tests/integration/test_almacen_auditoria.py`: sin contraseñas, tokens, secretos TOTP, credenciales SMTP, cuerpo del correo, contenido binario ni rutas absolutas; una sola auditoría de stock/series por confirmación
 - [ ] T127 [P] Actualizar `05-especificaciones/007-envio-y-revision-del-almacen/research.md` y `plan.md` si la implementación difiere del diseño; registrar deudas (RLS no disponible, correo no configurado, limpieza de archivos) sin inventar comportamiento no especificado
 - [ ] T128 [P] Ejecutar la matriz de permisos de `contracts/http-endpoints.md` para las 10 rutas y los perfiles `ADMIN_PLATAFORMA`, `RESPONSABLE_ALMACEN`, `USUARIO_TENANT`, tenant suspendido, cuenta inactiva y anónimo; corregir cualquier desviación de `403`/`404`/`302`/`405`
-- [ ] T129 [P] Verificar el aislamiento por región en `tests/integration/test_almacen_aislamiento.py`: bandeja, detalle, SSE, polling, históricos y descargas no revelan datos de otra región; `tenant_id`/`region_id` forzados se ignoran
+- [X] T129 [P] Verificar el aislamiento por región en `tests/integration/test_almacen_aislamiento.py`: bandeja, detalle, SSE, polling, históricos y descargas no revelan datos de otra región; `tenant_id`/`region_id` forzados se ignoran
 - [ ] T130 Ejecutar los escenarios de `05-especificaciones/007-envio-y-revision-del-almacen/quickstart.md`, marcar los criterios de salida y reportar el resultado antes de cerrar la feature
 
 ---

@@ -12,7 +12,7 @@ Este documento contrasta los `tasks.md` con el código y las pruebas reales del 
 | 004 Recojos | `recojos` | 7 contract + 9 integration + 1 unit `test_recojo_*` | Completo | T059: recorrido manual de quickstart |
 | 005 Stock inicial | `stock_inicial` | `test_stock_inicial_*` | Completo, incluido reinicio | T080 rendimiento, T083 docs, T086 cobertura, T087 manual |
 | 006 Asignaciones | `asignaciones` | `test_asignacion_*` | Completo | Pruebas con nombres históricos y quickstart/cobertura |
-| 007 Almacén | `asignaciones` | `test_almacen_*`, `test_almacen_notificaciones`, `test_almacen_tiempo_real*` | Completo | T120, T123, T125, T126, T130 |
+| 007 Almacén | `asignaciones` | 66 pruebas de almacén/correo, 89 % en servicios | Completo | T010, T123, T127, T128 y T130 |
 | 008 Stock | `stock` | `test_stock_*`, `test_traspaso_movimientos` | Completo con libro de movimientos | T003 fixtures, T062 rendimiento, T068 cobertura, T069 manual |
 | 009 Traspasos | `traspasos` | `test_traspaso*` | Completo; T001–T082 son históricas y fueron sustituidas por la ampliación T083–T118 | T080 manual |
 | 010 Conciliación | `conciliaciones` | 63 pruebas `test_conciliacion_*`, 90 % de cobertura | Completo | T003, T076 y T085 |
@@ -38,4 +38,4 @@ Para dar una spec por cerrada:
 3. `python manage.py check`, `makemigrations --check` y la suite completa están en verde.
 4. Se recorrió el `quickstart.md` o se documentó la deuda.
 
-La suite actual tiene **853 pruebas en verde**.
+La suite actual tiene **889 pruebas en verde**.
