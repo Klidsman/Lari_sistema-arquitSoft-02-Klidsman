@@ -4,6 +4,10 @@ description: "Lista de tareas para la implementación de 011 Logística Inversa 
 
 # Tareas: 011 Logística Inversa y Devoluciones
 
+> **Estado real (2026-11-25):** implementación y pruebas completas, incluida la selección de series
+> por técnico y las bajas múltiples. Las casillas son históricas; quedan cobertura fina y recorrido
+> manual. Ver `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
+
 **Entrada**: Documentos de diseño en `05-especificaciones/011-logistica-inversa-y-devoluciones/`
 
 **Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`,

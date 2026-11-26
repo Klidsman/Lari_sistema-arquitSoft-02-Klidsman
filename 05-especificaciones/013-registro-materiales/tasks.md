@@ -4,6 +4,10 @@ description: "Lista de tareas para la implementación de 013 Registro de Materia
 
 # Tareas: 013 Registro de Materiales
 
+> **Estado real (2026-11-25):** implementación y pruebas `test_registro_materiales*` completas. Las
+> casillas son históricas; quedan cobertura fina y recorrido manual. Ver
+> `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
+
 **Entrada**: Documentos de diseño en `05-especificaciones/013-registro-materiales/`
 
 **Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`,

@@ -4,6 +4,10 @@ description: "Lista de tareas para la implementación de 010 Conciliación de St
 
 # Tareas: 010 Conciliación de Stock
 
+> **Estado real (2026-11-25):** implementación y pruebas `test_conciliacion_*` completas. Las
+> casillas son históricas; quedan cobertura fina y recorrido manual. Ver
+> `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
+
 **Entrada**: Documentos de diseño en `05-especificaciones/010-conciliacion-de-stock/`
 
 **Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`,

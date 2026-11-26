@@ -4,6 +4,9 @@ description: "Lista de tareas para la implementación de 004 Recojo de materiale
 
 # Tareas: 004 Recojo de materiales
 
+> **Estado real (2026-11-25):** implementación completa y cubierta por pruebas. Las casillas son
+> históricas; solo queda el recorrido manual T059. Ver `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
+
 **Entrada**: Documentos de diseño en `05-especificaciones/004-recojo-de-materiales/`
 
 **Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`,

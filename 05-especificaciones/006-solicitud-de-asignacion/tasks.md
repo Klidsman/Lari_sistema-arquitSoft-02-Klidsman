@@ -4,6 +4,10 @@ description: "Lista de tareas para la implementación de 006 Solicitud de Asigna
 
 # Tareas: 006 Solicitud de Asignación
 
+> **Estado real (2026-11-25):** implementación completa y cubierta por `test_asignacion_*`. Las
+> casillas son históricas; las tareas pendientes son de cobertura/quickstart o nombran archivos de
+> prueba que se agruparon en otros. Ver `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
+
 **Entrada**: Documentos de diseño en `05-especificaciones/006-solicitud-de-asignacion/`
 
 **Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`,

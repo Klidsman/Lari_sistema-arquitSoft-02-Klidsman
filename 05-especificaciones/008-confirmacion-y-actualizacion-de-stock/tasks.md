@@ -4,6 +4,10 @@ description: "Lista de tareas para la implementación de 008 Confirmación y Act
 
 # Tareas: 008 Confirmación y Actualización de Stock
 
+> **Estado real (2026-11-25):** implementación completa, ahora con libro de movimientos. Las
+> casillas son históricas; quedan T003 (fixtures), T062 (rendimiento), T068 (cobertura) y T069
+> (recorrido manual). Ver `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
+
 **Entrada**: Documentos de diseño en `05-especificaciones/008-confirmacion-y-actualizacion-de-stock/`
 
 **Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`,

@@ -4,6 +4,11 @@ description: "Lista de tareas para la implementación de 009 Traspaso entre Téc
 
 # Tareas: 009 Traspaso entre Técnicos
 
+> **Estado real (2026-11-25):** implementación completa. Las tareas T001–T082 son históricas y
+> describen el modelo anterior de un solo origen/destino; el estado vigente está en la ampliación
+> T083–T118. Solo queda T080 (recorrido manual). Ver
+> `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
+
 **Entrada**: Documentos de diseño en `05-especificaciones/009-traspaso-entre-tecnicos/`
 
 **Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`,

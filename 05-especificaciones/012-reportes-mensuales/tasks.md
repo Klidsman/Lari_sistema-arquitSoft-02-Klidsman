@@ -4,6 +4,10 @@ description: "Lista de tareas para la implementación de 012 Reportes Mensuales"
 
 # Tareas: 012 Reportes Mensuales
 
+> **Estado real (2026-11-25):** implementación y pruebas `test_reportes*` completas. Las casillas son
+> históricas; quedan cobertura fina y recorrido manual. Ver
+> `06-plan-implementacion/auditoria-tareas-2026-11-25.md`.
+
 **Entrada**: Documentos de diseño en `05-especificaciones/012-reportes-mensuales/`
 
 **Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`,
