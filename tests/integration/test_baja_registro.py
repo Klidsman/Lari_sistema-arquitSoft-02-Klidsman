@@ -133,3 +133,42 @@ def test_estados_no_admitidos_para_baja(
     )
     with pytest.raises(SerieYaInactiva):
         registrar_baja_equipo(tenant, inactiva, "AVERIA", "", usuario_tenant)
+
+@pytest.mark.django_db
+def test_baja_multiple_series_del_tecnico(
+    usuario_tenant, tenant, tecnico, material_seriado, almacen
+):
+    primera = _serie(
+        tenant, material_seriado, EstadoSerie.ASIGNADA, usuario_tenant,
+        tecnico=tecnico, numero="SER000000031",
+    )
+    segunda = _serie(
+        tenant, material_seriado, EstadoSerie.ASIGNADA, usuario_tenant,
+        tecnico=tecnico, numero="SER000000032",
+    )
+    StockTecnico.objects.create(
+        tenant=tenant, tecnico=tecnico, material=material_seriado, cantidad=2
+    )
+
+    from logistica_inversa.services import registrar_bajas_equipo
+
+    bajas = registrar_bajas_equipo(
+        tenant,
+        tecnico,
+        [primera, segunda],
+        "AVERIA",
+        "Lote dañado",
+        usuario_tenant,
+    )
+
+    assert len(bajas) == 2
+    primera.refresh_from_db()
+    segunda.refresh_from_db()
+    assert primera.estado == EstadoSerie.INACTIVA
+    assert segunda.estado == EstadoSerie.INACTIVA
+    assert (
+        StockTecnico.objects.get(
+            tecnico=tecnico, material=material_seriado
+        ).cantidad
+        == 0
+    )

@@ -429,6 +429,39 @@ def registrar_baja_equipo(tenant, serie, causa, observaciones, actor):
     return baja
 
 
+def registrar_bajas_equipo(
+    tenant, tecnico, series, causa, observaciones, actor
+):
+    """Registra la baja de varias series asignadas a un mismo técnico."""
+    tenant = validar_cuenta_tenant(actor, tenant)
+    tecnico = validar_tecnico(tenant, tecnico)
+    causa = (causa or "").strip().upper()
+    if not causa:
+        raise CausaRequerida
+    if causa not in CausaBaja.values:
+        raise CausaInvalida
+    series = _resolver_series(tenant, series)
+    for serie in series:
+        validar_serie_para_baja(serie, tenant)
+        if (
+            serie.estado != EstadoSerie.ASIGNADA
+            or serie.tecnico_id != tecnico.pk
+        ):
+            raise SerieNoEnTecnico(
+                "La serie no está asignada al técnico"
+            )
+
+    bajas = []
+    with transaction.atomic():
+        for serie in series:
+            bajas.append(
+                registrar_baja_equipo(
+                    tenant, serie, causa, observaciones, actor
+                )
+            )
+    return bajas
+
+
 def registrar_baja_por_numero(tenant, numero, causa, observaciones, actor):
     tenant = validar_cuenta_tenant(actor, tenant)
     serie = Serie.objects.filter(

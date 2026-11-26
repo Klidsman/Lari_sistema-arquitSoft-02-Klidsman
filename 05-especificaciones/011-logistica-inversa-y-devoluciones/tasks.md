@@ -325,6 +325,12 @@ T039 → T040 → T041
 
 ---
 
+## Ampliación 2026-11-21: selección por técnico y baja múltiple
+
+- [X] T116 Unificar el selector técnico → series en devoluciones y bajas, agrupado por material y ordenado
+- [X] T117 Permitir la baja de varias series del mismo técnico en una sola operación, manteniendo la diferencia de estado frente a la devolución
+- [X] T118 Cubrir con pruebas que solo se muestran y aceptan series del técnico seleccionado en devoluciones y bajas
+
 ## Trazabilidad de criterios de aceptación
 
 | CA | Historia | Pruebas principales |

@@ -9,6 +9,11 @@ urlpatterns = [
         name="lista_devoluciones",
     ),
     path(
+        "devoluciones/series-tecnico/",
+        views.series_tecnico_devolucion,
+        name="series_tecnico_devolucion",
+    ),
+    path(
         "devoluciones/nueva/",
         views.nueva_devolucion,
         name="nueva_devolucion",
@@ -24,6 +29,11 @@ urlpatterns = [
         name="detalle_devolucion",
     ),
     path("bajas/", views.lista_bajas, name="lista_bajas"),
+    path(
+        "bajas/series-tecnico/",
+        views.series_tecnico_baja,
+        name="series_tecnico_baja",
+    ),
     path("bajas/nueva/", views.nueva_baja, name="nueva_baja"),
     path("bajas/<int:baja_id>/", views.detalle_baja, name="detalle_baja"),
 ]

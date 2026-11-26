@@ -7,6 +7,8 @@ from django.http import FileResponse, HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
+from series.models import EstadoSerie, Serie
+
 from . import services
 from .forms import BajaEquipoForm, DevolucionForm
 from .models import CausaBaja
@@ -75,6 +77,43 @@ def lista_devoluciones(request):
     )
 
 
+def _grupos_series(tenant, tecnico_id):
+    if not tecnico_id:
+        return []
+    series = (
+        Serie.objects.filter(
+            tenant=tenant,
+            estado=EstadoSerie.ASIGNADA,
+            tecnico_id=tecnico_id,
+        )
+        .select_related("material")
+        .order_by("material__codigo", "numero")
+    )
+    grupos = {}
+    for serie in series:
+        grupo = grupos.setdefault(
+            serie.material_id,
+            {"material": serie.material, "series": []},
+        )
+        grupo["series"].append(serie)
+    return list(grupos.values())
+
+
+@login_required
+@require_GET
+def series_tecnico_devolucion(request):
+    tenant, error = _tenant_o_error(request)
+    if error is not None:
+        return error
+    tecnico_id = request.GET.get("tecnico")
+    grupos = _grupos_series(tenant, tecnico_id)
+    return render(
+        request,
+        "logistica_inversa/_series_tecnico.html",
+        {"grupos": grupos, "seleccionadas": []},
+    )
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def nueva_devolucion(request):
@@ -82,12 +121,23 @@ def nueva_devolucion(request):
     if error is not None:
         return error
     if request.method == "POST":
-        formulario = DevolucionForm(request.POST, tenant=tenant)
+        tecnico_id = request.POST.get("tecnico")
+        formulario = DevolucionForm(
+            request.POST, tenant=tenant, tecnico=tecnico_id
+        )
         if not formulario.is_valid():
             return render(
                 request,
                 "logistica_inversa/devolucion_formulario.html",
-                {"formulario": formulario},
+                {
+                    "formulario": formulario,
+                    "grupos": _grupos_series(tenant, tecnico_id),
+                    "seleccionadas": [
+                        int(pk)
+                        for pk in request.POST.getlist("series")
+                        if str(pk).isdigit()
+                    ],
+                },
                 status=400,
             )
         try:
@@ -105,10 +155,17 @@ def nueva_devolucion(request):
         return redirect(
             "detalle_devolucion", devolucion_id=devolucion.pk
         )
+    tecnico_id = request.GET.get("tecnico")
     return render(
         request,
         "logistica_inversa/devolucion_formulario.html",
-        {"formulario": DevolucionForm(tenant=tenant)},
+        {
+            "formulario": DevolucionForm(
+                tenant=tenant, tecnico=tecnico_id
+            ),
+            "grupos": _grupos_series(tenant, tecnico_id),
+            "seleccionadas": [],
+        },
     )
 
 
@@ -155,6 +212,12 @@ def acta_devolucion(request, devolucion_id):
 
 @login_required
 @require_GET
+def series_tecnico_baja(request):
+    return series_tecnico_devolucion(request)
+
+
+@login_required
+@require_GET
 def lista_bajas(request):
     tenant, error = _tenant_o_error(request)
     if error is not None:
@@ -182,18 +245,30 @@ def nueva_baja(request):
     if error is not None:
         return error
     if request.method == "POST":
-        formulario = BajaEquipoForm(request.POST)
+        tecnico_id = request.POST.get("tecnico")
+        formulario = BajaEquipoForm(
+            request.POST, tenant=tenant, tecnico=tecnico_id
+        )
         if not formulario.is_valid():
             return render(
                 request,
                 "logistica_inversa/baja_formulario.html",
-                {"formulario": formulario},
+                {
+                    "formulario": formulario,
+                    "grupos": _grupos_series(tenant, tecnico_id),
+                    "seleccionadas": [
+                        int(pk)
+                        for pk in request.POST.getlist("series")
+                        if str(pk).isdigit()
+                    ],
+                },
                 status=400,
             )
         try:
-            baja = services.registrar_baja_por_numero(
+            services.registrar_bajas_equipo(
                 tenant,
-                formulario.cleaned_data["serie"],
+                formulario.cleaned_data["tecnico"],
+                list(formulario.cleaned_data["series"]),
                 formulario.cleaned_data["causa"],
                 formulario.cleaned_data["observaciones"],
                 request.usuario,
@@ -201,11 +276,18 @@ def nueva_baja(request):
         except services.ErrorLogistica as exc:
             return _error(exc)
         messages.success(request, "Baja registrada")
-        return redirect("detalle_baja", baja_id=baja.pk)
+        return redirect("lista_bajas")
+    tecnico_id = request.GET.get("tecnico")
     return render(
         request,
         "logistica_inversa/baja_formulario.html",
-        {"formulario": BajaEquipoForm()},
+        {
+            "formulario": BajaEquipoForm(
+                tenant=tenant, tecnico=tecnico_id
+            ),
+            "grupos": _grupos_series(tenant, tecnico_id),
+            "seleccionadas": [],
+        },
     )
 
 
