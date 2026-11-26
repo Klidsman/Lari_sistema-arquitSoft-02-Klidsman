@@ -186,37 +186,65 @@ a.boton-secundario {
   margin: 0;
 }
 
+/* Botón compacto de acciones en tabla */
+
+.boton-accion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.9rem;
+  padding: 0.22rem 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.4rem;
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease,
+    color 160ms ease, transform 120ms ease;
+}
+
+.boton-accion:hover {
+  border-color: var(--acento);
+  background: var(--acento-tenue);
+  color: var(--acento);
+}
+
+.boton-accion:active {
+  transform: translateY(1px);
+}
+
+.boton-accion--peligro {
+  color: var(--error);
+}
+
+.boton-accion--peligro:hover {
+  border-color: var(--error);
+  background: var(--error-tenue);
+  color: var(--error);
+}
+
 .acciones {
   white-space: nowrap;
 }
 
-.acciones a {
-  color: var(--acento);
-  font-weight: 600;
-  text-decoration: none;
+.acciones > * {
+  vertical-align: middle;
 }
 
-.acciones a:hover {
-  text-decoration: underline;
+.acciones > * + * {
+  margin-left: 0.35rem;
 }
 
 .acciones form {
   display: inline;
-  margin-left: 0.5rem;
-}
-
-.acciones button {
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--acento);
-  font-size: 0.875rem;
-}
-
-.acciones button:hover {
-  color: var(--acento-hundido);
-  text-decoration: underline;
+  margin: 0;
 }
 
 /* Cabecera de sección */

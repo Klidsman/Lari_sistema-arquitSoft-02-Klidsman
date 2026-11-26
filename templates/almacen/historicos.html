@@ -5,7 +5,7 @@
 {% block contenido %}
   <h1>Excels históricos</h1>
   <table class="tabla">
-    <thead><tr><th>ID</th><th>Fecha</th><th>Tenant</th><th>Técnico</th><th>Estado</th><th>Último envío</th><th>Hash</th><th></th></tr></thead>
+    <thead><tr><th>ID</th><th>Fecha</th><th>Tenant</th><th>Técnico</th><th>Estado</th><th>Último envío</th><th>Hash</th><th>Acciones</th></tr></thead>
     <tbody>
       {% for solicitud in solicitudes %}
         <tr>
@@ -16,7 +16,7 @@
           <td>{{ solicitud.get_estado_display }}</td>
           <td>{{ solicitud.ultimo_envio_estado|default:"—" }}</td>
           <td>{{ solicitud.excel_hash }}</td>
-          <td><a href="{% url 'descargar_historico_almacen' solicitud.pk %}">Descargar</a></td>
+          <td class="acciones"><a class="boton-accion" href="{% url 'descargar_historico_almacen' solicitud.pk %}">Descargar</a></td>
         </tr>
       {% empty %}
         <tr><td colspan="7">No hay Excels registrados.</td></tr>

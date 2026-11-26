@@ -6,7 +6,7 @@
       <th>Tenant</th>
       <th>Técnico</th>
       <th>Estado</th>
-      <th></th>
+      <th>Acciones</th>
     </tr>
   </thead>
   <tbody>
@@ -17,7 +17,7 @@
         <td>{{ solicitud.tenant.codigo }}</td>
         <td>{{ solicitud.nifs_tecnicos }}</td>
         <td>{{ solicitud.get_estado_display }}</td>
-        <td><a href="{% url 'detalle_almacen' solicitud.pk %}">Revisar</a></td>
+        <td class="acciones"><a class="boton-accion" href="{% url 'detalle_almacen' solicitud.pk %}">Revisar</a></td>
       </tr>
     {% empty %}
       <tr><td colspan="6">No hay solicitudes para revisar.</td></tr>

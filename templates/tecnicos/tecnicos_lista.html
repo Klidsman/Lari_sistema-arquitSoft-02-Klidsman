@@ -44,15 +44,15 @@
           <td>{{ tecnico.nombre }}</td>
           <td>{{ tecnico.activo|yesno:"Activo,Desactivado" }}</td>
           <td class="acciones">
-            <a href="{% url 'detalle_tecnico' tecnico.pk %}">Ver</a>
-            <a href="{% url 'editar_tecnico' tecnico.pk %}">Editar</a>
+            <a class="boton-accion" href="{% url 'detalle_tecnico' tecnico.pk %}">Ver</a>
+            <a class="boton-accion" href="{% url 'editar_tecnico' tecnico.pk %}">Editar</a>
             {% if tecnico.activo %}
               <form method="post"
                     action="{% url 'desactivar_tecnico' tecnico.pk %}"
                     class="en-linea"
                     data-confirmar="¿Estás seguro de desactivar este técnico? No aparecerá en nuevas operaciones.">
                 {% csrf_token %}
-                <button type="submit">Desactivar</button>
+                <button class="boton-accion boton-accion--peligro" type="submit">Desactivar</button>
               </form>
             {% else %}
               <form method="post"
@@ -60,7 +60,7 @@
                     class="en-linea"
                     data-confirmar="¿Estás seguro de reactivar este técnico?">
                 {% csrf_token %}
-                <button type="submit">Reactivar</button>
+                <button class="boton-accion" type="submit">Reactivar</button>
               </form>
             {% endif %}
           </td>

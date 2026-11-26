@@ -10,7 +10,7 @@
     <button type="submit">Filtrar</button>
   </form>
   <table class="tabla">
-    <thead><tr><th>Periodo</th><th>Alcance</th><th>Solicitados</th><th>Asignados</th><th>Merma</th><th></th></tr></thead>
+    <thead><tr><th>Periodo</th><th>Alcance</th><th>Solicitados</th><th>Asignados</th><th>Merma</th><th>Acciones</th></tr></thead>
     <tbody>
       {% for corte in cortes %}
         <tr>
@@ -19,7 +19,7 @@
           <td>{{ corte.solicitados }}</td>
           <td>{{ corte.asignados }}</td>
           <td>{{ corte.porcentaje_merma }}%</td>
-          <td><a href="{% url 'detalle_corte' corte.pk %}">Ver</a></td>
+          <td class="acciones"><a class="boton-accion" href="{% url 'detalle_corte' corte.pk %}">Ver</a></td>
         </tr>
       {% empty %}
         <tr><td colspan="6">No hay cortes.</td></tr>

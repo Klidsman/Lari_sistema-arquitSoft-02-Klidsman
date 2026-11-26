@@ -361,7 +361,7 @@ El sistema cubre el shell autenticado (sidebar, topbar, drawer móvil), los comp
 - **Hover / Focus:** el hover del primario oscurece a Azul sello hundido (`#18496b`); el neutro cambia borde y texto a Azul sello. En acceso se añade `translateY(1px)` al pulsar. El foco es siempre `outline: 3px solid var(--acento)` con `outline-offset: 2px`.
 - **Secondary:** blanco con filete, texto Grafito, hover Azul sello.
 - **Ghost / enlace:** `.boton-enlace`, sin fondo ni borde, Azul sello subrayado, `padding: 0`. Se usa para «Cancelar», que nunca debe parecer primario.
-- **En tabla:** las acciones son enlaces de texto en Azul sello; los formularios de baja se leen como enlace, no como botón relleno.
+- **En tabla:** `.boton-accion` es el botón compacto de las celdas de acción: altura mínima `1.9rem`, `0.22rem 0.6rem`, texto `0.8125rem`, filete de 1 px y radio `0.4rem`. En reposo es neutro; en hover toma borde y texto Azul sello con fondo Azul sello tenue. La acción destructiva añade `.boton-accion--peligro`: texto Rojo corrección y hover con fondo Rojo pálido. Nunca se usa el botón primario dentro de una fila.
 
 ### Chips / Badges
 Implementados como etiquetas de estado. `.etiqueta` y `.estado` usan fondo Superficie alterna, texto Grafito tenue, radio `999px` y `0.15rem 0.5rem`; `.etiqueta-anulado` cambia a fondo Rojo pálido, filete rojo y texto Rojo corrección. Son la única forma completamente redondeada y el único relleno de color fuera de los banners; no se usan para decorar encabezados ni para sustituir texto.
@@ -392,6 +392,8 @@ El shell autenticado es la navegación principal: sidebar en Tapa, grupos por ro
 
 ### Tables
 El componente más usado: fondo Hoja, borde de 1 px, `border-collapse: separate`, filas separadas por Filete tenue y celdas `0.65rem 0.75rem` alineadas a la izquierda. La cabecera usa Superficie alterna, texto Grafito tenue, mayúsculas y `0.75rem`. No hay cebra ni bordes verticales; el hover de fila es `#fafbfc`. Las celdas numéricas usan `font-variant-numeric: tabular-nums`. El estado vacío ocupa la fila con `colspan` y se centra en Grafito tenue. En móvil, un contenedor `.tabla-scroll` permite scroll horizontal; la tabla no se corta.
+
+Toda tabla con operaciones por fila reserva una última columna «Acciones» alineada a la izquierda, con `.boton-accion` (y `.boton-accion--peligro` para la baja). Los botones se separan `0.35rem`, caben en una sola línea y comparten la altura de la fila; la acción de lectura usa el mismo peso que las demás para no competir con la navegación.
 
 ### Detail list
 `dl.detalle` en rejilla de dos columnas (`minmax(7rem, max-content)` y `minmax(0, 1fr)`), fondo Hoja, filete y padding `1rem 1.25rem`. Los `dt` van en versalitas de `0.75rem` y Grafito tenue; los `dd` en `0.9375rem` con `overflow-wrap: anywhere` para hashes y códigos largos.
@@ -441,6 +443,7 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - **Do** conservar la densidad de tabla (`0.65rem 0.75rem`) y la cabecera de Superficie alterna; es lo que permite comparar series y discrepancias de un vistazo.
 - **Do** usar el botón primario (`.boton`) para la acción principal y el neutro para filtros y acciones secundarias.
 - **Do** usar `.buscador`, `.paginacion`, `.tabla`, `.detalle` y `.etiqueta` antes de inventar una variante local.
+- **Do** resolver las acciones de fila con `.boton-accion` y reservar `.boton-accion--peligro` para lo que desactiva, da de baja o anula; nunca dejes un enlace suelto en la columna «Acciones».
 - **Do** tratar el raíl de contexto como parte del patrón de pantalla de trabajo: fijo, pegajoso, con scroll propio y apilado solo en móvil.
 - **Do** envolver las tablas nuevas en `.tabla-scroll` o confiar en la envoltura automática del shell para que el móvil no las corte.
 - **Do** usar el sprite `parciales/iconos.html` y la marca `parciales/marca.html` antes de dibujar un símbolo nuevo.
