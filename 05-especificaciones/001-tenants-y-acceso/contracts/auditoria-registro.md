@@ -12,7 +12,7 @@ Se apoya en `03-reglas-de-dominio/auditoria.md` y en el principio VI de la const
 | `id` | entero | Sí | Clave primaria |
 | `entidad` | texto(50) | Sí | `Region`, `Almacen`, `Tenant`, `Usuario` o `Invitacion` |
 | `entidad_id` | entero | Sí | Identificador de la entidad auditada |
-| `campo` | texto(50) | Sí | Campo modificado o evento (`alta`, `suspension`, `activacion`, `desactivacion`, `reactivacion`, `cambio_rol`, `invitacion_enviada`, `invitacion_aceptada`, `acceso_cuenta`, `segundo_factor`) |
+| `campo` | texto(50) | Sí | Campo modificado o evento (`alta`, `suspension`, `activacion`, `desactivacion`, `reactivacion`, `cambio_rol`, `invitacion_enviada`, `invitacion_aceptada`, `acceso_cuenta`) |
 | `valor_anterior` | texto | No | Valor antes del cambio; vacío en altas |
 | `valor_nuevo` | texto | No | Valor después del cambio |
 | `usuario` | FK `Usuario` | Sí | Autor de la acción; nunca nulo |
@@ -51,7 +51,7 @@ campo).
 4. **Valores como texto**: fechas en ISO 8601, booleanos como `True`/`False`, FK como su
    identificador y, cuando aporte legibilidad, su código o correo.
 5. **Sin secretos**: nunca se registran contraseñas, hashes de contraseña, tokens de
-   invitación, `token_hash`, secretos TOTP ni claves de cifrado.
+   invitación, `token_hash` ni claves de cifrado.
 6. **Corrección**: un valor equivocado se corrige con un cambio nuevo; no se edita el registro
    anterior.
 
@@ -90,5 +90,5 @@ campo).
 - Un cambio de rol registra el valor anterior y el nuevo.
 - Una desactivación y una suspensión producen registro y conservan el historial.
 - Un intento de `UPDATE` o `DELETE` sobre la tabla falla por permisos de base de datos.
-- Ningún registro contiene contraseñas, tokens ni secretos TOTP.
+- Ningún registro contiene contraseñas ni tokens.
 - La consulta de auditoría de un tenant no devuelve registros de otro tenant.

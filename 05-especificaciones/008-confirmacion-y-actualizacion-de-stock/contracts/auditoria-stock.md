@@ -82,7 +82,7 @@ Se escribe **un registro por material agregado**.
 
 Nunca se auditan:
 
-- contraseñas, tokens, secretos TOTP ni credenciales;
+- contraseñas, tokens, secretos ni credenciales;
 - cuerpos de correo o adjuntos;
 - contenido binario de Excel;
 - rutas físicas absolutas;

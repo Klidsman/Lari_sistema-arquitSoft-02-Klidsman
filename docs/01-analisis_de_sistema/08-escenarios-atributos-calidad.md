@@ -61,13 +61,13 @@ Escenarios redactados en formato de tabla por **Elemento**: *Atributo de calidad
 | Elemento | Descripción |
 |---|---|
 | Atributo de calidad | Seguridad |
-| Fuente | Administrador de plataforma o Almacén |
-| Estímulo | Inicia sesión sin presentar el segundo factor. |
-| Condición | Inicio de sesión. |
-| Respuesta Esperada | El sistema deniega el acceso. |
-| Medida |  0 accesos a cuentas sensibles sin segundo factor. |
-| Verificación | Prueba de inicio de sesión sin segundo factor. |
-| Estado | Pendiente de aprobar la medida y de elegir el mecanismo de doble factor. |
+| Fuente | Administrador de plataforma, Almacén o cuenta del tenant |
+| Estímulo | Inicia sesión con correo y contraseña. |
+| Condición | Credenciales válidas y cuenta activa. |
+| Respuesta Esperada | El sistema abre la sesión con el alcance del rol. |
+| Medida | 0 accesos con credenciales inválidas; revocación inmediata al desactivar la cuenta. |
+| Verificación | Prueba de login y de revocación por `version_sesion`. |
+| Estado | Aprobado; sin segundo factor por ADR-022. |
 
 ### ESC-06 — Integridad (RNF-04)
 

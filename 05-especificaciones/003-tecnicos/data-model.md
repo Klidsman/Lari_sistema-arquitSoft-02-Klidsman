@@ -198,7 +198,7 @@ transacción que el cambio.
   auditoría: no hubo cambio.
 - `nif` y `tenant` no se auditan como cambios porque son inmutables; el alta sí registra el NIF.
 - Los valores se guardan como texto legible; fechas en ISO 8601 cuando correspondan.
-- Nunca se auditan contraseñas, `token_hash`, tokens de invitación, secretos TOTP ni claves.
+- Nunca se auditan contraseñas, `token_hash`, tokens de invitación, secretos ni claves.
 - La auditoría no lleva un `tenant_id` separado: el alcance se deriva de la entidad `Tecnico` y de
   la cuenta autora.
 - La consulta de estos registros pertenece a la auditoría administrativa; esta spec no expone una

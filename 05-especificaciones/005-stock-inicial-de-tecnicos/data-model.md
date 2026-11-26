@@ -250,7 +250,7 @@ Reglas:
 - Todos los registros se escriben en la misma transacción que el cambio.
 - Si la operación falla, no se escribe auditoría.
 - La auditoría de stock la escribe 008; 005 no la duplica.
-- La auditoría no contiene contraseñas, tokens, secretos TOTP ni `token_hash`.
+- La auditoría no contiene contraseñas, tokens, secretos ni `token_hash`.
 - No se escribe `tenant_id` como campo separado; se deduce del usuario y de la entidad.
 - La auditoría sobrevive a la desactivación de la cuenta, la suspensión del tenant y el borrado
   físico de una serie o línea.

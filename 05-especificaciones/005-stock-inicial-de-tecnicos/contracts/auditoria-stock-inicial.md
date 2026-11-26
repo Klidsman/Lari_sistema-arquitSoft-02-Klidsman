@@ -14,7 +14,7 @@ inserción.
 - `RegistroCambio` es de solo inserción: no se actualiza ni se borra.
 - Se registran `entidad`, `entidad_id`, `campo`, `valor_anterior`, `valor_nuevo`, `usuario` y
   `fecha`.
-- Nunca se auditan contraseñas, tokens, `token_hash`, secretos TOTP ni datos sensibles.
+- Nunca se auditan contraseñas, tokens, `token_hash`, secretos ni datos sensibles.
 - No se guarda `tenant_id` como campo separado; el tenant se deduce del usuario y de la entidad.
 - Los valores se serializan como texto legible; los importes y cantidades se guardan como enteros.
 - La auditoría no revela datos de otros tenants. Un mensaje o valor de auditoría de una serie
@@ -180,7 +180,7 @@ el error mostrado al usuario.
 
 ## 7. Prohibiciones
 
-- No se auditan contraseñas, tokens, `token_hash`, secretos TOTP ni claves.
+- No se auditan contraseñas, tokens, `token_hash`, secretos ni claves.
 - No se guarda el contenido completo del Excel; solo nombre y hash.
 - No se guarda el archivo en disco desde la vista de validación.
 - No se escribe un registro por fila del Excel; se escribe por línea agregada y por serie.

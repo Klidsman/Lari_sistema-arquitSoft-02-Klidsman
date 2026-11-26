@@ -4,11 +4,9 @@ from . import views
 
 urlpatterns = [
     path("login/", views.login, name="login"),
-    path("login/2fa/", views.login_2fa, name="login_2fa"),
     path("logout/", views.logout, name="logout"),
     path("", views.inicio, name="inicio"),
     path("perfil/", views.perfil, name="perfil"),
-    path("perfil/2fa/", views.configurar_2fa, name="configurar_2fa"),
     path(
         "plataforma/tenants/<int:tenant_id>/cuenta/nueva/",
         views.crear_cuenta_tenant,

@@ -70,7 +70,7 @@ El motivo se audita como valor nuevo de `motivo_rechazo`; no se repite en cada s
 - La auditoría del envío ocurre en la tarea, después de cerrar el intento; un fallo de auditoría no
   reenvía el correo.
 - Nunca se auditan:
-  - contraseñas, tokens, secretos TOTP ni credenciales SMTP;
+  - contraseñas, tokens, secretos ni credenciales SMTP;
   - el cuerpo del correo;
   - el contenido binario del Excel;
   - rutas físicas absolutas (solo la ruta relativa);

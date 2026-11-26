@@ -25,7 +25,7 @@ description: "Lista de tareas para la implementación de 001 Tenants, regiones y
 
 | Historia | Prioridad | Origen en `spec.md` |
 |---|---|---|
-| US1 — Inicio de sesión con segundo factor y sesión revocable | P1 | Flujo «Inicio de sesión», regla 10, criterios de 2FA y revocación |
+| US1 — Inicio de sesión y sesión revocable | P1 | Flujo «Inicio de sesión», regla 10 y criterios de revocación |
 | US2 — Regiones con almacén central | P2 | Flujo «Alta de región y almacén», entidad Región, criterios de alta/duplicado/buzón |
 | US3 — Tenants en una región | P3 | Flujo «Alta de tenant», entidad Tenant, criterios de región obligatoria/inmutable |
 | US4 — Cuenta única del tenant y cuentas administrativas con invitación | P4 | Flujos «Alta de la cuenta del tenant», «Alta de cuenta de almacén» y «Aceptación de invitación» |
@@ -44,7 +44,7 @@ Proyecto Django único en la raíz: `config/`, `tenants/`, `acceso/`, `auditoria
 
 - [X] T001 Crear el esqueleto del proyecto Django con `manage.py`, `config/__init__.py`, `config/settings/{base,dev,prod,test}.py`, `config/urls.py`, `config/wsgi.py` y `config/asgi.py`
 - [X] T002 [P] Declarar dependencias en `requirements.txt` (Django LTS 5.x, `psycopg[binary]`, `celery`, `redis`, `pyotp`, `cryptography`, `dj-database-url`, `python-dotenv`, `gunicorn`) y en `requirements-dev.txt` (`pytest`, `pytest-django`, `pytest-cov`)
-- [X] T003 [P] Configurar lectura de variables de entorno en `config/settings/base.py` y documentar las claves en `.env.example` (`SECRET_KEY`, `DATABASE_URL`, `REDIS_URL`, `TOTP_ENCRYPTION_KEY`, `EMAIL_*`, `DEFAULT_FROM_EMAIL`)
+- [X] T003 [P] Configurar lectura de variables de entorno en `config/settings/base.py` y documentar las claves en `.env.example` (`SECRET_KEY`, `DATABASE_URL`, `REDIS_URL`, `EMAIL_*`, `DEFAULT_FROM_EMAIL`)
 - [X] T004 [P] Crear `pyproject.toml` con configuración de `pytest` y `pytest-django`, `DJANGO_SETTINGS_MODULE=config.settings.test` y marcador de base PostgreSQL obligatoria (sin SQLite)
 - [X] T005 [P] Crear la configuración de pruebas en `config/settings/test.py` con base PostgreSQL de pruebas, `EMAIL_BACKEND` en memoria y `CELERY_TASK_ALWAYS_EAGER=True`
 - [X] T006 [P] Crear `templates/base.html`, `templates/parciales/mensajes.html` y `static/css/base.css` con la estructura mínima de la interfaz server-rendered
@@ -61,11 +61,11 @@ Proyecto Django único en la raíz: `config/`, `tenants/`, `acceso/`, `auditoria
 - [X] T008 Crear las apps `tenants`, `acceso` y `auditoria` con sus `apps.py` y registrarlas en `INSTALLED_APPS` de `config/settings/base.py`
 - [X] T009 [P] Implementar `Region`, `Almacen` y `Tenant` en `tenants/models.py` con `codigo=CharField(max_length=20, unique=True)`, `nombre=CharField(max_length=100)`, `Almacen.centro`/`codigo_almacen` de 20 caracteres, `buzon=EmailField()`, `Tenant.estado` con choices `ACTIVO`/`SUSPENDIDO` por defecto `ACTIVO`, `CheckConstraint(region_codigo_obligatorio)` (`codigo <> ''`), `CheckConstraint(almacen_parametros_obligatorios)` (`centro <> '' AND codigo_almacen <> ''`), `CheckConstraint(tenant_codigo_obligatorio)`, `CheckConstraint(tenant_estado_valido)` (`estado IN ('ACTIVO','SUSPENDIDO')`), `Index(region, estado, name="tenant_region_estado")` y `Tenant.tiene_cuenta_activa()`
 - [X] T010 [P] Implementar `UsuarioManager` en `acceso/managers.py` con `create_user(email, password=None, **extra_fields)` que aplique `normalize_email`, `is_active=False` por defecto, `set_unusable_password()` cuando no hay contraseña y los métodos `para_tenant(tenant)` y `para_region(region)`
-- [X] T011 Implementar `Rol` (`TextChoices`: `ADMIN_PLATAFORMA`, `USUARIO_TENANT`, `RESPONSABLE_ALMACEN`) y `Usuario(AbstractUser)` en `acceso/models.py` con `username=None`, `email=EmailField(unique=True)`, `tenant`/`region` FK `null=True, blank=True, on_delete=PROTECT`, `version_sesion=PositiveIntegerField(default=0)`, `secreto_totp=CharField(max_length=255, blank=True)`, `segundo_factor_habilitado=BooleanField(default=False)`, `USERNAME_FIELD="email"`, `REQUIRED_FIELDS=[]`, `CheckConstraint(usuario_alcance_coherente)` y `UniqueConstraint(["tenant"], condition=Q(rol=USUARIO_TENANT), name="un_usuario_tenant_por_tenant")`
+- [X] T011 Implementar `Rol` (`TextChoices`: `ADMIN_PLATAFORMA`, `USUARIO_TENANT`, `RESPONSABLE_ALMACEN`) y `Usuario(AbstractUser)` en `acceso/models.py` con `username=None`, `email=EmailField(unique=True)`, `tenant`/`region` FK `null=True, blank=True, on_delete=PROTECT`, `version_sesion=PositiveIntegerField(default=0)`, `USERNAME_FIELD="email"`, `REQUIRED_FIELDS=[]`, `CheckConstraint(usuario_alcance_coherente)` y `UniqueConstraint(["tenant"], condition=Q(rol=USUARIO_TENANT), name="un_usuario_tenant_por_tenant")`
 - [X] T012 Agregar `Invitacion` en `acceso/models.py` con `usuario` FK `CASCADE`, `token_hash=CharField(max_length=64, unique=True)`, `correo=EmailField()`, `expira_en`, `enviada_en`/`usada_en`/`revocada_en` nulos, `ultimo_error=TextField(blank=True)`, `creada_por` FK `PROTECT`, `creada_en` `auto_now_add` e `Index(["usuario","usada_en","revocada_en"], name="invitacion_vigente")`
 - [X] T013 [P] Implementar `RegistroCambio` en `auditoria/models.py` con `tenant` FK `Tenant` `PROTECT` `null=True` `related_name="registros_cambio"`, `entidad=CharField(max_length=50)`, `entidad_id=BigIntegerField()`, `campo=CharField(max_length=50)`, `valor_anterior`/`valor_nuevo` `TextField(blank=True)`, `usuario` FK `PROTECT`, `fecha` `auto_now_add` e índices `(entidad, entidad_id)`, `(usuario, fecha)` y `(tenant, fecha)`
-- [X] T014 [P] Implementar `auditoria/services.py` con `registrar_cambio(entidad, entidad_id, campo, valor_anterior, valor_nuevo, usuario, tenant=None)` de solo inserción, poblando `tenant` desde el actor o desde un registro de entidades auditables que resuelve el modelo y su ruta de tenant, y dejándolo nulo en acciones globales y helpers `serializar_valor()`; debe rechazar explícitamente contraseñas, tokens, `token_hash` y secretos TOTP
-- [X] T015 [P] Implementar `acceso/totp.py` con `cifrar_secreto()`/`descifrar_secreto()` usando `cryptography.fernet.Fernet` y `TOTP_ENCRYPTION_KEY`, `generar_uri_otpauth(usuario)` y `verificar_codigo(usuario, codigo)` con `pyotp`
+- [X] T014 [P] Implementar `auditoria/services.py` con `registrar_cambio(entidad, entidad_id, campo, valor_anterior, valor_nuevo, usuario, tenant=None)` de solo inserción, poblando `tenant` desde el actor o desde un registro de entidades auditables que resuelve el modelo y su ruta de tenant, y dejándolo nulo en acciones globales y helpers `serializar_valor()`; debe rechazar explícitamente contraseñas y tokens
+- [X] T015 [P] ~~Implementar `acceso/totp.py`~~ (retirado por ADR-022 el 2026-11-26)
 - [X] T016 [P] Implementar `ContextoUsuarioMiddleware` en `acceso/middleware.py`: rechaza cuentas inactivas, tenants suspendidos y `version_sesion` desactualizada comparando la sesión con la base; publica `request.usuario`, `request.rol`, `request.tenant` y `request.region` derivados solo del usuario autenticado, nunca del cliente
 - [X] T017 [P] Implementar decoradores `requiere_rol(*roles)`, `requiere_tenant` y `requiere_region` en `acceso/decorators.py`, devolviendo `403` con `"No tienes permiso para administrar esta cuenta"` cuando corresponda
 - [X] T018 Configurar en `config/settings/base.py` `AUTH_USER_MODEL="acceso.Usuario"`, `MIDDLEWARE` con `ContextoUsuarioMiddleware` después de la autenticación y los validadores `MinimumLengthValidator(12)`, `UserAttributeSimilarityValidator`, `CommonPasswordValidator` y `NumericPasswordValidator`
@@ -77,32 +77,32 @@ Proyecto Django único en la raíz: `config/`, `tenants/`, `acceso/`, `auditoria
 
 ---
 
-## Fase 3: US1 — Inicio de sesión con segundo factor y sesión revocable (P1) 🎯
+## Fase 3: US1 — Inicio de sesión y sesión revocable (P1) 🎯
 
-**Objetivo**: autenticación por correo y contraseña, TOTP obligatorio para Administrador de plataforma y Responsable de almacén, cierre de sesión y revocación inmediata por `version_sesion`; incluye el comando de arranque `crear_admin_plataforma`.
+**Objetivo**: autenticación por correo y contraseña, sin segundo factor, cierre de sesión y revocación inmediata por `version_sesion`; incluye el comando de arranque `crear_admin_plataforma`.
 
-**Prueba independiente**: crear un Administrador con `crear_admin_plataforma`, aceptar su invitación, iniciar sesión sin TOTP (no se abre la sesión), completar TOTP (sesión abierta), incrementar `version_sesion` en la base y verificar que la siguiente petición cierra la sesión.
+**Prueba independiente**: crear un Administrador con `crear_admin_plataforma`, aceptar su invitación, iniciar sesión con correo y contraseña, incrementar `version_sesion` en la base y verificar que la siguiente petición cierra la sesión.
 
 ### Pruebas de US1 (escribir primero, deben fallar)
 
-- [X] T022 [P] [US1] Pruebas de contrato de `GET/POST /login/` en `tests/contract/test_login.py`: `302` sin 2FA, `302` a `/login/2fa/` con 2FA, `400` `"Correo o contraseña incorrectos"` uniforme, `403` `"La cuenta está desactivada"`, `403` `"El tenant está suspendido"`
-- [X] T023 [P] [US1] Pruebas de contrato de `/login/2fa/` y `POST /logout/` en `tests/contract/test_auth_2fa.py`: éxito `302`, `400` `"Debes completar el segundo factor"`, `403` `"Debes iniciar sesión"` sin sesión pendiente, `403` sin CSRF en logout
-- [X] T024 [P] [US1] Pruebas de integración de sesión en `tests/integration/test_sesion.py`: `pendiente_2fa` solo accede a `/login/2fa/`, `/logout/` y estáticos; `version_sesion` desactualizada cierra la sesión; admin y almacén exigen segundo factor; cuenta de tenant no lo exige
-- [X] T025 [P] [US1] Pruebas unitarias de `acceso/totp.py` en `tests/unit/test_totp.py`: cifrado/descifrado del secreto, rechazo de secreto corrupto y verificación de un código TOTP válido e inválido
+- [X] T022 [P] [US1] Pruebas de contrato de `GET/POST /login/` en `tests/contract/test_login.py`: `302` directo para todos los roles, `400` `"Correo o contraseña incorrectos"` uniforme, `403` `"La cuenta está desactivada"`, `403` `"El tenant está suspendido"`
+- [X] T023 [P] [US1] ~~Pruebas de `/login/2fa/`~~ (retirado por ADR-022); se conserva la prueba de `POST /logout/`
+- [X] T024 [P] [US1] Pruebas de integración de sesión en `tests/integration/test_sesion.py`: `version_sesion` desactualizada cierra la sesión; admin y almacén entran con correo y contraseña
+- [X] T025 [P] [US1] ~~Pruebas unitarias de `acceso/totp.py`~~ (retirado por ADR-022)
 - [X] T026 [P] [US1] Pruebas unitarias del comando en `tests/unit/test_comando_admin.py`: `crear_admin_plataforma --email admin@lari.local` crea rol `ADMIN_PLATAFORMA` sin tenant ni región, inactivo, con invitación y sin superusuario de Django
 
 ### Implementación de US1
 
 - [X] T027 [US1] Implementar el backend de autenticación por correo en `acceso/authentication.py` y registrarlo en `AUTHENTICATION_BACKENDS`
-- [X] T028 [US1] Implementar `LoginForm`, `SegundoFactorForm` y `ConfigurarTotpForm` en `acceso/forms.py` con los mensajes exactos del contrato
-- [X] T029 [US1] Implementar `iniciar_sesion(correo, password)`, `verificar_segundo_factor(usuario, codigo)`, `renovar_version_sesion(usuario)` y `estado_sesion_pendiente()` en `acceso/services.py`, guardando `version_sesion` en la sesión y aplicando `transaction.atomic` + `select_for_update` al incrementar la versión
-- [X] T030 [US1] Implementar las vistas `login`, `login_2fa`, `logout` y `configurar_2fa` en `acceso/views.py` con CSRF, estado `pendiente_2fa` y mensajes del contrato
+- [X] T028 [US1] Implementar `LoginForm` en `acceso/forms.py` con los mensajes exactos del contrato
+- [X] T029 [US1] Implementar `iniciar_sesion(correo, password)` y `renovar_version_sesion(usuario)` en `acceso/services.py`, guardando `version_sesion` en la sesión y aplicando `transaction.atomic` + `select_for_update` al incrementar la versión
+- [X] T030 [US1] Implementar las vistas `login` y `logout` en `acceso/views.py` con CSRF y mensajes del contrato
 - [X] T031 [US1] Implementar la vista inicial por rol en `acceso/views.py` y la redirección `302` posterior al login según `request.rol`
-- [X] T032 [US1] Registrar las rutas `/login/`, `/login/2fa/`, `/logout/` y `/perfil/` en `acceso/urls.py` e incluirlas en `config/urls.py`
-- [X] T033 [US1] Crear `templates/acceso/login.html`, `templates/acceso/login_2fa.html`, `templates/acceso/configurar_2fa.html`, `templates/acceso/perfil.html` y `templates/inicio.html`
+- [X] T032 [US1] Registrar las rutas `/login/`, `/logout/` y `/perfil/` en `acceso/urls.py` e incluirlas en `config/urls.py`
+- [X] T033 [US1] Crear `templates/acceso/login.html`, `templates/acceso/perfil.html` y `templates/inicio.html`
 - [X] T034 [US1] Implementar el comando `crear_admin_plataforma` en `acceso/management/commands/crear_admin_plataforma.py`, que crea la cuenta con rol explícito, `is_active=False`, contraseña inutilizable e invitación, sin superusuario ni credenciales conocidas por el operador
 
-**Checkpoint**: US1 funcional y verificable de forma independiente (login, 2FA, logout, revocación).
+**Checkpoint**: US1 funcional y verificable de forma independiente (login, logout, revocación).
 
 ---
 
@@ -110,7 +110,7 @@ Proyecto Django único en la raíz: `config/`, `tenants/`, `acceso/`, `auditoria
 
 **Objetivo**: el Administrador de plataforma lista, crea y edita regiones con su almacén central en una sola transacción, con validaciones y auditoría por campo.
 
-**Prueba independiente**: con un Administrador autenticado con 2FA, crear `LIM/Lima/PR05/BE03/buzón válido` y comprobar región + almacén + auditoría; repetir código (409), buzón inválido y Centro vacío.
+**Prueba independiente**: con un Administrador autenticado, crear `LIM/Lima/PR05/BE03/buzón válido` y comprobar región + almacén + auditoría; repetir código (409), buzón inválido y Centro vacío.
 
 ### Pruebas de US2 (escribir primero, deben fallar)
 
@@ -191,15 +191,23 @@ Proyecto Django único en la raíz: `config/`, `tenants/`, `acceso/`, `auditoria
 ### Restablecimiento de contraseña (2026-11-26)
 
 - [X] T100 [P] [US4] Agregar `tipo` (`ALTA`/`RESTABLECIMIENTO`) a `acceso.Invitacion` con migración y valor por defecto `ALTA`
-- [X] T101 [P] [US4] Pruebas de contrato en `tests/contract/test_restablecimiento_password.py`: enlace mostrado una sola vez, `403` no admin, `405` `GET`, `409` cuenta inactiva, `400` auto-restablecimiento, sesión invalidada, 2FA conservado, token vencido, alta no sirve sobre cuenta activa, reenvío y comando de consola
+- [X] T101 [P] [US4] Pruebas de contrato en `tests/contract/test_restablecimiento_password.py`: enlace mostrado una sola vez, `403` no admin, `405` `GET`, `409` cuenta inactiva, `400` auto-restablecimiento, sesión invalidada, token vencido, alta no sirve sobre cuenta activa, reenvío y comando de consola
 - [X] T102 [US4] Implementar `emitir_invitacion`, `solicitar_restablecimiento` y `restablecer_segundo_factor` en `acceso/services.py`, con auditoría `acceso_cuenta`/`segundo_factor` sin token ni secreto
-- [X] T103 [US4] Ajustar `aceptar_invitacion` para distinguir alta y restablecimiento, conservar el 2FA y cerrar sesiones
+- [X] T103 [US4] Ajustar `aceptar_invitacion` para distinguir alta y restablecimiento y cerrar sesiones
 - [X] T104 [US4] Implementar las vistas `restablecer_password` y `reenviar_invitacion_cuenta`, las rutas `/restablecer/` e `/invitacion/`, y la pantalla `templates/acceso/enlace_generado.html` con `Cache-Control: no-store`
 - [X] T105 [US4] Mostrar el enlace de invitación una sola vez al crear cuentas de tenant y almacén, en lugar de depender del correo
 - [X] T106 [US4] Agregar los botones «Restablecer contraseña» y «Reenviar invitación» en `templates/acceso/cuentas_lista.html`
-- [X] T107 [US4] Implementar `acceso/management/commands/restablecer_admin_plataforma.py` con `--email` y `--reiniciar-2fa`, documentado en `quickstart.md`
+- [X] T107 [US4] Implementar `acceso/management/commands/restablecer_admin_plataforma.py` con `--email`, documentado en `quickstart.md`
 
 **Checkpoint**: el Administrador restablece contraseñas sin correo y recupera su propia cuenta desde la consola.
+
+### Retiro del segundo factor (ADR-022, 2026-11-26)
+
+- [X] T108 [US1] Retirar `LoginForm` de 2FA, `login_2fa`, `configurar_2fa`, sus rutas, plantillas y la dependencia `pyotp`
+- [X] T109 [US1] Eliminar `acceso/totp.py`, `TOTP_ENCRYPTION_KEY`, los campos `secreto_totp` y `segundo_factor_habilitado`, y su migración `0005_quitar_segundo_factor`
+- [X] T110 [US1] Ajustar `iniciar_sesion`, el middleware y las pruebas para abrir la sesión solo con correo y contraseña
+- [X] T111 [US1] Actualizar constitución 2.0.0, ADR-022, spec 001, plan, contratos, quickstart y reglas de dominio
+- [X] T112 [P] [US1] Ejecutar la suite completa y verificar que no quedan referencias a 2FA, TOTP ni secretos
 
 ---
 
@@ -244,7 +252,7 @@ Proyecto Django único en la raíz: `config/`, `tenants/`, `acceso/`, `auditoria
 - [X] T085 [P] [US6] Pruebas de restricciones de alcance en `tests/integration/test_restricciones_usuario.py`: inserción directa con tenant y región a la vez falla; dos cuentas `USUARIO_TENANT` para el mismo tenant falla por `UniqueConstraint`; correo duplicado falla por `unique`
 - [X] T086 [P] [US6] Pruebas de concurrencia en `tests/integration/test_concurrencia.py`: dos altas simultáneas con el mismo código o correo producen una sola fila y un `IntegrityError` traducido; dos cuentas de tenant simultáneas dejan solo una
 - [X] T087 [P] [US6] Pruebas de contrato de auditoría en `tests/contract/test_auditoria.py`: `ADMIN` ve todo, `TENANT` solo su tenant, `ALMACEN` solo su región, recurso ajeno `404`, paginación y filtros `entidad`, `entidad_id`, `desde`, `hasta`, `usuario`
-- [X] T088 [P] [US6] Pruebas de inmutabilidad y secretos en `tests/integration/test_auditoria_inmutable.py`: `UPDATE` y `DELETE` sobre `auditoria_registrocambio` fallan por permisos; ningún registro contiene contraseñas, `token_hash` ni secretos TOTP; altas, cambio de rol, desactivación y suspensión generan sus filas
+- [X] T088 [P] [US6] Pruebas de inmutabilidad y secretos en `tests/integration/test_auditoria_inmutable.py`: `UPDATE` y `DELETE` sobre `auditoria_registrocambio` fallan por permisos; ningún registro contiene contraseñas ni `token_hash`; altas, cambio de rol, desactivación y suspensión generan sus filas
 - [X] T089 [P] [US6] Prueba de separación de funciones en `tests/integration/test_roles_negocio.py`: la cuenta del tenant no tiene subroles (solo `USUARIO_TENANT`) y puede ejecutar cualquier acción de su tenant; el Administrador de plataforma no tiene acceso a rutas de inventario, recojos, asignaciones, traspasos ni conciliaciones (`404`/`403`)
 
 ### Implementación de US6
@@ -280,8 +288,8 @@ Proyecto Django único en la raíz: `config/`, `tenants/`, `acceso/`, `auditoria
 ### Dependencias de fase
 
 - **Setup (Fase 1)**: sin dependencias.
-- **Fundacional (Fase 2)**: depende de Setup y **bloquea todas las historias** (modelos, `AUTH_USER_MODEL`, auditoría, middleware, TOTP).
-- **Historias (Fases 3–8)**: dependen de la Fase 2. US2–US6 dependen funcionalmente de US1 para la validación manual (login con 2FA), aunque sus servicios se prueban con fixtures autenticados.
+- **Fundacional (Fase 2)**: depende de Setup y **bloquea todas las historias** (modelos, `AUTH_USER_MODEL`, auditoría, middleware).
+- **Historias (Fases 3–8)**: dependen de la Fase 2. US2–US6 dependen funcionalmente de US1 para la validación manual (login), aunque sus servicios se prueban con fixtures autenticados.
 - **Pulido (Fase 9)**: depende de las historias que se deseen entregar.
 
 ### Dependencias entre historias
@@ -313,9 +321,8 @@ Proyecto Django único en la raíz: `config/`, `tenants/`, `acceso/`, `auditoria
 ```bash
 # Escribir primero todas las pruebas de US1 (archivos distintos):
 Task: "Pruebas de contrato /login/ en tests/contract/test_login.py"
-Task: "Pruebas de contrato /login/2fa/ y /logout/ en tests/contract/test_auth_2fa.py"
+Task: "Pruebas de contrato de /logout/ en tests/contract/test_login.py"
 Task: "Pruebas de integración de sesión en tests/integration/test_sesion.py"
-Task: "Pruebas unitarias de acceso/totp.py en tests/unit/test_totp.py"
 Task: "Pruebas unitarias del comando en tests/unit/test_comando_admin.py"
 ```
 
@@ -342,7 +349,7 @@ Task: "Implementar tarea Celery en acceso/tasks.py"
 1. Completar Fase 1 (Setup).
 2. Completar Fase 2 (Fundacional) — **crítica**.
 3. Completar Fase 3 (US1).
-4. **DETENERSE y VALIDAR**: login, 2FA, logout y revocación por `version_sesion`.
+4. **DETENERSE y VALIDAR**: login, logout y revocación por `version_sesion`.
 5. Desplegar/demostrar si está listo.
 
 > US1 por sí sola no entrega valor de negocio completo (no hay regiones ni tenants). Para una primera demo funcional de negocio, entregar **US1 + US2 + US3 + US4**; US5 y US6 completan la operación segura y auditable.
@@ -350,7 +357,7 @@ Task: "Implementar tarea Celery en acceso/tasks.py"
 ### Entrega incremental
 
 1. Setup + Fundacional → base lista.
-2. US1 → validar sesión y 2FA.
+2. US1 → validar sesión y revocación.
 3. US2 → regiones y almacenes con auditoría.
 4. US3 → tenants con región inmutable.
 5. US4 → cuentas e invitaciones (primer flujo completo de alta de tenant).
@@ -362,7 +369,7 @@ Task: "Implementar tarea Celery en acceso/tasks.py"
 
 1. Todo el equipo completa Setup + Fundacional.
 2. Al terminar la Fase 2:
-   - Persona A: US1 (autenticación y 2FA).
+   - Persona A: US1 (autenticación y sesión).
    - Persona B: US2 (regiones y almacenes, servicios y formularios).
    - Persona C: US3 (tenants, servicios y formularios).
 3. Luego US4 (depende de US3) y, en paralelo, US5 sobre las cuentas ya creadas.
@@ -384,7 +391,7 @@ plataforma y a las acciones de estado de cuentas, tenants, técnicos y materiale
 - `[P]` significa archivos distintos y sin dependencia de tareas incompletas.
 - `[Story]` traza cada tarea a su historia y a los criterios de aceptación de `spec.md`.
 - Toda alta, cambio de rol, desactivación y suspensión debe dejar auditoría en la misma transacción.
-- Nunca se registran contraseñas, hashes de contraseña, tokens de invitación, `token_hash` ni secretos TOTP.
+- Nunca se registran contraseñas, hashes de contraseña, tokens de invitación ni `token_hash`.
 - El tenant y la región se derivan de la sesión; `tenant_id`/`region_id` del cliente se ignoran o rechazan.
 - No existen rutas de borrado para regiones, tenants ni cuentas.
 - `contracts/http-endpoints.md` no define una ruta de edición de tenant como pantalla propia; el reenvío de invitación y el restablecimiento de contraseña sí están documentados y cubiertos por pruebas de contrato.

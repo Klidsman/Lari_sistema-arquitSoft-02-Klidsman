@@ -13,12 +13,8 @@ from tenants.models import Tenant
 from .models import Invitacion, Rol, TipoInvitacion, Usuario
 from .tasks import enviar_correo_invitacion
 from .tokens import generar_token, hash_token
-from .totp import verificar_codigo
 
-CLAVE_PENDIENTE_2FA = "pendiente_2fa_usuario_id"
 CLAVE_VERSION_SESION = "version_sesion"
-
-ROLES_CON_2FA = {Rol.ADMIN_PLATAFORMA, Rol.RESPONSABLE_ALMACEN}
 
 
 class CredencialesInvalidas(Exception):
@@ -37,33 +33,7 @@ class SesionPendienteRequerida(Exception):
     mensaje = "Debes iniciar sesión"
 
 
-class SegundoFactorRequerido(Exception):
-    mensaje = "Debes completar el segundo factor"
-
-
-def requiere_segundo_factor(usuario) -> bool:
-    return usuario.rol in ROLES_CON_2FA
-
-
-def estado_sesion_pendiente(request) -> bool:
-    return bool(request.session.get(CLAVE_PENDIENTE_2FA))
-
-
-def usuario_pendiente(request):
-    usuario_id = request.session.get(CLAVE_PENDIENTE_2FA)
-    if not usuario_id:
-        return None
-    return Usuario.objects.filter(pk=usuario_id, is_active=True).first()
-
-
-def _dejar_sesion_pendiente(request, usuario) -> None:
-    request.session.cycle_key()
-    request.session[CLAVE_PENDIENTE_2FA] = usuario.pk
-    request.session[CLAVE_VERSION_SESION] = usuario.version_sesion
-
-
 def _completar_sesion(request, usuario) -> None:
-    request.session.pop(CLAVE_PENDIENTE_2FA, None)
     login(request, usuario)
     request.session[CLAVE_VERSION_SESION] = usuario.version_sesion
 
@@ -82,20 +52,8 @@ def iniciar_sesion(request, correo: str, password: str):
     if usuario.tenant_id and usuario.tenant.estado != Tenant.ESTADO_ACTIVO:
         raise TenantSuspendido
 
-    if requiere_segundo_factor(usuario):
-        _dejar_sesion_pendiente(request, usuario)
-        return usuario
-
     _completar_sesion(request, usuario)
     return usuario
-
-
-def verificar_segundo_factor(request, usuario, codigo: str) -> None:
-    if not usuario.segundo_factor_habilitado or not usuario.secreto_totp:
-        raise SegundoFactorRequerido
-    if not verificar_codigo(usuario, codigo):
-        raise SegundoFactorRequerido
-    _completar_sesion(request, usuario)
 
 
 def renovar_version_sesion(usuario) -> int:
@@ -481,37 +439,6 @@ def solicitar_restablecimiento(
         )
 
     return invitacion, token
-
-
-def restablecer_segundo_factor(usuario, actor=None) -> Usuario:
-    """Borra el secreto TOTP y obliga a configurarlo de nuevo."""
-    with transaction.atomic():
-        bloqueado = Usuario.objects.select_for_update().get(pk=usuario.pk)
-        bloqueado.secreto_totp = ""
-        bloqueado.segundo_factor_habilitado = False
-        bloqueado.version_sesion += 1
-        bloqueado.save(
-            update_fields=[
-                "secreto_totp",
-                "segundo_factor_habilitado",
-                "version_sesion",
-            ]
-        )
-        usuario.version_sesion = bloqueado.version_sesion
-        usuario.secreto_totp = ""
-        usuario.segundo_factor_habilitado = False
-
-        registrar_cambio(
-            "Usuario",
-            bloqueado.pk,
-            "segundo_factor",
-            "configurado",
-            "reiniciado",
-            actor or bloqueado,
-            tenant=bloqueado.tenant,
-        )
-
-    return bloqueado
 
 
 def _vigente(invitacion, ahora) -> bool:

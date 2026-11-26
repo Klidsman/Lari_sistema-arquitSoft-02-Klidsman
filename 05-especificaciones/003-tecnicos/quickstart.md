@@ -53,8 +53,8 @@ Datos mínimos para las pruebas manuales (crear desde la interfaz de la spec 001
 1. Una región con su almacén.
 2. Un tenant activo y su cuenta activa (`USUARIO_TENANT`).
 3. Un segundo tenant activo y su cuenta, para comprobar el aislamiento.
-4. Un Administrador de plataforma con segundo factor.
-5. Un Responsable de almacén con segundo factor.
+4. Un Administrador de plataforma con sesión iniciada.
+5. Un Responsable de almacén con sesión iniciada.
 6. Un técnico desactivado con historial en el primer tenant, para las pruebas de reactivación.
 
 ## Pruebas automatizadas

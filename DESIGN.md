@@ -215,7 +215,7 @@ El sistema nace de una aplicación operativa real: sesión única por tenant, se
 - Shell autenticado con barra lateral en Tapa, topbar blanca y contenido sobre Papel.
 - Separación por filete de 1 px (`--borde`), no por sombra ni por relleno de color.
 - Un único acento, el Azul sello, usado solo en acción, enlace, foco y estado activo.
-- Monoespaciada para todo lo que es un identificador: series, códigos de material, TOTP, URIs.
+- Monoespaciada para todo lo que es un identificador: series, códigos de material, URIs.
 - Densidad de mesa de trabajo: celdas de `0.65rem 0.75rem`, sin aire decorativo.
 - Semántica de color explícita: corrección (rojo), conformidad (verde), nota (ámbar).
 
@@ -244,7 +244,7 @@ Paleta de instrumento: un azul de sello sobre una escala de grafito y papel, má
 - **Rojo pálido** (`#fdf3f3`) con **filete rojo** (`#e3b6b9`): fondo y borde del banner de error de acceso.
 - **Verde conformidad** (`#256b3b`): éxito, confirmación de copia, mensajes `mensaje-success`.
 - **Ámbar de nota** (`#8a5a00`): notas operativas y auroras de advertencia dentro de una línea.
-- **Ámbar pálido** (`#fdf8ec`) con **filete ámbar** (`#e6d6a8`): bloque de aviso del flujo TOTP.
+- **Ámbar pálido** (`#fdf8ec`) con **filete ámbar** (`#e6d6a8`): bloque de aviso.
 
 ### On-dark (Tapa: acceso y barra lateral)
 - **Sobre tapa** (`#ffffff`): el logotipo, el título y el enlace activo de la sidebar.
@@ -292,20 +292,20 @@ Un solo sprite inline en `templates/parciales/iconos.html`, con símbolos de `24
 **Character:** Tipografía de instrumento, no de marca: la del sistema operativo, sin descargas, sin licencias y sin latencia. La única inflexión expresiva es el monoespaciado con interletraje amplio para identificadores y códigos de un solo uso, que se lee como un número sellado en el libro.
 
 ### Hierarchy
-- **Headline** (600, `1.75rem`, 1.15, `-0.02em`): título de la tarjeta de acceso y de la tarjeta de configuración 2FA. Es el techo real del sistema; no hay escala de display.
+- **Headline** (600, `1.75rem`, 1.15, `-0.02em`): título de la tarjeta de acceso y de la tarjeta de acceso. Es el techo real del sistema; no hay escala de display.
 - **Content heading** (600, `1.6rem`, 1.2, `-0.02em`): `h1` de las pantallas de trabajo. No compite con el headline de acceso.
 - **Title** (700, `1.5rem`, 1.2, `0.06em`): solo la marca «Lari» en la tapa de acceso y en la sidebar. El enlace de cabecera usa el mismo peso con interletraje reducido.
 - **Body** (400, `1rem`, 1.5): todo el contenido. En prosa instructiva se limita a `62ch`.
 - **Label** (600, `0.875rem`): etiquetas de formulario, `legend` de bloque, encabezados de columna.
 - **Table head** (700, `0.75rem`, mayúsculas, `0.05em`): cabecera de tabla; se lee como el encabezado impreso de una columna de inventario.
 - **Small** (400, `0.85rem`): metadatos, cantidades, notas y mensajes auxiliares.
-- **Mono** (`0.85rem`, `0.08em`): series, códigos, URIs `otpauth://`. El campo de código TOTP sube a `1.15rem` con `0.3em` de interletraje y se centra.
+- **Mono** (`0.85rem`, `0.08em`): series, códigos y URIs.
 
 ### Named Rules
 
-**La regla de la serie en mono.** Todo lo que un humano podría confundir al dictar —serie, código de material, secreto TOTP, URI— va en monoespaciada con interletraje y `overflow-wrap: anywhere`. No hay excepciones por estética.
+**La regla de la serie en mono.** Todo lo que un humano podría confundir al dictar —serie, código de material y URI— va en monoespaciada con interletraje y `overflow-wrap: anywhere`. No hay excepciones por estética.
 
-**La regla de los 62ch.** La prosa instructiva no pasa de `62ch`. Es la razón por la que los pasos del flujo TOTP se leen sin perder el renglón; aplícala a cualquier ayuda o introducción nueva.
+**La regla de los 62ch.** La prosa instructiva no pasa de `62ch`. Es la razón por la que los pasos del flujo de acceso se leen sin perder el renglón; aplícala a cualquier ayuda o introducción nueva.
 
 ## Layout
 
@@ -315,7 +315,7 @@ Las pantallas de trabajo usan dos columnas: contenido principal flexible (`minma
 
 Densidad media-alta: `0.65rem 0.75rem` en celdas, `0.85rem 1rem` en buscadores, `0.75rem` de padding en paneles, `1rem` entre bloques, `1.25rem` de separación entre columnas. La escala de espaciado (`0.35 / 0.5 / 0.75 / 1 / 1.5 / 2rem`) sigue siendo una escala de facto; los tokens viven en `:root` para color y radio, no para espaciado.
 
-Puntos de quiebre reales: `900px` (la sidebar pasa a drawer y la asignación deja de ser dos columnas), `700px` (el recojo apila el raíl bajo el formulario), `480px` (ajustes de padding y de tamaño en acceso y TOTP).
+Puntos de quiebre reales: `900px` (la sidebar pasa a drawer y la asignación deja de ser dos columnas), `700px` (el recojo apila el raíl bajo el formulario), `480px` (ajustes de padding y de tamaño en acceso).
 
 ## Elevation & Depth
 
@@ -333,7 +333,7 @@ El drawer móvil no añade sombra: se separa con el overlay `rgba(15, 28, 38, 0.
 
 ## Shapes
 
-Lenguaje de esquina suave y contenido: `0.4rem` en controles (botones, buscadores, enlaces con borde, campos), `0.5rem` en superficies —paneles, raíles, bloques de técnico, `dl.detalle`, banners—, `0.75rem` en la tarjeta de configuración 2FA y `1rem` en la tarjeta de acceso de escritorio. Las etiquetas de estado usan `999px` y son la única forma completamente redondeada del sistema. En móvil, la tarjeta de acceso pierde radio y borde y se convierte en pantalla completa.
+Lenguaje de esquina suave y contenido: `0.4rem` en controles (botones, buscadores, enlaces con borde, campos), `0.5rem` en superficies —paneles, raíles, bloques de técnico, `dl.detalle`, banners—, `0.75rem` en la tarjeta de acceso y `1rem` en la tarjeta de acceso de escritorio. Las etiquetas de estado usan `999px` y son la única forma completamente redondeada del sistema. En móvil, la tarjeta de acceso pierde radio y borde y se convierte en pantalla completa.
 
 Los bordes son siempre de `1px`; el grosor no se usa para jerarquía. El único círculo del sistema es el punto de `0.4rem` que precede a cada hecho en el panel de tapa del acceso, dibujado con borde `1px` y sin relleno. No hay recortes en diagonal, ni esquinas mixtas, ni pestañas.
 
@@ -429,8 +429,6 @@ El patrón que define las pantallas de trabajo. Una columna fija a la derecha (`
 ### Signature: tarjeta de acceso partida
 `62rem` de ancho, dos columnas `0.92fr / 1.08fr`, radio `1rem`, sombra difusa. A la izquierda, el panel de tapa oscuro con la marca, tres hechos operativos y el pie «Uso interno · Operación diaria». A la derecha, la tarjeta blanca con un único título, un subtítulo de `36ch` y un formulario de una columna. En móvil se convierte en pantalla completa: el panel de tapa se reduce a una franja con el logotipo y los hechos desaparecen.
 
-**Variante de alta del segundo factor.** Cuando el contenido es una guía de tres pasos, la misma tarjeta pasa a una sola columna: la tapa se reduce a franja superior y el cuerpo reparte la guía en dos columnas, pasos 1 y 3 a la izquierda y el bloque de clave del paso 2 a la derecha (`19rem`), con una sola columna por debajo de `900px`. El orden del DOM sigue siendo 1 → 2 → 3; la rejilla solo mueve el paso 2 a la derecha para que la clave y el formulario de confirmación quepan en el primer viewport.
-
 ## Flujo de traspaso en tres columnas
 
 La pantalla `templates/traspasos/formulario.html` usa `.traspaso-flujo`, una rejilla de tres columnas
@@ -447,7 +445,7 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - **Do** construir sobre la hoja blanca: cualquier contenido nuevo va en una superficie blanca con filete de `1px var(--borde)`, sobre el papel `var(--fondo)`.
 - **Do** usar `--acento` solo en acción, enlace, foco y estado activo, y comprobar que no supera el 10 % de la pantalla.
 - **Do** mantener el foco visible de `3px` con `offset 2px` en todo control interactivo; es la garantía de teclado del sistema y no se negocia por estética.
-- **Do** poner en monoespaciada, con `overflow-wrap: anywhere`, toda serie, código, secreto TOTP y URI.
+- **Do** poner en monoespaciada, con `overflow-wrap: anywhere`, toda serie, código y URI.
 - **Do** limitar la prosa instructiva a `62ch` y apoyarla en el Grafito medio, no en el Grafito.
 - **Do** usar los tres estados con su pareja pálido/filete ya existente (rojo, verde, ámbar) en lugar de introducir un cuarto color.
 - **Do** conservar la densidad de tabla (`0.65rem 0.75rem`) y la cabecera de Superficie alterna; es lo que permite comparar series y discrepancias de un vistazo.
@@ -470,7 +468,7 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - **Don't** usar relleno de color de marca para separar secciones, ni cebra en tablas, ni cabeceras de columna oscuras.
 - **Don't** usar las etiquetas de estado como decoración: solo describen un estado real.
 - **Don't** introducir una segunda tipografía, una fuente de display descargada ni una escala tipográfica más allá de los roles documentados.
-- **Don't** dar el mismo peso visual a una acción primaria y a «Cancelar»; la jerarquía primario / secundario / enlace es lo que evita el clic erróneo en el flujo 2FA.
+- **Don't** dar el mismo peso visual a una acción primaria y a «Cancelar»; la jerarquía primario / secundario / enlace es lo que evita el clic erróneo en el flujo de acceso.
 - **Don't** repetir valores literales (`#fff`, `#eef1f4`, `rgba(...)`) en reglas nuevas: usa los tokens de `:root` y, si falta uno, añádelo al token set.
 - **Don't** volver a introducir `style="..."` en plantillas; si una pantalla necesita una excepción, se resuelve con una clase.
 - **Don't** tratar el carácter visual como identidad confirmada. La marca y los iconos son una propuesta de trabajo: este documento se reescribe cuando exista dirección de identidad definitiva.
@@ -484,7 +482,6 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - Los fragmentos de búsqueda `.resultado-material` y `.resultado-tecnico` aún no tienen regla propia; heredan el estilo básico de lista. Es la siguiente pieza de UI pendiente.
 - Los bloques internos del constructor de asignaciones y del recojo (`.constructor-bloque`, `.filas-bloque`, `.serie-opcion`, `.series-seleccionadas`, `.material-seleccionado`, `.resumen-series`, `.titulo-bloque`, `.material-fila`, `.agregar-fila`, `.quitar-fila`, `.quitar-bloque`) usan controles globales pero no un componente documentado. Funcionan; no están pulidos.
 - `templates/inicio.html` ya es un panel de accesos por rol; un resumen de pendientes por rol sería el siguiente paso.
-- La configuración 2FA no tiene QR; usa clave manual copiable. Añadirlo requiere una dependencia de generación de QR.
 - `.impeccable/design.json` se generó antes del shell y de `componentes.css`; hay que regenerarlo cuando se cierre esta fase.
 - Quedan literales por tokenizar: `#fafbfc` (hover de fila), `#f2f8f4` (fondo de éxito) y `#6b4e00` (texto de aviso). No introduzcas nuevos: formalízalos en `:root` cuando toques esas reglas.
 - No hay tema oscuro. El sistema es claro por decisión; `color-scheme: light` es explícito.

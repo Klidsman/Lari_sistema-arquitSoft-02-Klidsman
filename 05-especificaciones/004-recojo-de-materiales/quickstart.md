@@ -67,7 +67,7 @@ Datos mínimos para las pruebas manuales (crear desde la interfaz de las specs 0
 2. Un tenant `AYA-01` de esa región y su cuenta activa.
 3. Un segundo tenant `AYA-02` de la misma región y su cuenta activa.
 4. Un tercer tenant de otra región, si se quiere probar un intento de cruce.
-5. Un Administrador de plataforma con segundo factor.
+5. Un Administrador de plataforma con sesión iniciada.
 6. Un Responsable de almacén de Ayacucho.
 7. Material seriado `10402520279` (`ROSETA`, lote `FIBERHOME`).
 8. Material no seriado `10402520323` (`CABLE`, lote `FIBERHOME`).

@@ -43,7 +43,6 @@ Región → Responsable de almacén
 - Crea regiones, almacenes, tenants, la cuenta única del tenant y las cuentas de Responsable de almacén.
 - Gestiona el catálogo compartido.
 - No opera inventario, recojos, asignaciones, traspasos ni conciliaciones.
-- Requiere segundo factor.
 
 ### Cuenta del tenant
 - Alcance de un solo tenant.
@@ -65,7 +64,6 @@ Región → Responsable de almacén
 - Alcance de una sola región.
 - Confirma o rechaza solicitudes y traspasos de su región.
 - No ve ni opera datos de tenants ni de otras regiones.
-- Requiere segundo factor.
 
 ### Técnico
 - Actor pasivo.
@@ -82,10 +80,10 @@ Región → Responsable de almacén
 - El enlace de invitación se muestra una sola vez; el envío por correo es opcional.
 - El token de invitación es de un solo uso, vence y se invalida al reenviar la invitación.
 - Solo el Administrador de plataforma restablece la contraseña de una cuenta activa.
-- El restablecimiento usa un enlace de un solo uso, invalida las sesiones abiertas y conserva el rol, el alcance y el segundo factor.
+- El restablecimiento usa un enlace de un solo uso, invalida las sesiones abiertas y conserva el rol y el alcance.
 - El Administrador nunca conoce ni define la contraseña.
-- Si el único Administrador pierde su contraseña o su segundo factor, la recuperación se hace desde la consola del servidor.
-- Las cuentas de Administrador de plataforma y Responsable de almacén requieren segundo factor.
+- Si el único Administrador pierde su contraseña, la recuperación se hace desde la consola del servidor.
+- El acceso usa solo correo y contraseña, sin segundo factor.
 - Una cuenta desactivada no puede iniciar sesión ni conservar una sesión activa.
 - Un tenant suspendido bloquea el acceso de su cuenta y sus operaciones.
 - No se eliminan cuentas, tenants ni regiones; se desactivan o suspenden.
@@ -114,10 +112,9 @@ Región → Responsable de almacén
 - Todo cambio de rol se audita con rol anterior y nuevo.
 - Toda desactivación de cuenta o suspensión de tenant se audita.
 - La solicitud y el completado de un restablecimiento de contraseña se auditan; el token y la contraseña no se registran.
-- El reinicio del segundo factor se audita sin guardar el secreto.
 - Cada registro incluye usuario, fecha, valor anterior y valor nuevo.
 - La auditoría es de solo inserción.
-- No se registran contraseñas, tokens ni secretos de segundo factor.
+- No se registran contraseñas ni tokens.
 
 ## 9. Validaciones
 
@@ -130,5 +127,4 @@ Región → Responsable de almacén
 - Buzón de almacén válido.
 - Centro y Almacén obligatorios.
 - Invitación vigente y no usada.
-- Segundo factor completado para los roles que lo requieren.
 - Cuenta activa y tenant activo para operar.

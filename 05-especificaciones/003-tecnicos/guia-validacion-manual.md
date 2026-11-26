@@ -28,8 +28,8 @@ Datos mínimos:
 1. Región con almacén.
 2. Tenant A con su cuenta activa (`USUARIO_TENANT`).
 3. Tenant B con su cuenta activa.
-4. Administrador de plataforma con TOTP.
-5. Responsable de almacén con TOTP.
+4. Administrador de plataforma con sesión iniciada.
+5. Responsable de almacén con sesión iniciada.
 
 ---
 

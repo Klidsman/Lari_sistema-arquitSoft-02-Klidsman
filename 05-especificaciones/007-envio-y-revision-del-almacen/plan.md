@@ -71,7 +71,7 @@ sustituye con una tabla, un servicio local ni un mecanismo de notificación para
 | III. Invariantes de stock | PASA | 007 no escribe `StockGeneral` ni `StockTecnico`. Al confirmar llama a 008, que valida stock suficiente, nunca deja cantidades negativas y aplica el movimiento en la misma transacción. Al rechazar, el reservado de no seriados se libera porque solo se calcula sobre solicitudes `ENVIADA`. |
 | IV. Identidad y unicidad de series | PASA | Se usa `series.Serie`. La confirmación cambia `RESERVADA→ASIGNADA` mediante 008; el rechazo cambia `RESERVADA→DISPONIBLE` en 007. No se crea otra tabla ni se duplica el número de serie. |
 | V. Integridad transaccional | PASA | Confirmación, rechazo, cambios de serie, stock y auditoría ocurren en una sola `transaction.atomic`. El correo se dispara con `transaction.on_commit` y nunca dentro de la transacción de envío. Un fallo de correo no revierte la solicitud. |
-| VI. Auditoría inmutable y trazabilidad | PASA | Se auditan `SolicitudAsignacion/estado`, `Serie/estado`, motivo de rechazo y resultado de cada intento de envío. No se auditan contraseñas, tokens, secretos TOTP ni el contenido binario del Excel. |
+| VI. Auditoría inmutable y trazabilidad | PASA | Se auditan `SolicitudAsignacion/estado`, `Serie/estado`, motivo de rechazo y resultado de cada intento de envío. No se auditan contraseñas, tokens, secretos ni el contenido binario del Excel. |
 | VII. Autoridad del reporte de Lari y aprobación humana | PASA | La confirmación o el rechazo son siempre una acción humana del Responsable de almacén; el sistema no confirma automáticamente. 007 no procesa el reporte de Lari. |
 | VIII. Spec-driven, pruebas y simplicidad | PASA | Cada CA-01…CA-12 tiene al menos una prueba. La lógica vive en `asignaciones/services.py`, `asignaciones/correo.py` y `asignaciones/notificaciones.py`; las vistas solo orquestan. No se agregan dependencias: SSE usa Redis, ya presente para Celery. |
 
@@ -524,7 +524,7 @@ Las vistas, formularios y plantillas no contienen lógica de negocio.
   - `EnvioCorreo/estado`: `REINTENTANDO→EXITOSO` o `REINTENTANDO→FALLIDO` con `numero_intento`,
     destinatario y archivo; sin contenido binario ni credenciales SMTP.
 - 008 audita los cambios de stock y de serie al confirmar; 007 no los duplica.
-- Nunca se auditan contraseñas, tokens, secretos TOTP ni el cuerpo completo del correo.
+- Nunca se auditan contraseñas, tokens, secretos ni el cuerpo completo del correo.
 - RLS: `asignaciones_enviocorreo` con políticas por `tenant_id` y `region_id`; la bandeja y la
   búsqueda filtran además en el ORM. Si la infraestructura RLS de 001 no existe, se registra como
   deuda en `research.md` y no se inventa una paralela.

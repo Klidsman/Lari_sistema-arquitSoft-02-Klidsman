@@ -93,7 +93,6 @@ jobs:
       TEST_DATABASE_NAME: test_lari
       REDIS_URL: redis://localhost:6379/0
       EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
-      TOTP_ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
 
     steps:
       - name: Checkout
@@ -139,7 +138,6 @@ jobs:
 | `REDIS_URL` | Broker de Celery y notificaciones |
 | `EMAIL_BACKEND` | Correo en memoria; no se envía nada real |
 | `SECRET_KEY` | Valor ficticio solo para CI |
-| `TOTP_ENCRYPTION_KEY` | Clave Fernet válida de pruebas |
 | `DEBUG=False` | Evita páginas de error de desarrollo |
 
 `manage.py` usa `config.settings.dev` por defecto, pero respeta `DJANGO_SETTINGS_MODULE` si ya está
@@ -253,7 +251,6 @@ $env:DATABASE_URL = "postgresql://lari_app:lari_app@localhost:5434/lari"
 $env:REDIS_URL = "redis://localhost:6379/0"
 $env:TEST_DATABASE_NAME = "test_lari"
 $env:SECRET_KEY = "local-solo-pruebas"
-$env:TOTP_ENCRYPTION_KEY = "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
 
 .\.venv\Scripts\python.exe manage.py check
 .\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
@@ -364,28 +361,6 @@ Ejecuta en local:
 
 Revisa la migración, pruébala y haz commit.
 
-### `Secrets must be at least 112 bits after decoding`
-
-No es un problema de `TOTP_ENCRYPTION_KEY`. Es `pyotp` 2.12 o superior validando el **secreto
-Base32 de las pruebas**. Un secreto de ejemplo como `JBSWY3DPEHPK3PXP` tiene 80 bits y ya no es
-aceptado. Usa al menos 32 caracteres Base32 (160 bits), por ejemplo:
-
-```text
-JBSWY3DPEHPK3PXPJBSWY3DPJBSWY3DP
-```
-
-Ese valor ya está aplicado en las pruebas de TOTP y 2FA.
-
-### `InvalidToken` o error con `TOTP_ENCRYPTION_KEY`
-
-La clave debe ser una clave Fernet válida. Genera una nueva:
-
-```powershell
-.\.venv\Scripts\python.exe -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-```
-
-En CI usa un valor fijo de pruebas, nunca una clave real.
-
 ### Las pruebas pasan en Windows pero fallan en Ubuntu
 
 Revisa:
@@ -404,7 +379,7 @@ En GitHub cada job parte de un entorno limpio, así que no debería ocurrir. En 
 ## 13. Seguridad
 
 - El CI de pruebas **no necesita secretos**: todos los valores son ficticios.
-- No subas `.env`, claves TOTP reales ni credenciales de producción.
+- No subas `.env` ni credenciales de producción.
 - Un workflow de despliegue debe ser distinto y usar **Environments** y **Secrets** de GitHub.
 - El rol de PostgreSQL de producción no debe ser superusuario ni tener `BYPASSRLS`.
 

@@ -19,7 +19,7 @@ flowchart TB
         direction TB
 
         subgraph NUCLEO["Núcleo transversal"]
-            ACCESO["acceso<br/>sesión, 2FA, cuentas"]
+            ACCESO["acceso<br/>sesión y cuentas"]
             TENANTS["tenants<br/>regiones y almacenes"]
             AUDITORIA["auditoria<br/>registro inmutable"]
         end

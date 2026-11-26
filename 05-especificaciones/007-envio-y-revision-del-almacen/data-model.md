@@ -188,7 +188,7 @@ intento 4 FALLIDO  → fallo definitivo → aviso al tenant
 | Confirmación | `Serie/estado` y stock | 008, misma transacción | Lo escribe 008; 007 no lo duplica |
 
 - Todos los registros usan `auditoria.services.registrar_cambio` y `RegistroCambio`.
-- No se auditan contraseñas, tokens, secretos TOTP, credenciales SMTP ni el cuerpo del correo.
+- No se auditan contraseñas, tokens, secretos, credenciales SMTP ni el cuerpo del correo.
 - La auditoría de la confirmación y del rechazo es síncrona y transaccional. La del envío ocurre en
   la tarea, después de cerrar el intento.
 

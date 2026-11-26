@@ -32,9 +32,6 @@ class Usuario(AbstractUser):
         related_name="usuarios",
     )
     version_sesion = models.PositiveIntegerField(default=0)
-    # El token Fernet de un secreto TOTP supera 64 caracteres.
-    secreto_totp = models.CharField(max_length=255, blank=True)
-    segundo_factor_habilitado = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

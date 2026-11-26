@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from acceso.models import Invitacion, Rol, Usuario
-from acceso.totp import generar_token, hash_token
+from acceso.tokens import generar_token, hash_token
 
 
 class Command(BaseCommand):

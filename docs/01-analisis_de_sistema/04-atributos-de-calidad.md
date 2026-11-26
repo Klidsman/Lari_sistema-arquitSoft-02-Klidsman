@@ -24,5 +24,5 @@ Propiedades no funcionales inferidas de los requerimientos. El estado sigue la c
 | **RNF-18** | Usabilidad | Los datos del catálogo y del técnico se completan solos en los formularios | Confirmado |
 | **RNF-19** | Idioma | Interfaz y documentación en español |
 | **RNF-20** | Seguridad | Los privilegios de ACT-02 son un rol con alcance explícito y limitado. Ningún mecanismo técnico que omita los permisos (superusuario de base de datos o de framework) puede usarse para operar datos de tenants |
-| **RNF-21** | Seguridad | Las cuentas de ACT-02 y de Almacén (ACT-03) requieren autenticación de dos factores |
+| **RNF-21** | Seguridad | El acceso usa correo y contraseña para todos los roles, sin segundo factor. La sesión se revoca al desactivar la cuenta o cambiar su rol |
 | **RNF-22** | Disponibilidad | El sistema mantiene disponibles las operaciones críticas y comunica los errores de forma controlada cuando un componente falla |

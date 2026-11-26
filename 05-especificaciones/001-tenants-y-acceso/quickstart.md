@@ -3,7 +3,7 @@
 **Fase**: 1 | **Fecha**: 2026-11-11 | **Spec**: `05-especificaciones/001-tenants-y-acceso/spec.md`
 
 Guía para levantar el proyecto y validar de extremo a extremo las regiones, tenants, cuentas,
-invitaciones, segundo factor, revocación de sesiones y auditoría. Los detalles de datos están
+invitaciones, restablecimiento de contraseña, revocación de sesiones y auditoría. Los detalles de datos están
 en `data-model.md` y los contratos en `contracts/`.
 
 ## Prerrequisitos
@@ -46,15 +46,8 @@ DJANGO_SETTINGS_MODULE=config.settings.dev
 SECRET_KEY=dev-solo-local
 DATABASE_URL=postgresql://lari_app:cambiar-en-local@localhost:5432/lari
 REDIS_URL=redis://localhost:6379/0
-TOTP_ENCRYPTION_KEY=<clave-Fernet-generada-localmente>
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 DEFAULT_FROM_EMAIL=no-reply@lari.local
-```
-
-Generar una clave Fernet local (guardarla solo en `.env`):
-
-```powershell
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
 ## Puesta en marcha
@@ -87,11 +80,7 @@ python manage.py restablecer_admin_plataforma --email admin@lari.local
 ```
 
 El comando muestra una sola vez el enlace `/invitacion/<token>/` e invalida las sesiones
-abiertas. Si además perdió el segundo factor:
-
-```powershell
-python manage.py restablecer_admin_plataforma --email admin@lari.local --reiniciar-2fa
-```
+abiertas.
 
 ## Pruebas automatizadas
 
@@ -113,7 +102,7 @@ concurrencia real.
 
 ### 1. Alta de región y almacén
 
-1. Iniciar sesión como Administrador con segundo factor.
+1. Iniciar sesión como Administrador con correo y contraseña.
 2. Ir a `/plataforma/regiones/nueva/`.
 3. Registrar código `LIM`, nombre `Lima`, Centro `PR05`, Almacén `BE03` y un buzón válido.
 4. **Esperado**: la región y su almacén aparecen en `/plataforma/regiones/`; la auditoría
@@ -167,22 +156,20 @@ concurrencia real.
    abiertas se cierran.
 3. Abrir el enlace en otro navegador y definir una contraseña nueva.
 4. **Esperado**: la contraseña anterior deja de funcionar, la nueva funciona, el rol y el
-   alcance no cambian y el segundo factor se conserva.
+   alcance no cambian.
 5. Intentar restablecer una cuenta inactiva.
 6. **Esperado**: `"Reactiva la cuenta antes de restablecer su contraseña"`.
 7. Intentar restablecer la propia cuenta del Administrador desde la interfaz.
 8. **Esperado**: se rechaza y se indica usar el comando de consola.
 
-### 6. Inicio de sesión y segundo factor
+### 6. Inicio de sesión
 
-1. Iniciar sesión como Administrador sin completar el TOTP.
-2. **Esperado**: no se abre la sesión; solo se accede a `/login/2fa/`.
-3. Completar el TOTP.
-4. **Esperado**: sesión abierta con alcance global.
-5. Repetir con un Responsable de almacén.
-6. **Esperado**: también exige segundo factor.
-7. Iniciar sesión con la cuenta del tenant.
-8. **Esperado**: no exige segundo factor y el alcance es solo su tenant.
+1. Iniciar sesión como Administrador con correo y contraseña.
+2. **Esperado**: sesión abierta con alcance global.
+3. Repetir con un Responsable de almacén.
+4. **Esperado**: sesión abierta con alcance de su región.
+5. Iniciar sesión con la cuenta del tenant.
+6. **Esperado**: sesión abierta con alcance solo de su tenant.
 
 ### 7. Aislamiento entre tenants y regiones
 
@@ -236,7 +223,7 @@ concurrencia real.
 3. Abrir la misma ruta como cuenta de tenant.
 4. **Esperado**: solo se ven registros de su tenant.
 5. Inspeccionar los registros.
-6. **Esperado**: no contienen contraseñas, tokens ni secretos TOTP.
+6. **Esperado**: no contienen contraseñas ni tokens.
 
 ### 12. Concurrencia
 
@@ -261,7 +248,7 @@ Django 5.2 y Python 3.12.
 | 3 | Cuenta única e invitación | OK |
 | 4 | Invitación vencida y reenvío | OK |
 | 5 | Restablecimiento de contraseña | OK |
-| 6 | Inicio de sesión y segundo factor | OK |
+| 6 | Inicio de sesión | OK |
 | 7 | Aislamiento entre tenants y regiones | OK |
 | 8 | Desactivación, reactivación y suspensión | OK |
 | 9 | Cambio de rol | OK |

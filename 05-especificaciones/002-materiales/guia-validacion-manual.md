@@ -25,7 +25,7 @@ Debe terminar en **214 passed**.
 
 Necesitas:
 
-1. Un Administrador de plataforma con TOTP (spec 001).
+1. Un Administrador de plataforma con sesión iniciada (spec 001).
 2. La cuenta activa de un tenant A (solo consulta).
 3. La cuenta activa de un tenant B (otro tenant, solo consulta).
 4. Una cuenta activa de **Responsable de almacén** (crea y da de baja materiales).

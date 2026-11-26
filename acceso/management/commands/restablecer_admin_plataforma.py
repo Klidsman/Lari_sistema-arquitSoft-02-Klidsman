@@ -9,7 +9,7 @@ from acceso.models import Rol, Usuario
 class Command(BaseCommand):
     help = (
         "Genera un enlace de restablecimiento de un solo uso para un "
-        "Administrador de plataforma y, opcionalmente, reinicia su 2FA."
+        "Administrador de plataforma."
     )
 
     def add_arguments(self, parser):
@@ -17,11 +17,6 @@ class Command(BaseCommand):
             "--email",
             required=True,
             help="Correo del Administrador de plataforma.",
-        )
-        parser.add_argument(
-            "--reiniciar-2fa",
-            action="store_true",
-            help="Borra el secreto TOTP para que se configure de nuevo.",
         )
 
     def handle(self, *args, **options):
@@ -47,15 +42,6 @@ class Command(BaseCommand):
             )
         except services.CuentaInactivaRestablecimiento as exc:
             raise CommandError(exc.mensaje) from exc
-
-        if options["reiniciar_2fa"]:
-            services.restablecer_segundo_factor(usuario, usuario)
-            self.stdout.write(
-                self.style.WARNING(
-                    "Segundo factor reiniciado: se configurará de nuevo al "
-                    "iniciar sesión."
-                )
-            )
 
         self.stdout.write(
             self.style.SUCCESS(

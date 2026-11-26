@@ -15,28 +15,19 @@ from tenants.models import Tenant
 
 from . import services as acceso_servicios
 from .forms import (
-    ConfigurarTotpForm,
     CuentaAlmacenForm,
     CuentaTenantForm,
     InvitacionPasswordForm,
     LoginForm,
-    SegundoFactorForm,
 )
 from .models import Rol, Usuario
 from .services import (
-    CLAVE_VERSION_SESION,
     CredencialesInvalidas,
     CuentaDesactivada,
-    SegundoFactorRequerido,
-    SesionPendienteRequerida,
     TenantSuspendido,
     destino_por_rol,
-    estado_sesion_pendiente,
     iniciar_sesion,
-    usuario_pendiente,
-    verificar_segundo_factor,
 )
-from .totp import cifrar_secreto, contexto_configuracion, verificar_codigo
 
 
 def _render_error(request, plantilla, mensaje, status, contexto=None):
@@ -107,74 +98,11 @@ def login(request):
                     403,
                 )
 
-            if estado_sesion_pendiente(request):
-                return redirect("login_2fa")
             return redirect(destino_por_rol(usuario))
     else:
         form = LoginForm()
 
     return render(request, "acceso/login.html", {"form": form})
-
-
-@never_cache
-def login_2fa(request):
-    usuario = usuario_pendiente(request)
-    if usuario is None:
-        return _render_error(
-            request,
-            "acceso/login_2fa.html",
-            SesionPendienteRequerida.mensaje,
-            403,
-        )
-
-    configurando = not usuario.segundo_factor_habilitado
-    if configurando and not usuario.secreto_totp:
-        import pyotp
-
-        usuario.secreto_totp = cifrar_secreto(pyotp.random_base32())
-        usuario.save(update_fields=["secreto_totp"])
-
-    alta = contexto_configuracion(usuario) if configurando else {}
-    contexto = {"usuario": usuario, "configurando": configurando, **alta}
-
-    if request.method == "POST":
-        form = ConfigurarTotpForm(request.POST) if configurando else SegundoFactorForm(request.POST)
-        if form.is_valid():
-            if configurando:
-                if not verificar_codigo(usuario, form.cleaned_data["codigo"]):
-                    return _render_error(
-                        request,
-                        "acceso/login_2fa.html",
-                        SegundoFactorRequerido.mensaje,
-                        400,
-                        {**contexto, "form": form},
-                    )
-                usuario.segundo_factor_habilitado = True
-                usuario.save(update_fields=["segundo_factor_habilitado"])
-
-            try:
-                verificar_segundo_factor(
-                    request,
-                    usuario,
-                    form.cleaned_data["codigo"],
-                )
-            except SegundoFactorRequerido:
-                return _render_error(
-                    request,
-                    "acceso/login_2fa.html",
-                    SegundoFactorRequerido.mensaje,
-                    400,
-                    {**contexto, "form": form},
-                )
-            return redirect(destino_por_rol(usuario))
-    else:
-        form = ConfigurarTotpForm() if configurando else SegundoFactorForm()
-
-    return render(
-        request,
-        "acceso/login_2fa.html",
-        {"form": form, **contexto},
-    )
 
 
 @require_POST
@@ -191,53 +119,6 @@ def inicio(request):
 @login_required
 def perfil(request):
     return render(request, "acceso/perfil.html")
-
-
-@login_required
-@never_cache
-def configurar_2fa(request):
-    usuario = request.user
-
-    if request.method == "POST":
-        form = ConfigurarTotpForm(request.POST)
-        if form.is_valid():
-            if not usuario.secreto_totp:
-                return redirect("configurar_2fa")
-            if not verificar_codigo(usuario, form.cleaned_data["codigo"]):
-                return _render_error(
-                    request,
-                    "acceso/configurar_2fa.html",
-                    "Debes completar el segundo factor",
-                    400,
-                    {
-                        "form": form,
-                        "usuario": usuario,
-                        **contexto_configuracion(usuario),
-                    },
-                )
-            usuario.segundo_factor_habilitado = True
-            usuario.save(update_fields=["segundo_factor_habilitado"])
-            request.session[CLAVE_VERSION_SESION] = usuario.version_sesion
-            messages.success(request, "Segundo factor configurado")
-            return redirect("perfil")
-    else:
-        form = ConfigurarTotpForm()
-        if not usuario.secreto_totp:
-            import pyotp
-
-            secreto = pyotp.random_base32()
-            usuario.secreto_totp = cifrar_secreto(secreto)
-            usuario.save(update_fields=["secreto_totp"])
-
-    return render(
-        request,
-        "acceso/configurar_2fa.html",
-        {
-            "form": form,
-            "usuario": usuario,
-            **contexto_configuracion(usuario),
-        },
-    )
 
 
 @requiere_rol(Rol.ADMIN_PLATAFORMA)

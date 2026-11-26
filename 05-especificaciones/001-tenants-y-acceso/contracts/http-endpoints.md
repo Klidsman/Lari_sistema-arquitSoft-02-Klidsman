@@ -9,8 +9,7 @@ en el servidor; ocultar un botón no es una autorización.
 
 ## Convenciones
 
-- **Autenticación**: cookie de sesión de Django. Sesión en estado `pendiente_2fa` solo puede
-  acceder a `/login/2fa/`, `/logout/` y recursos estáticos.
+- **Autenticación**: cookie de sesión de Django. No hay segundo factor ni sesión pendiente.
 - **Roles**: `ADMIN` = Administrador de plataforma; `TENANT` = cuenta del tenant;
   `ALMACEN` = Responsable de almacén.
 - **CSRF**: obligatorio en todo `POST`.
@@ -34,24 +33,10 @@ Inicio de sesión con correo y contraseña.
 |---|---|
 | Acceso | Público |
 | Petición | `email`, `password`, `csrfmiddlewaretoken` |
-| Éxito sin 2FA | `302` a la pantalla inicial del rol; sesión autenticada |
-| Éxito con 2FA | `302` a `/login/2fa/`; sesión `pendiente_2fa`, sin acceso al resto |
+| Éxito | `302` a la pantalla inicial del rol; sesión autenticada, sin segundo factor |
 | Error | `400` `"Correo o contraseña incorrectos"` (mismo mensaje para cuenta inexistente o clave errónea) |
 | Cuenta inactiva | `403` `"La cuenta está desactivada"` |
 | Tenant suspendido | `403` `"El tenant está suspendido"` |
-
-### `GET/POST /login/2fa/`
-
-Verificación del segundo factor.
-
-| Aspecto | Contrato |
-|---|---|
-| Acceso | Sesión `pendiente_2fa` |
-| Petición | `codigo` (6 dígitos TOTP) |
-| Éxito | `302` a la pantalla inicial del rol; sesión autenticada |
-| Error | `400` `"Debes completar el segundo factor"` |
-| Sin sesión pendiente | `403` `"Debes iniciar sesión"` |
-| Reintentos | Límite configurable por usuario; al excederse se cierra la sesión pendiente |
 
 ### `POST /logout/`
 
@@ -59,7 +44,7 @@ Cierre de sesión.
 
 | Aspecto | Contrato |
 |---|---|
-| Acceso | Autenticado o `pendiente_2fa` |
+| Acceso | Autenticado |
 | Éxito | `302` a `/login/`; sesión cerrada |
 | CSRF ausente | `403` |
 
@@ -76,12 +61,12 @@ Definir contraseña desde la invitación.
 | Contraseña débil | `400` con el mensaje del validador correspondiente |
 | Cuenta ya activa | `410` con el mismo mensaje uniforme |
 
-> El token original solo viaja en el enlace del correo. La base guarda su hash y nunca lo
-> devuelve.
+> El token original se muestra una sola vez en la interfaz y, si el correo está configurado,
+> también viaja por correo. La base guarda su hash y nunca lo devuelve.
 
 ## Rutas del Administrador de plataforma
 
-Todas requieren `rol = ADMIN`, sesión autenticada con segundo factor completado. Un rol
+Todas requieren `rol = ADMIN` y sesión autenticada. Un rol
 distinto recibe `403` `"No tienes permiso para administrar esta cuenta"`.
 
 ### `GET /plataforma/regiones/`
@@ -208,7 +193,7 @@ Generar un enlace de restablecimiento para una cuenta activa.
 | `GET` | `405` |
 | Rol distinto de Administrador | `403` |
 
-Al aceptar el enlace, la cuenta sigue activa y conserva rol, alcance y segundo factor.
+Al aceptar el enlace, la cuenta sigue activa y conserva su rol y su alcance.
 
 ### `POST /plataforma/cuentas/<id>/invitacion/`
 
@@ -239,7 +224,7 @@ Consulta paginada de altas, cambios de rol, desactivaciones y suspensiones de ac
 
 | Ruta | ADMIN | TENANT | ALMACEN |
 |---|---|---|---|
-| `/login/`, `/login/2fa/`, `/logout/`, `/invitacion/<token>/` | Público | Público | Público |
+| `/login/`, `/logout/`, `/invitacion/<token>/` | Público | Público | Público |
 | `/plataforma/regiones/**` | Sí | No | No |
 | `/plataforma/tenants/**` | Sí | No | No |
 | `/plataforma/cuentas/**` | Sí | No | No |

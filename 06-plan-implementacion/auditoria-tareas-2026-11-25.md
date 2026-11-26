@@ -6,7 +6,7 @@ Este documento contrasta los `tasks.md` con el código y las pruebas reales del 
 
 | Spec | Código | Pruebas | Estado real | Pendiente real |
 |---|---|---|---|---|
-| 001 Tenants y acceso | `tenants`, `acceso`, `auditoria` | `test_tenants`, `test_sesion`, `test_login`, `test_auth_2fa`, `test_cuentas*`, `test_auditoria*` | Completo | Nada funcional |
+| 001 Tenants y acceso | `tenants`, `acceso`, `auditoria` | `test_tenants`, `test_sesion`, `test_login`, `test_cuentas*`, `test_auditoria*` | Completo | Nada funcional |
 | 002 Materiales | `materiales` | `test_material_*`, `test_restricciones_material` | Completo | Nada funcional |
 | 003 Técnicos | `tecnicos` | `test_tecnico_*`, `test_tecnico_stock_http` | Completo | Nada funcional |
 | 004 Recojos | `recojos` | 7 contract + 9 integration + 1 unit `test_recojo_*` | Completo | T059: recorrido manual de quickstart |
@@ -38,4 +38,4 @@ Para dar una spec por cerrada:
 3. `python manage.py check`, `makemigrations --check` y la suite completa están en verde.
 4. Se recorrió el `quickstart.md` o se documentó la deuda.
 
-La suite actual tiene **926 pruebas en verde**.
+La suite actual tiene **912 pruebas en verde**.

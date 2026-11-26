@@ -1,4 +1,4 @@
-"""Contrato de restablecimiento de contraseña y recuperación del 2FA."""
+"""Contrato de restablecimiento de contraseña."""
 
 import re
 from datetime import timedelta
@@ -106,14 +106,9 @@ def test_admin_no_se_restablece_a_si_mismo(
 
 
 @pytest.mark.django_db
-def test_aceptar_restablecimiento_conserva_cuenta_y_2fa(
+def test_aceptar_restablecimiento_conserva_cuenta(
     usuario_admin, usuario_tenant, django_capture_on_commit_callbacks
 ):
-    usuario_tenant.secreto_totp = "secreto-cifrado"
-    usuario_tenant.segundo_factor_habilitado = True
-    usuario_tenant.save(
-        update_fields=["secreto_totp", "segundo_factor_habilitado"]
-    )
     version_anterior = usuario_tenant.version_sesion
 
     with django_capture_on_commit_callbacks(execute=True):
@@ -126,8 +121,6 @@ def test_aceptar_restablecimiento_conserva_cuenta_y_2fa(
     assert usuario_tenant.check_password("ClaveNueva12345")
     assert usuario_tenant.rol == Rol.USUARIO_TENANT
     assert usuario_tenant.tenant_id is not None
-    assert usuario_tenant.secreto_totp == "secreto-cifrado"
-    assert usuario_tenant.segundo_factor_habilitado is True
     assert usuario_tenant.version_sesion == version_anterior + 2
 
     invitacion = Invitacion.objects.get(usuario=usuario_tenant)
@@ -254,32 +247,6 @@ def test_comando_restablece_admin_e_invalida_sesiones(usuario_admin):
     assert Invitacion.objects.filter(
         usuario=usuario_admin,
         tipo=TipoInvitacion.RESTABLECIMIENTO,
-    ).exists()
-
-
-@pytest.mark.django_db
-def test_comando_reinicia_2fa(usuario_admin):
-    usuario_admin.secreto_totp = "secreto-cifrado"
-    usuario_admin.segundo_factor_habilitado = True
-    usuario_admin.save(
-        update_fields=["secreto_totp", "segundo_factor_habilitado"]
-    )
-
-    call_command(
-        "restablecer_admin_plataforma",
-        email=usuario_admin.email,
-        reiniciar_2fa=True,
-        stdout=StringIO(),
-    )
-
-    usuario_admin.refresh_from_db()
-    assert usuario_admin.secreto_totp == ""
-    assert usuario_admin.segundo_factor_habilitado is False
-    assert RegistroCambio.objects.filter(
-        entidad="Usuario",
-        entidad_id=usuario_admin.pk,
-        campo="segundo_factor",
-        valor_nuevo="reiniciado",
     ).exists()
 
 

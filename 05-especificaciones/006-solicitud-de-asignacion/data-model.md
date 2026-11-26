@@ -219,7 +219,7 @@ Reglas:
 
 - Cada registro se escribe en la misma transacción que el cambio; si falla, no se escribe.
 - No se audita el contenido del Excel, solo nombre, ruta y hash.
-- No se auditan contraseñas, tokens, secretos TOTP ni `token_hash`.
+- No se auditan contraseñas, tokens, secretos ni `token_hash`.
 - No se escribe `tenant_id` como campo separado; se deduce del usuario y de la entidad auditada.
 - La auditoría de stock es responsabilidad de 008; 006 no la duplica.
 
