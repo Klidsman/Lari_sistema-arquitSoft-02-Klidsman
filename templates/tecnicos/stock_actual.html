@@ -6,7 +6,7 @@
   <div class="cabecera-seccion">
     <div>
       <h1>Stock actual</h1>
-      <p class="ayuda">Custodia vigente por técnico y material.</p>
+      <p class="ayuda">Elige un técnico para ver los materiales en su custodia.</p>
     </div>
     <a class="boton boton-secundario" href="{% url 'listar_tecnicos' %}">
       <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-tecnicos"></use></svg>
@@ -15,18 +15,14 @@
   </div>
 
   <form method="get" action="{% url 'stock_actual_tecnicos' %}" class="buscador">
-    <label>Buscar
-      <input type="search" name="q" value="{{ q }}" placeholder="NIF, técnico, código o material">
-    </label>
-    <label class="campo-check">
-      <input type="checkbox" name="incluir" value="1" {% if incluir_sin_stock %}checked{% endif %}>
-      Incluir sin stock
+    <label>Buscar técnico
+      <input type="search" name="q" value="{{ q }}" placeholder="NIF o nombre">
     </label>
     <button type="submit">Filtrar</button>
   </form>
 
   <p class="resumen-linea">
-    <strong>{{ resumen.tecnicos|default:0 }}</strong> técnicos
+    <strong>{{ resumen.tecnicos|default:0 }}</strong> técnicos con stock
     <span aria-hidden="true">·</span>
     <strong>{{ resumen.materiales|default:0 }}</strong> materiales
     <span aria-hidden="true">·</span>
@@ -38,33 +34,30 @@
       <tr>
         <th>Técnico</th>
         <th>NIF</th>
-        <th>Material</th>
-        <th>Descripción</th>
-        <th>Lote</th>
-        <th>Tipo</th>
-        <th class="columna-numero">Cantidad</th>
+        <th>Estado</th>
+        <th class="columna-numero">Materiales</th>
+        <th class="columna-numero">Unidades</th>
+        <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
-      {% for fila in filas %}
+      {% for tecnico in tecnicos %}
         <tr>
           <td>
-            <a href="{% url 'detalle_tecnico' fila.tecnico.pk %}">{{ fila.tecnico.nombre }}</a>
-            {% if not fila.tecnico.activo %}
-              <span class="etiqueta etiqueta-anulado">Inactivo</span>
-            {% endif %}
+            <a href="{% url 'detalle_stock_tecnico' tecnico.pk %}">{{ tecnico.nombre }}</a>
           </td>
-          <td class="mono">{{ fila.tecnico.nif }}</td>
-          <td class="mono">{{ fila.material.codigo }}</td>
-          <td>{{ fila.material.descripcion }}</td>
-          <td>{{ fila.material.lote|default:"—" }}</td>
-          <td>{{ fila.material.es_seriado|yesno:"Seriado,No seriado" }}</td>
-          <td class="columna-numero">{{ fila.cantidad }}</td>
+          <td class="mono">{{ tecnico.nif }}</td>
+          <td>{{ tecnico.activo|yesno:"Activo,Inactivo" }}</td>
+          <td class="columna-numero">{{ tecnico.materiales }}</td>
+          <td class="columna-numero">{{ tecnico.unidades|default:0 }}</td>
+          <td class="acciones">
+            <a class="boton-accion" href="{% url 'detalle_stock_tecnico' tecnico.pk %}">Ver stock</a>
+          </td>
         </tr>
       {% empty %}
         <tr>
-          <td colspan="7" class="sin-resultados">
-            No hay stock registrado para los filtros seleccionados.
+          <td colspan="6" class="sin-resultados">
+            No hay técnicos que coincidan con la búsqueda.
           </td>
         </tr>
       {% endfor %}
@@ -74,11 +67,11 @@
   {% if pagina.paginator.num_pages > 1 %}
     <nav class="paginacion">
       {% if pagina.has_previous %}
-        <a href="?page={{ pagina.previous_page_number }}&q={{ q|urlencode }}{% if incluir_sin_stock %}&incluir=1{% endif %}">Anterior</a>
+        <a href="?page={{ pagina.previous_page_number }}&q={{ q|urlencode }}">Anterior</a>
       {% endif %}
       <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
       {% if pagina.has_next %}
-        <a href="?page={{ pagina.next_page_number }}&q={{ q|urlencode }}{% if incluir_sin_stock %}&incluir=1{% endif %}">Siguiente</a>
+        <a href="?page={{ pagina.next_page_number }}&q={{ q|urlencode }}">Siguiente</a>
       {% endif %}
     </nav>
   {% endif %}

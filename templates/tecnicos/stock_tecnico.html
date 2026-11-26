@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Stock de {{ tecnico.nombre }} · Lari{% endblock %}
+
+{% block contenido %}
+  <div class="cabecera-seccion">
+    <div>
+      <h1>Stock de {{ tecnico.nombre }}</h1>
+      <p class="ayuda">
+        <span class="mono">{{ tecnico.nif }}</span>
+        <span aria-hidden="true">·</span>
+        {{ tecnico.activo|yesno:"Activo,Inactivo" }}
+      </p>
+    </div>
+    <div class="acciones-cabecera">
+      <a class="boton boton-secundario" href="{% url 'stock_actual_tecnicos' %}">
+        <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-volver"></use></svg>
+        Volver a Stock actual
+      </a>
+      <a class="boton" href="{% url 'detalle_tecnico' tecnico.pk %}">Ver ficha</a>
+    </div>
+  </div>
+
+  <p class="resumen-linea">
+    <strong>{{ resumen.materiales|default:0 }}</strong> materiales
+    <span aria-hidden="true">·</span>
+    <strong>{{ resumen.unidades|default:0 }}</strong> unidades en custodia
+  </p>
+
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Material</th>
+        <th>Descripción</th>
+        <th>Lote</th>
+        <th>Tipo</th>
+        <th class="columna-numero">Cantidad</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in filas %}
+        <tr>
+          <td class="mono">{{ fila.material.codigo }}</td>
+          <td>{{ fila.material.descripcion }}</td>
+          <td>{{ fila.material.lote|default:"—" }}</td>
+          <td>{{ fila.material.es_seriado|yesno:"Seriado,No seriado" }}</td>
+          <td class="columna-numero">{{ fila.cantidad }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5" class="sin-resultados">
+            Este técnico no tiene stock registrado.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

@@ -10,6 +10,11 @@ urlpatterns = [
         name="stock_actual_tecnicos",
     ),
     path(
+        "stock/<int:tecnico_id>/",
+        views.detalle_stock_tecnico,
+        name="detalle_stock_tecnico",
+    ),
+    path(
         "buscar/",
         views.buscar_tecnicos_htmx,
         name="buscar_tecnicos_htmx",

@@ -94,7 +94,7 @@ def test_tecnico_desactivado_conserva_stock_visible(
 
 
 @pytest.mark.django_db
-def test_stock_actual_lista_todos_los_tecnicos_y_materiales(
+def test_stock_actual_lista_tecnicos_con_sus_totales(
     cliente_tenant,
     usuario_tenant,
     tenant,
@@ -130,13 +130,42 @@ def test_stock_actual_lista_todos_los_tecnicos_y_materiales(
     assert "Stock actual" in contenido
     assert tecnico.nombre in contenido
     assert otro.nombre in contenido
-    assert material_seriado.codigo in contenido
-    assert otro_material.codigo in contenido
-    assert ">14<" in contenido
+    assert reverse("detalle_stock_tecnico", args=[tecnico.pk]) in contenido
+    assert reverse("detalle_stock_tecnico", args=[otro.pk]) in contenido
+    assert material_seriado.codigo not in contenido
 
 
 @pytest.mark.django_db
-def test_stock_actual_filtra_por_tecnico_y_material(
+def test_stock_actual_detalle_muestra_el_stock_del_tecnico(
+    cliente_tenant, tecnico, material_seriado, stock_tecnico
+):
+    respuesta = cliente_tenant.get(
+        reverse("detalle_stock_tecnico", args=[tecnico.pk])
+    )
+    contenido = respuesta.content.decode()
+
+    assert respuesta.status_code == 200
+    assert tecnico.nombre in contenido
+    assert material_seriado.codigo in contenido
+    assert material_seriado.descripcion in contenido
+    assert ">10<" in contenido
+    assert "Volver a Stock actual" in contenido
+
+
+@pytest.mark.django_db
+def test_stock_actual_detalle_sin_stock_muestra_estado_vacio(
+    cliente_tenant, tecnico
+):
+    respuesta = cliente_tenant.get(
+        reverse("detalle_stock_tecnico", args=[tecnico.pk])
+    )
+
+    assert respuesta.status_code == 200
+    assert "Este técnico no tiene stock registrado." in respuesta.content.decode()
+
+
+@pytest.mark.django_db
+def test_stock_actual_filtra_tecnicos_por_nif_o_nombre(
     cliente_tenant,
     usuario_tenant,
     tenant,
@@ -165,27 +194,25 @@ def test_stock_actual_filtra_por_tecnico_y_material(
         cantidad=2,
     )
 
-    por_tecnico = cliente_tenant.get(
+    por_nif = cliente_tenant.get(
         reverse("stock_actual_tecnicos"), {"q": "LA2222"}
     ).content.decode()
-    assert otro_material.codigo in por_tecnico
-    assert material_seriado.codigo not in por_tecnico
+    assert otro.nombre in por_nif
+    assert tecnico.nombre not in por_nif
 
-    por_material = cliente_tenant.get(
-        reverse("stock_actual_tecnicos"), {"q": "ROSETA"}
+    por_nombre = cliente_tenant.get(
+        reverse("stock_actual_tecnicos"), {"q": "Juan"}
     ).content.decode()
-    assert material_seriado.codigo in por_material
-    assert otro_material.codigo not in por_material
+    assert tecnico.nombre in por_nombre
+    assert otro.nombre not in por_nombre
 
 
 @pytest.mark.django_db
-def test_stock_actual_no_muestra_otro_tenant(
+def test_stock_actual_detalle_no_muestra_otro_tenant(
     cliente_tenant,
     usuario_otro_tenant,
     usuario_almacen,
-    tecnico,
     material_seriado,
-    stock_tecnico,
 ):
     otro_tenant = usuario_otro_tenant.tenant
     otro_tecnico = Tecnico.objects.create(
@@ -208,18 +235,16 @@ def test_stock_actual_no_muestra_otro_tenant(
         cantidad=99,
     )
 
-    contenido = cliente_tenant.get(
-        reverse("stock_actual_tecnicos")
-    ).content.decode()
-
-    assert otro_material.codigo not in contenido
-    assert otro_tecnico.nombre not in contenido
-    assert material_seriado.codigo in contenido
+    respuesta = cliente_tenant.get(
+        reverse("detalle_stock_tecnico", args=[otro_tecnico.pk])
+    )
+    assert respuesta.status_code == 404
+    assert otro_material.codigo not in respuesta.content.decode()
 
 
 @pytest.mark.django_db
 def test_stock_actual_requiere_cuenta_tenant(
-    cliente_autenticado, cliente_almacen
+    cliente_autenticado, cliente_almacen, tecnico
 ):
     assert (
         cliente_autenticado.get(reverse("stock_actual_tecnicos")).status_code
@@ -227,5 +252,17 @@ def test_stock_actual_requiere_cuenta_tenant(
     )
     assert (
         cliente_almacen.get(reverse("stock_actual_tecnicos")).status_code
+        == 403
+    )
+    assert (
+        cliente_autenticado.get(
+            reverse("detalle_stock_tecnico", args=[tecnico.pk])
+        ).status_code
+        == 403
+    )
+    assert (
+        cliente_almacen.get(
+            reverse("detalle_stock_tecnico", args=[tecnico.pk])
+        ).status_code
         == 403
     )

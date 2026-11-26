@@ -79,27 +79,42 @@ def stock_actual_tecnicos(request):
         return error
 
     q = request.GET.get("q", "")
-    incluir_sin_stock = request.GET.get("incluir") == "1"
-    filas = services.listar_stock_actual(
-        tenant, q=q, incluir_sin_stock=incluir_sin_stock
-    )
-    resumen = filas.aggregate(
-        tecnicos=Count("tecnico", distinct=True),
-        materiales=Count("material", distinct=True),
-        unidades=Sum("cantidad"),
-    )
-    pagina = Paginator(filas, 100).get_page(request.GET.get("page"))
+    tecnicos = services.listar_tecnicos_con_stock(tenant, q=q)
+    resumen = services.resumen_stock_actual(tenant, q=q)
+    pagina = Paginator(tecnicos, 50).get_page(request.GET.get("page"))
 
     return render(
         request,
         "tecnicos/stock_actual.html",
         {
             "pagina": pagina,
-            "filas": pagina.object_list,
+            "tecnicos": pagina.object_list,
             "q": q,
-            "incluir_sin_stock": incluir_sin_stock,
             "resumen": resumen,
         },
+    )
+
+
+@login_required
+@require_GET
+def detalle_stock_tecnico(request, tecnico_id):
+    tenant, error = _tenant_o_error(request)
+    if error is not None:
+        return error
+
+    tecnico, error = _tecnico_o_error(tenant, tecnico_id)
+    if error is not None:
+        return error
+
+    filas = services.stock_actual_tecnico(tecnico, solo_con_stock=True)
+    resumen = filas.aggregate(
+        materiales=Count("material", distinct=True),
+        unidades=Sum("cantidad", default=0),
+    )
+    return render(
+        request,
+        "tecnicos/stock_tecnico.html",
+        {"tecnico": tecnico, "filas": filas, "resumen": resumen},
     )
 
 
