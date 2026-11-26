@@ -8,9 +8,9 @@
   <title>{% block title %}Lari · Control de materiales{% endblock %}</title>
   <link rel="icon" href="{% static 'img/marca.svg' %}" type="image/svg+xml">
   <meta name="theme-color" content="#0f1c26">
-  <link rel="stylesheet" href="{% static 'css/base.css' %}?v=8">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}?v=9">
   {% if request.user.is_authenticated %}
-    <link rel="stylesheet" href="{% static 'css/shell.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'css/shell.css' %}?v=3">
     <noscript>
       <style>
         .shell-sidebar { position: static !important; transform: none !important; width: auto !important; height: auto !important; }
@@ -18,7 +18,7 @@
       </style>
     </noscript>
   {% endif %}
-  <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=5">
   <script src="{% static 'js/htmx.min.js' %}?v=2.0.4" defer></script>
   {% block extra_head %}{% endblock %}
 </head>

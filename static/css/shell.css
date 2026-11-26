@@ -94,12 +94,14 @@
   font-size: 0.9375rem;
   line-height: 1.35;
   text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease;
 }
 
 .shell-enlace .icono {
   width: 1.05rem;
   height: 1.05rem;
   opacity: 0.66;
+  transition: opacity 160ms ease, color 160ms ease;
 }
 
 .shell-enlace__texto {
@@ -170,6 +172,8 @@
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease,
+    color 160ms ease, transform 120ms ease;
 }
 
 .shell-menu .icono {
@@ -215,11 +219,19 @@
   font: inherit;
   font-size: 0.8125rem;
   cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease,
+    color 160ms ease, transform 120ms ease;
 }
 
 .shell-boton-salir .icono {
   width: 0.95rem;
   height: 0.95rem;
+}
+
+.shell-boton-salir:active,
+.shell-menu:active,
+.shell-cerrar:active {
+  transform: translateY(1px);
 }
 
 .shell-boton-salir:hover {
@@ -285,7 +297,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shell-sidebar {
+  .shell-sidebar,
+  .shell-enlace,
+  .shell-enlace .icono,
+  .shell-menu,
+  .shell-boton-salir,
+  .shell-cerrar {
     transition: none;
+  }
+
+  .shell-boton-salir:active,
+  .shell-menu:active,
+  .shell-cerrar:active {
+    transform: none;
   }
 }

@@ -111,6 +111,8 @@ button,
   gap: 0.4rem;
   min-height: 2.25rem;
   padding: 0.45rem 0.8rem;
+  transition: background-color 160ms ease, border-color 160ms ease,
+    color 160ms ease, transform 120ms ease;
   border: 1px solid var(--borde);
   border-radius: 0.4rem;
   background: var(--superficie);
@@ -547,6 +549,18 @@ a.boton-secundario {
   border-radius: 0.5rem;
   background: var(--superficie);
   color: var(--texto);
+  animation: aviso-entrada 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes aviso-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .aviso-toast a {
@@ -621,14 +635,13 @@ a.boton-secundario {
   padding: 0.8rem 1.25rem;
   color: inherit;
   text-decoration: none;
+  animation: acceso-entrada 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(min(var(--i, 0), 7) * 22ms);
+  transition: background-color 180ms ease;
 }
 
 .acceso:hover {
   background: var(--hoja-hover);
-}
-
-.acceso:hover .acceso__icono {
-  border-color: var(--acento);
 }
 
 .acceso:focus-visible {
@@ -645,11 +658,24 @@ a.boton-secundario {
   border: 1px solid var(--borde);
   border-radius: 0.4rem;
   color: var(--acento);
+  transition: background-color 180ms ease, border-color 180ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .acceso__icono .icono {
   width: 1.1rem;
   height: 1.1rem;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.acceso:hover .acceso__icono {
+  border-color: var(--acento);
+  background: var(--acento-tenue);
+  transform: translateY(-1px);
+}
+
+.acceso:hover .acceso__icono .icono {
+  transform: scale(1.04);
 }
 
 .acceso__texto {
@@ -662,6 +688,7 @@ a.boton-secundario {
 .acceso__titulo {
   font-size: 0.9375rem;
   font-weight: 600;
+  transition: color 160ms ease;
 }
 
 .acceso__desc {
@@ -670,16 +697,63 @@ a.boton-secundario {
   line-height: 1.3;
 }
 
-.acceso__flecha {
-  width: 0.95rem;
-  height: 0.95rem;
+.acceso__accion {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
   margin-left: auto;
+  border: 1px solid var(--borde);
+  border-radius: 0.4rem;
   color: var(--texto-tenue);
+  transition: background-color 180ms ease, border-color 180ms ease,
+    color 180ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.acceso:hover .acceso__titulo,
-.acceso:hover .acceso__flecha {
+.acceso__accion .icono {
+  width: 0.9rem;
+  height: 0.9rem;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.acceso:hover .acceso__titulo {
   color: var(--acento);
+}
+
+.acceso:hover .acceso__accion {
+  border-color: var(--acento);
+  background: var(--acento);
+  color: var(--sobre-tapa);
+  transform: translateX(2px);
+}
+
+.acceso:hover .acceso__accion .icono {
+  transform: translateX(1px);
+}
+
+.accesos li:nth-child(1) .acceso { --i: 0; }
+.accesos li:nth-child(2) .acceso { --i: 1; }
+.accesos li:nth-child(3) .acceso { --i: 2; }
+.accesos li:nth-child(4) .acceso { --i: 3; }
+.accesos li:nth-child(5) .acceso { --i: 4; }
+.accesos li:nth-child(6) .acceso { --i: 5; }
+.accesos li:nth-child(7) .acceso { --i: 6; }
+.accesos li:nth-child(8) .acceso { --i: 7; }
+.accesos li:nth-child(9) .acceso { --i: 8; }
+.accesos li:nth-child(10) .acceso { --i: 9; }
+.accesos li:nth-child(11) .acceso { --i: 10; }
+.accesos li:nth-child(12) .acceso { --i: 11; }
+
+@keyframes acceso-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 700px) {
@@ -689,5 +763,20 @@ a.boton-secundario {
 
   .accesos li:nth-child(odd) {
     border-right: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acceso,
+  .acceso__icono,
+  .acceso__icono .icono,
+  .acceso__titulo,
+  .acceso__accion,
+  .acceso__accion .icono,
+  .aviso-toast,
+  button,
+  .boton {
+    animation: none;
+    transition: none;
   }
 }

@@ -337,6 +337,19 @@ Lenguaje de esquina suave y contenido: `0.4rem` en controles (botones, buscadore
 
 Los bordes son siempre de `1px`; el grosor no se usa para jerarquía. El único círculo del sistema es el punto de `0.4rem` que precede a cada hecho en el panel de tapa del acceso, dibujado con borde `1px` y sin relleno. No hay recortes en diagonal, ni esquinas mixtas, ni pestañas.
 
+## Motion
+
+El movimiento es funcional, breve y con una sola intención por superficie. No hay bucles, parallax ni animaciones decorativas permanentes.
+
+- **Entrada de acceso:** `.auth` aparece con `auth-entrada` (`420ms`, `translateY(10px)`, `scale(0.995)`, ease-out exponencial). Es el único gesto de bienvenida.
+- **Entrada de accesos:** cada `.acceso` entra con `acceso-entrada` (`260ms`, `translateY(6px)`) y un retardo escalonado de `22ms` por fila, limitado a 7 pasos para que la última fila no supere `~414ms`.
+- **Hover:** `160–180ms ease` para color, fondo y borde; el icono del acceso sube `1px`, el botón decorativo se desplaza `2px` y adopta Azul sello.
+- **Pulsación:** `transform: translateY(1px)` durante `120ms` en botones y controles del shell.
+- **Aviso flotante:** `aviso-entrada` (`220ms`, `translateY(8px)`).
+- **Reduced motion:** con `prefers-reduced-motion: reduce` se desactivan todas las animaciones y transiciones anteriores; los estados y el foco siguen visibles.
+
+**Reglas:** una entrada por vista; nada supera `420ms`; no se animan `width`, `height`, `top` ni `left`; el foco nunca depende del movimiento.
+
 ## Components
 
 El sistema cubre el shell autenticado (sidebar, topbar, drawer móvil), los componentes de contenido (tabla, buscador, paginación, botones, formularios, etiquetas, detalle, mensajes y estados vacíos), las dos pantallas compuestas (recojos y asignación) y la superficie de acceso. Lo que aún no tiene regla propia —fragmentos de búsqueda y bloques internos de asignación— se enumera en *Drift conocido*.
@@ -390,7 +403,7 @@ El componente más usado: fondo Hoja, borde de 1 px, `border-collapse: separate`
 `.menu-modulo` es una rejilla de enlaces/tarjetas para el módulo de registro de materiales; `.resumen-carga` es una rejilla de totales en Hoja con filete. `.fila-alerta` tiñe la fila de Rojo pálido para negativos del dashboard.
 
 ### Inicio y accesos rápidos
-`templates/inicio.html` deja de ser una bienvenida y pasa a ser un panel de trabajo: `h1` «Inicio», una línea de sesión con correo y rol, y un único panel blanco con filete. Dentro, `.accesos` es una lista en dos columnas separada por filetes tenues, sin tarjetas repetidas ni sombras. Cada `.acceso` alinea un icono en caja de `2rem`, título y descripción breve, y un chevron al final; el hover tiñe la fila con `--hoja-hover` y el icono toma el borde de acento. Si el rol tiene un número impar de accesos, el último ocupa las dos columnas. En móvil la lista pasa a una columna. Los enlaces se generan por rol: el tenant ve operación; el almacén, bandeja y traspasos; el administrador, plataforma y catálogo.
+`templates/inicio.html` deja de ser una bienvenida y pasa a ser un panel de trabajo: `h1` «Inicio», una línea de sesión con correo y rol, y un único panel blanco con filete. Dentro, `.accesos` es una lista en dos columnas separada por filetes tenues, sin tarjetas repetidas ni sombras. Cada `.acceso` alinea un icono en caja de `2rem`, título y descripción breve, y un botón decorativo `.acceso__accion` de `2rem` con chevron al final. En hover la fila se tiñe con `--hoja-hover`, el icono toma borde y fondo de acento, y el botón decorativo se rellena de Azul sello y avanza `2px`. Si el rol tiene un número impar de accesos, el último ocupa las dos columnas. En móvil la lista pasa a una columna. Los enlaces se generan por rol: el tenant ve operación; el almacén, bandeja y traspasos; el administrador, plataforma y catálogo.
 
 ### Signature: shell autenticado
 La estructura de todas las pantallas privadas. Sidebar de `15rem` en Tapa con la marca gráfica, grupos por rol, iconos de trazo único y «Mi perfil» al pie; topbar blanca de `3.5rem` con correo, rol y «Cerrar sesión» con icono; contenido sobre Papel con máximo `1100px`. No hay sombras: sidebar y topbar se separan del contenido por el cambio de superficie y el filete. En móvil la sidebar se convierte en drawer con overlay y el botón «Menú» queda en la topbar.
@@ -430,6 +443,8 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - **Do** usar el sprite `parciales/iconos.html` y la marca `parciales/marca.html` antes de dibujar un símbolo nuevo.
 - **Do** mantener el trazo de `1.75px`, `currentColor` y `stroke-linecap="round"` en cualquier icono nuevo.
 - **Do** dar al último acceso de una lista impar el ancho completo para no dejar una celda vacía.
+- **Do** usar el botón decorativo `.acceso__accion` como affordance, no como acción independiente: toda la fila sigue siendo el enlace.
+- **Do** respetar `prefers-reduced-motion` en cualquier animación nueva y mantenerla por debajo de `420ms`.
 
 ### Don't:
 - **Don't** crear un botón, campo, chip o paginación nuevos sin CSS y sin documentarlos aquí en el mismo cambio. El sistema ya existe; extiéndelo, no lo reinventes.
@@ -445,6 +460,8 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - **Don't** usar emoji, glifos Unicode, iconos rellenos o una fuente de iconos externa.
 - **Don't** dejar un botón que solo lleva icono sin `aria-label`.
 - **Don't** rellenar la marca con Azul sello ni usarla como patrón de fondo.
+- **Don't** animar propiedades de layout ni encadenar más de una entrada por vista.
+- **Don't** usar animaciones en bucle, parallax o movimiento que compita con la lectura de una tabla.
 
 ### Drift conocido
 - Los fragmentos de búsqueda `.resultado-material` y `.resultado-tecnico` aún no tienen regla propia; heredan el estilo básico de lista. Es la siguiente pieza de UI pendiente.
@@ -454,4 +471,4 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - `.impeccable/design.json` se generó antes del shell y de `componentes.css`; hay que regenerarlo cuando se cierre esta fase.
 - Quedan literales por tokenizar: `#fafbfc` (hover de fila), `#f2f8f4` (fondo de éxito) y `#6b4e00` (texto de aviso). No introduzcas nuevos: formalízalos en `:root` cuando toques esas reglas.
 - No hay tema oscuro. El sistema es claro por decisión; `color-scheme: light` es explícito.
-- La única transición del sistema es el drawer móvil (`180ms`, desactivada con `prefers-reduced-motion`). No hay animaciones decorativas.
+- El sistema tiene microtransiciones de `160–180ms`, entradas de `220–420ms` en acceso e inicio, y el drawer móvil de `180ms`; todas se desactivan con `prefers-reduced-motion`. No hay animaciones en bucle ni decorativas permanentes.

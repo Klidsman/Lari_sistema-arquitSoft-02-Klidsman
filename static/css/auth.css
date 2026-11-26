@@ -28,6 +28,18 @@
   border-radius: 1rem;
   background: #fff;
   box-shadow: 0 1.5rem 3.5rem rgba(15, 28, 38, 0.1);
+  animation: auth-entrada 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes auth-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Panel de marca */
@@ -154,6 +166,8 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease,
+    transform 120ms ease;
 }
 
 .auth-panel .boton-primario:hover,
@@ -394,5 +408,21 @@
   .auth-marca .marca-lari__simbolo {
     width: 2rem;
     height: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth {
+    animation: none;
+  }
+
+  .auth-boton,
+  .auth-panel .boton-primario {
+    transition: none;
+  }
+
+  .auth-boton:active,
+  .auth-panel .boton-primario:active {
+    transform: none;
   }
 }
