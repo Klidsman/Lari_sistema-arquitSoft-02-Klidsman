@@ -6,9 +6,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Lari · Control de materiales{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/base.css' %}?v=6">
+  <link rel="icon" href="{% static 'img/marca.svg' %}" type="image/svg+xml">
+  <meta name="theme-color" content="#0f1c26">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}?v=8">
   {% if request.user.is_authenticated %}
-    <link rel="stylesheet" href="{% static 'css/shell.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'css/shell.css' %}?v=2">
     <noscript>
       <style>
         .shell-sidebar { position: static !important; transform: none !important; width: auto !important; height: auto !important; }
@@ -16,59 +18,64 @@
       </style>
     </noscript>
   {% endif %}
-  <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/componentes.css' %}?v=3">
   <script src="{% static 'js/htmx.min.js' %}?v=2.0.4" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
+{% include "parciales/iconos.html" %}
 {% if request.user.is_authenticated %}
   <a class="salto-contenido" href="#contenido-principal">Saltar al contenido</a>
 
   <div class="shell" data-shell>
     <aside class="shell-sidebar" id="shell-sidebar" aria-label="Menú lateral">
       <div class="shell-sidebar__cabecera">
-        <a class="shell-marca" href="{% url 'inicio' %}">Lari</a>
-        <button type="button" class="shell-cerrar" data-cerrar-menu aria-label="Cerrar menú">Cerrar</button>
+        <a class="shell-marca" href="{% url 'inicio' %}">
+          {% include "parciales/marca.html" with marca_clase="marca-lari--shell" %}
+        </a>
+        <button type="button" class="shell-cerrar" data-cerrar-menu aria-label="Cerrar menú">
+          <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-cerrar"></use></svg>
+        </button>
       </div>
 
       <nav class="shell-nav" aria-label="Navegación principal">
         {% block navegacion %}
-          {% enlace_nav 'inicio' 'Inicio' %}
+          {% enlace_nav 'inicio' 'Inicio' None None 'inicio' %}
 
           {% if request.rol == "USUARIO_TENANT" %}
             <p class="shell-grupo">Operación</p>
-            {% enlace_nav 'listar_materiales' 'Materiales' '/materiales/' %}
-            {% enlace_nav 'listar_tecnicos' 'Técnicos' '/tecnicos/' %}
-            {% enlace_nav 'lista_recojos' 'Recojos' '/recojos/' %}
-            {% enlace_nav 'estado_stock_inicial' 'Stock inicial' '/stock-inicial/' %}
-            {% enlace_nav 'lista_asignaciones' 'Asignaciones' '/asignaciones/' %}
-            {% enlace_nav 'lista_traspasos' 'Traspasos' '/traspasos/' %}
-            {% enlace_nav 'lista_conciliaciones' 'Conciliaciones' '/conciliaciones/' %}
-            {% enlace_nav 'lista_devoluciones' 'Devoluciones' '/logistica-inversa/devoluciones/' %}
-            {% enlace_nav 'lista_bajas' 'Bajas' '/logistica-inversa/bajas/' %}
-            {% enlace_nav 'menu_registro_materiales' 'Registro de materiales' '/registro-materiales/' %}
-            {% enlace_nav 'lista_cortes' 'Reportes' '/reportes/' %}
+            {% enlace_nav 'listar_materiales' 'Materiales' '/materiales/' None 'material' %}
+            {% enlace_nav 'listar_tecnicos' 'Técnicos' '/tecnicos/' None 'tecnicos' %}
+            {% enlace_nav 'lista_recojos' 'Recojos' '/recojos/' None 'recojo' %}
+            {% enlace_nav 'estado_stock_inicial' 'Stock inicial' '/stock-inicial/' None 'stock' %}
+            {% enlace_nav 'lista_asignaciones' 'Asignaciones' '/asignaciones/' None 'asignacion' %}
+            {% enlace_nav 'lista_traspasos' 'Traspasos' '/traspasos/' None 'traspaso' %}
+            {% enlace_nav 'lista_conciliaciones' 'Conciliaciones' '/conciliaciones/' None 'conciliacion' %}
+            {% enlace_nav 'lista_devoluciones' 'Devoluciones' '/logistica-inversa/devoluciones/' None 'devolucion' %}
+            {% enlace_nav 'lista_bajas' 'Bajas' '/logistica-inversa/bajas/' None 'baja' %}
+            {% enlace_nav 'menu_registro_materiales' 'Registro de materiales' '/registro-materiales/' None 'registro' %}
+            {% enlace_nav 'lista_cortes' 'Reportes' '/reportes/' None 'reportes' %}
           {% elif request.rol == "RESPONSABLE_ALMACEN" %}
             <p class="shell-grupo">Almacén</p>
-            {% enlace_nav 'bandeja_almacen' 'Bandeja de despachos' '/almacen/' '/almacen/traspasos/' %}
-            {% enlace_nav 'bandeja_traspasos' 'Traspasos del almacén' '/almacen/traspasos/' %}
+            {% enlace_nav 'bandeja_almacen' 'Bandeja de despachos' '/almacen/' '/almacen/traspasos/' 'bandeja' %}
+            {% enlace_nav 'bandeja_traspasos' 'Traspasos del almacén' '/almacen/traspasos/' None 'traspaso' %}
             <p class="shell-grupo">Catálogo</p>
-            {% enlace_nav 'listar_materiales' 'Materiales' '/materiales/' %}
+            {% enlace_nav 'listar_materiales' 'Materiales' '/materiales/' None 'material' %}
           {% elif request.rol == "ADMIN_PLATAFORMA" %}
             <p class="shell-grupo">Catálogo</p>
-            {% enlace_nav 'listar_materiales' 'Materiales' '/materiales/' %}
+            {% enlace_nav 'listar_materiales' 'Materiales' '/materiales/' None 'material' %}
             <p class="shell-grupo">Administración</p>
-            {% enlace_nav 'listar_regiones' 'Regiones' '/plataforma/regiones/' %}
-            {% enlace_nav 'listar_tenants' 'Tenants' '/plataforma/tenants/' %}
-            {% enlace_nav 'listar_cuentas' 'Administración de cuentas' '/plataforma/cuentas/' %}
-            {% enlace_nav 'auditoria_acceso' 'Auditoría' '/auditoria/' %}
-            {% enlace_nav 'lista_cortes' 'Reportes' '/reportes/' %}
+            {% enlace_nav 'listar_regiones' 'Regiones' '/plataforma/regiones/' None 'regiones' %}
+            {% enlace_nav 'listar_tenants' 'Tenants' '/plataforma/tenants/' None 'tenants' %}
+            {% enlace_nav 'listar_cuentas' 'Cuentas' '/plataforma/cuentas/' None 'cuentas' %}
+            {% enlace_nav 'auditoria_acceso' 'Auditoría' '/auditoria/' None 'auditoria' %}
+            {% enlace_nav 'lista_cortes' 'Reportes' '/reportes/' None 'reportes' %}
           {% endif %}
         {% endblock %}
       </nav>
 
       <div class="shell-pie">
-        {% enlace_nav 'perfil' 'Mi perfil' %}
+        {% enlace_nav 'perfil' 'Mi perfil' None None 'perfil' %}
       </div>
     </aside>
 
@@ -79,7 +86,10 @@
                 data-abrir-menu
                 aria-controls="shell-sidebar"
                 aria-expanded="false"
-                aria-label="Abrir menú">Menú</button>
+                aria-label="Abrir menú">
+          <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-menu"></use></svg>
+          <span>Menú</span>
+        </button>
 
         <p class="shell-usuario">
           <span class="shell-email">{{ request.usuario.email }}</span>
@@ -88,12 +98,17 @@
 
         <form method="post" action="{% url 'logout' %}" class="shell-salir">
           {% csrf_token %}
-          <button type="submit" class="shell-boton-salir">Cerrar sesión</button>
+          <button type="submit" class="shell-boton-salir">
+            <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-salir"></use></svg>
+            <span>Cerrar sesión</span>
+          </button>
         </form>
       </header>
 {% else %}
   <header class="cabecera">
-    <a class="marca" href="/">Lari</a>
+    <a class="marca" href="/">
+      {% include "parciales/marca.html" with marca_clase="marca-lari--publica" %}
+    </a>
   </header>
 {% endif %}
 

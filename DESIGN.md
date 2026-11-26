@@ -4,6 +4,7 @@ description: Sistema visual de la operación diaria de materiales, documentado d
 colors:
   sello: "#1f5f8b"
   sello-hundido: "#18496b"
+  sello-tenue: "#e7eff6"
   grafito: "#1f2933"
   grafito-medio: "#3e4c59"
   grafito-tenue: "#52606d"
@@ -12,6 +13,7 @@ colors:
   papel: "#f6f7f9"
   hoja: "#ffffff"
   superficie-alt: "#f0f2f5"
+  hoja-hover: "#fafbfc"
   tapa-activa: "#172a38"
   filete: "#d9dee5"
   filete-tenue: "#eef1f4"
@@ -179,6 +181,19 @@ components:
   marca:
     textColor: "{colors.sello}"
     padding: "0"
+  marca-lari:
+    backgroundColor: "transparent"
+    textColor: "{colors.sobre-tapa}"
+    padding: "0"
+  icono:
+    backgroundColor: "transparent"
+    textColor: "{colors.acento}"
+    padding: "0"
+  acceso:
+    backgroundColor: "{colors.hoja}"
+    textColor: "{colors.grafito}"
+    rounded: "{rounded.md}"
+    padding: "0.8rem 1.25rem"
 ---
 
 # Design System: Lari · Control de materiales
@@ -191,9 +206,11 @@ Lari se lee como un libro de inventario abierto sobre una mesa: una hoja blanca 
 
 El sistema nace de una aplicación operativa real: sesión única por tenant, series que se rastrean una por una, conciliaciones que se aprueban o rechazan completas, y un registro inmutable detrás de cada movimiento. La pantalla no persuade a nadie; permite que una persona con prisa haga un trabajo exacto y a prueba de error. Por eso la densidad es media-alta, la tabla es el ciudadano de primera y cada estado (error, aviso, conformidad) tiene color propio en lugar de un icono decorativo.
 
-**Estado de este documento.** PRODUCT.md es explícito: no hay logo, manual de marca ni paleta corporativa, y la apariencia actual de `templates/` y `static/css/` es un punto de partida, no una identidad confirmada. Este DESIGN.md fotografía lo que hoy existe para que las pantallas nuevas no diverjan mientras esa identidad se decide. Los tokens de aquí son **normativos**; el carácter y el mundo visual son **provisionales** y se reemplazan cuando exista una dirección de marca confirmada. Desde la última revisión, el sistema ya cubre el shell autenticado, los formularios, las tablas, los botones, los buscadores, la paginación y los estados; lo que sigue sin regla propia se enumera en *Drift conocido*, no se presenta como inexistente.
+**Estado de este documento.** La interfaz ya tiene una **marca gráfica de trabajo** —monograma «L» con renglones de inventario— y un **sistema de iconos SVG** de trazo único. No es un manual de marca confirmado ni una identidad corporativa cerrada: es una propuesta coherente con «El libro de inventario» que puede reemplazarse sin tocar la estructura. Los tokens de aquí son **normativos**; el carácter visual sigue siendo **provisional** hasta que exista una dirección de marca definitiva. Desde la última revisión, el sistema cubre el shell autenticado, el inicio con accesos por rol, los formularios, las tablas, los botones, los buscadores, la paginación y los estados; lo que sigue sin regla propia se enumera en *Drift conocido*, no se presenta como inexistente.
 
 **Key Characteristics:**
+- Marca gráfica propia: monograma «L» dentro de un sello de esquina suave, con dos renglones que evocan el libro de inventario.
+- Iconografía SVG de trazo único (`1.75px`), sin emoji, sin fuentes de iconos y sin rellenos.
 - Hoja blanca sobre papel gris; el fondo nunca compite con el contenido.
 - Shell autenticado con barra lateral en Tapa, topbar blanca y contenido sobre Papel.
 - Separación por filete de 1 px (`--borde`), no por sombra ni por relleno de color.
@@ -244,6 +261,27 @@ Paleta de instrumento: un azul de sello sobre una escala de grafito y papel, má
 **La regla del filete.** La separación se hace con una línea de 1 px (`--borde`) o, dentro de un panel, con el filete tenue (`#eef1f4`). Nunca con una sombra, una cebra de filas ni un borde de 2 px.
 
 **La regla del papel.** El gris (`--fondo`) es la mesa y nunca contiene texto de lectura; el blanco (`--superficie`) es la página y todo contenido vive encima. No inviertas los papeles.
+
+## Marca e iconografía
+
+### Marca gráfica
+
+El símbolo es un cuadrado de esquina suave (`8px` sobre una caja de `32px`) con un trazo de `1.5px` al `40 %` de opacidad; dentro, una «L» de `2.25px` y dos renglones cortos al `55 %`. Se lee como una letra inicial sellada sobre una ficha de inventario, no como un isotipo tecnológico. El wordmark «Lari» va en `700`, `0.05em` de interletraje, con «Control de materiales» en versalitas de `0.625rem` y `0.12em`.
+
+- **Shell:** símbolo blanco sobre Tapa, subtítulo en `--sobre-tapa-apagado`.
+- **Acceso:** símbolo blanco a `2.5rem`, subtítulo en `--sobre-tapa-apagado`.
+- **Cabecera pública:** símbolo en Grafito, subtítulo en Grafito tenue.
+- **Favicon:** `static/img/marca.svg`, fondo Tapa y «L» blanca.
+- **Regla:** la marca no se rellena con Azul sello, no se inclina, no se le añaden sombras ni se usa como patrón de fondo.
+
+### Iconos
+
+Un solo sprite inline en `templates/parciales/iconos.html`, con símbolos de `24px` y trazo `1.75px`, `currentColor`, extremos y uniones redondeados. Se usan en la navegación lateral, en los accesos rápidos, en los hechos del acceso y en los botones de menú y salida.
+
+- **Tamaño:** `1.05rem` en navegación; `1rem` en botones y hechos; `2rem` de caja para los iconos de acceso.
+- **Color:** heredan el texto; el icono activo de la sidebar usa `#9cc3df` como acento sobre Tapa.
+- **Accesibilidad:** decorativos con `aria-hidden="true"` y `focusable="false"`; si un botón no lleva texto visible, conserva `aria-label`.
+- **Regla:** no se usan emoji, glifos Unicode ni una librería externa como sustituto. Un icono nuevo se dibuja en el sprite y se documenta aquí en el mismo cambio.
 
 ## Typography
 
@@ -351,8 +389,11 @@ El componente más usado: fondo Hoja, borde de 1 px, `border-collapse: separate`
 ### Menu and summaries
 `.menu-modulo` es una rejilla de enlaces/tarjetas para el módulo de registro de materiales; `.resumen-carga` es una rejilla de totales en Hoja con filete. `.fila-alerta` tiñe la fila de Rojo pálido para negativos del dashboard.
 
+### Inicio y accesos rápidos
+`templates/inicio.html` deja de ser una bienvenida y pasa a ser un panel de trabajo: `h1` «Inicio», una línea de sesión con correo y rol, y un único panel blanco con filete. Dentro, `.accesos` es una lista en dos columnas separada por filetes tenues, sin tarjetas repetidas ni sombras. Cada `.acceso` alinea un icono en caja de `2rem`, título y descripción breve, y un chevron al final; el hover tiñe la fila con `--hoja-hover` y el icono toma el borde de acento. Si el rol tiene un número impar de accesos, el último ocupa las dos columnas. En móvil la lista pasa a una columna. Los enlaces se generan por rol: el tenant ve operación; el almacén, bandeja y traspasos; el administrador, plataforma y catálogo.
+
 ### Signature: shell autenticado
-La estructura de todas las pantallas privadas. Sidebar de `15rem` en Tapa con marca, grupos por rol y «Mi perfil» al pie; topbar blanca de `3.5rem` con correo, rol y «Cerrar sesión»; contenido sobre Papel con máximo `1100px`. No hay sombras: sidebar y topbar se separan del contenido por el cambio de superficie y el filete. En móvil la sidebar se convierte en drawer con overlay y el botón «Menú» queda en la topbar.
+La estructura de todas las pantallas privadas. Sidebar de `15rem` en Tapa con la marca gráfica, grupos por rol, iconos de trazo único y «Mi perfil» al pie; topbar blanca de `3.5rem` con correo, rol y «Cerrar sesión» con icono; contenido sobre Papel con máximo `1100px`. No hay sombras: sidebar y topbar se separan del contenido por el cambio de superficie y el filete. En móvil la sidebar se convierte en drawer con overlay y el botón «Menú» queda en la topbar.
 
 ### Signature: raíl de contexto
 El patrón que define las pantallas de trabajo. Una columna fija a la derecha (`340px` / `310px`), pegajosa, con scroll propio y altura máxima `80vh`, que muestra el estado vivo de lo que se está capturando —series escaneadas y su estado, materiales disponibles con cantidades—. En escritorio nunca se apila; por debajo de `700px`/`900px` pasa a bloque estático sobre el formulario porque el formulario es lo primero.
@@ -386,6 +427,9 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - **Do** usar `.buscador`, `.paginacion`, `.tabla`, `.detalle` y `.etiqueta` antes de inventar una variante local.
 - **Do** tratar el raíl de contexto como parte del patrón de pantalla de trabajo: fijo, pegajoso, con scroll propio y apilado solo en móvil.
 - **Do** envolver las tablas nuevas en `.tabla-scroll` o confiar en la envoltura automática del shell para que el móvil no las corte.
+- **Do** usar el sprite `parciales/iconos.html` y la marca `parciales/marca.html` antes de dibujar un símbolo nuevo.
+- **Do** mantener el trazo de `1.75px`, `currentColor` y `stroke-linecap="round"` en cualquier icono nuevo.
+- **Do** dar al último acceso de una lista impar el ancho completo para no dejar una celda vacía.
 
 ### Don't:
 - **Don't** crear un botón, campo, chip o paginación nuevos sin CSS y sin documentarlos aquí en el mismo cambio. El sistema ya existe; extiéndelo, no lo reinventes.
@@ -397,12 +441,15 @@ rejilla pasa a una columna y el panel de materiales pierde su scroll propio.
 - **Don't** dar el mismo peso visual a una acción primaria y a «Cancelar»; la jerarquía primario / secundario / enlace es lo que evita el clic erróneo en el flujo 2FA.
 - **Don't** repetir valores literales (`#fff`, `#eef1f4`, `rgba(...)`) en reglas nuevas: usa los tokens de `:root` y, si falta uno, añádelo al token set.
 - **Don't** volver a introducir `style="..."` en plantillas; si una pantalla necesita una excepción, se resuelve con una clase.
-- **Don't** tratar el carácter visual como identidad confirmada. PRODUCT.md dice que no hay marca: este documento es una foto del punto de partida y se reescribe cuando exista dirección de identidad.
+- **Don't** tratar el carácter visual como identidad confirmada. La marca y los iconos son una propuesta de trabajo: este documento se reescribe cuando exista dirección de identidad definitiva.
+- **Don't** usar emoji, glifos Unicode, iconos rellenos o una fuente de iconos externa.
+- **Don't** dejar un botón que solo lleva icono sin `aria-label`.
+- **Don't** rellenar la marca con Azul sello ni usarla como patrón de fondo.
 
 ### Drift conocido
 - Los fragmentos de búsqueda `.resultado-material` y `.resultado-tecnico` aún no tienen regla propia; heredan el estilo básico de lista. Es la siguiente pieza de UI pendiente.
 - Los bloques internos del constructor de asignaciones y del recojo (`.constructor-bloque`, `.filas-bloque`, `.serie-opcion`, `.series-seleccionadas`, `.material-seleccionado`, `.resumen-series`, `.titulo-bloque`, `.material-fila`, `.agregar-fila`, `.quitar-fila`, `.quitar-bloque`) usan controles globales pero no un componente documentado. Funcionan; no están pulidos.
-- `templates/inicio.html` sigue siendo una pantalla de bienvenida, no un dashboard. Un panel de accesos rápidos por rol es el siguiente paso.
+- `templates/inicio.html` ya es un panel de accesos por rol; un resumen de pendientes por rol sería el siguiente paso.
 - La configuración 2FA no tiene QR; usa clave manual copiable. Añadirlo requiere una dependencia de generación de QR.
 - `.impeccable/design.json` se generó antes del shell y de `componentes.css`; hay que regenerarlo cuando se cierre esta fase.
 - Quedan literales por tokenizar: `#fafbfc` (hover de fila), `#f2f8f4` (fondo de éxito) y `#6b4e00` (texto de aviso). No introduzcas nuevos: formalízalos en `:root` cuando toques esas reglas.

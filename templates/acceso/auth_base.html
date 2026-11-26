@@ -4,20 +4,28 @@
 {% block body_class %}pagina-acceso{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=3">
 {% endblock %}
 
 {% block contenido %}
   <div class="auth{% block auth_modificador %}{% endblock %}">
     <aside class="auth-marca" aria-label="Información de Lari">
       <div class="auth-marca__cuerpo">
-        <p class="auth-logo">Lari</p>
-        <p class="auth-logo__desc">Control de materiales</p>
+        {% include "parciales/marca.html" with marca_clase="marca-lari--auth" %}
 
         <ul class="auth-hechos">
-          <li>Una cuenta por tenant</li>
-          <li>Trazabilidad por serie</li>
-          <li>Conciliación sin descuadres</li>
+          <li>
+            <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-cuentas"></use></svg>
+            <span>Una cuenta por tenant</span>
+          </li>
+          <li>
+            <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-serie"></use></svg>
+            <span>Trazabilidad por serie</span>
+          </li>
+          <li>
+            <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-verificado"></use></svg>
+            <span>Conciliación sin descuadres</span>
+          </li>
         </ul>
       </div>
       <p class="auth-pie">Uso interno · Operación diaria</p>

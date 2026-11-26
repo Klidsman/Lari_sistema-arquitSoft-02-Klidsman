@@ -46,7 +46,7 @@ El sistema es un instrumento de control y conciliación, no un ERP ni un sustitu
 ## Brand Commitments
 
 - Nombre de producto: «Lari», usado en la interfaz como «Lari · Control de materiales». Es lo único vinculante según la persona responsable.
-- No existe logo, manual de marca ni paleta corporativa. La apariencia actual de `templates/` y `static/css/base.css` es un punto de partida, no una identidad confirmada.
+- La interfaz incorpora una marca gráfica de trabajo (monograma «L» con renglones de inventario) y un sistema de iconos SVG de trazo único. Es una propuesta provisional, no un manual de marca confirmado; puede reemplazarse sin cambiar la estructura ni los flujos.
 - Tono confirmado por la documentación: español directo y operativo, sin marketing ni promesas comerciales.
 
 ## Evidence on Hand

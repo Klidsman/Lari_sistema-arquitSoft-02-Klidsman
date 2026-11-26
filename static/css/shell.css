@@ -33,6 +33,8 @@
   padding: 1.1rem 0.85rem 1rem;
   background: #0f1c26;
   color: #fff;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
 .shell-sidebar__cabecera {
@@ -45,22 +47,26 @@
 
 .shell-marca {
   color: #fff;
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
   text-decoration: none;
 }
 
 .shell-cerrar {
   display: none;
-  padding: 0.35rem 0.5rem;
-  border: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 0.35rem;
   background: transparent;
   color: #c9d4de;
-  font: inherit;
-  font-size: 0.8125rem;
   cursor: pointer;
+}
+
+.shell-cerrar:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
 }
 
 .shell-nav {
@@ -79,7 +85,9 @@
 }
 
 .shell-enlace {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
   padding: 0.5rem 0.75rem;
   border-radius: 0.4rem;
   color: #c9d4de;
@@ -88,15 +96,34 @@
   text-decoration: none;
 }
 
+.shell-enlace .icono {
+  width: 1.05rem;
+  height: 1.05rem;
+  opacity: 0.66;
+}
+
+.shell-enlace__texto {
+  min-width: 0;
+}
+
 .shell-enlace:hover {
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
+}
+
+.shell-enlace:hover .icono {
+  opacity: 1;
 }
 
 .shell-enlace--activo {
   background: #172a38;
   color: #fff;
   font-weight: 600;
+}
+
+.shell-enlace--activo .icono {
+  opacity: 1;
+  color: #9cc3df;
 }
 
 .shell-sidebar :focus-visible {
@@ -133,6 +160,7 @@
 .shell-menu {
   display: none;
   align-items: center;
+  gap: 0.45rem;
   padding: 0.4rem 0.65rem;
   border: 1px solid var(--borde);
   border-radius: 0.4rem;
@@ -142,6 +170,11 @@
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+.shell-menu .icono {
+  width: 1rem;
+  height: 1rem;
 }
 
 .shell-usuario {
@@ -171,6 +204,9 @@
 }
 
 .shell-boton-salir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.4rem 0.7rem;
   border: 1px solid var(--borde);
   border-radius: 0.4rem;
@@ -179,6 +215,11 @@
   font: inherit;
   font-size: 0.8125rem;
   cursor: pointer;
+}
+
+.shell-boton-salir .icono {
+  width: 0.95rem;
+  height: 0.95rem;
 }
 
 .shell-boton-salir:hover {
