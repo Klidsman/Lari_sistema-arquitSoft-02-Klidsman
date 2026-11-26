@@ -325,6 +325,15 @@ def confirmar_carga(tenant, tecnico, periodo, texto, actor):
     if not lista.ordenes:
         raise NumeroOrdenInvalido
     with transaction.atomic():
+        # Serializa cargas concurrentes del mismo tenant y recalcula el
+        # resumen con el estado ya confirmado para no chocar con la
+        # restricción única de órdenes.
+        Tenant.objects.select_for_update().get(pk=tenant.pk)
+        lista, resumen, nuevas = _resumen(
+            tenant, tecnico, periodo, texto
+        )
+        if lista.rechazadas or not lista.ordenes:
+            raise NumeroOrdenInvalido
         carga = CargaOrdenes.objects.create(
             tenant=tenant,
             tecnico=tecnico,
@@ -840,15 +849,35 @@ def dashboard_mensual(
     tenant, periodo, tecnico=None, material=None, desde=None, hasta=None
 ):
     validar_periodo(periodo)
-    materiales = _materiales_con_datos(tenant, periodo)
+    materiales = list(_materiales_con_datos(tenant, periodo))
     if material is not None:
-        materiales = materiales.filter(pk=material.pk)
+        materiales = [m for m in materiales if m.pk == material.pk]
+    ids = [mat.pk for mat in materiales]
+    # Resuelve los saldos en bloque para evitar una consulta por material.
+    manuales = dict(
+        SaldoInicialPeriodo.objects.filter(
+            tenant=tenant, periodo=periodo, material_id__in=ids
+        ).values_list("material_id", "cantidad")
+    )
+    heredados = dict(
+        SaldoMensualMaterial.objects.filter(
+            tenant=tenant,
+            material_id__in=ids,
+            cierre__periodo=periodo_anterior(periodo),
+            cierre__estado=CierreMensual.CERRADO,
+        ).values_list("material_id", "saldo_final")
+    )
     despachos = despachos_del_periodo(tenant, periodo)
     usos = usado_del_periodo(tenant, periodo, tecnico=tecnico)
     filas = []
     for mat in materiales:
         usado = usos.get(mat.pk, 0)
-        inicial = saldo_inicial_efectivo(tenant, mat, periodo)
+        if mat.pk in manuales:
+            inicial = manuales[mat.pk]
+        elif mat.pk in heredados:
+            inicial = heredados[mat.pk]
+        else:
+            inicial = saldo_inicial_efectivo(tenant, mat, periodo)
         despacho = despachos.get(mat.pk, 0)
         final = inicial + despacho - usado
         filas.append(
@@ -1046,7 +1075,11 @@ def cerrar_mes(tenant, periodo, backup_ref, actor):
         raise CierreBloqueado
     with transaction.atomic():
         cierre = _obtener_cierre(tenant, periodo)
-        CierreMensual.objects.select_for_update().get(pk=cierre.pk)
+        cierre = CierreMensual.objects.select_for_update().get(
+            pk=cierre.pk
+        )
+        if cierre.estado == CierreMensual.CERRADO:
+            raise PeriodoCerrado("El mes ya está cerrado")
         datos = []
         for fila in dashboard_mensual(tenant, periodo)["filas"]:
             datos.append(

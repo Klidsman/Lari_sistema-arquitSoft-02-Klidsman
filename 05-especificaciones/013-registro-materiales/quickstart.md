@@ -39,20 +39,33 @@ python manage.py shell -c "from registro_materiales.models import CargaOrdenes, 
 ## Pruebas automatizadas
 
 ```powershell
-# Unitarias: normalización y periodos
-pytest tests/unit/test_registro_materiales.py
+# Unitarias: validadores, restricciones y normalización
+pytest tests/unit/test_registro_materiales.py tests/unit/test_registro_carga.py
 
-# Integración: órdenes, usos, saldos, cierre y exportación
-pytest tests/integration/test_registro_materiales.py
+# Integración: órdenes, usos, saldos, cierre, aislamiento y exportación
+pytest tests/integration/test_registro_materiales.py tests/integration/test_cierre_mensual.py tests/integration/test_registro_aislamiento.py
 
-# Contrato HTTP
-pytest tests/contract/test_registro_materiales_http.py
+# Concurrencia y rendimiento
+pytest tests/integration/test_registro_materiales_concurrencia.py tests/integration/test_registro_materiales_rendimiento.py
+
+# Contrato HTTP y de servicios
+pytest tests/contract/test_registro_materiales_http.py tests/contract/test_registro_http.py
 
 # Todo 013
 pytest -k "registro"
 
 # Cobertura
 pytest --cov=registro_materiales
+```
+
+### Respaldo previo al cierre
+
+El cierre mensual exige una referencia `backups/...`. Para generarla:
+
+```powershell
+python manage.py respaldar_bd
+# o solo calcular la referencia sin ejecutar pg_dump:
+python manage.py respaldar_bd --dry-run
 ```
 
 Las pruebas requieren PostgreSQL real; validan restricciones, bloqueos, RLS y concurrencia.
@@ -313,6 +326,17 @@ completa en verde**.
 | CA-22 | `test_cierre_traspaso_y_reapertura` | Cubierto |
 | CA-23 | `test_exportacion_excel_y_csv` | Cubierto |
 
-Concurrencia de usos cubierta por `test_dos_usos_simultaneos_no_superan_el_disponible`. Rendimiento de exportación cubierto por `test_exportacion_de_mil_ordenes_en_menos_de_diez_segundos`. Pendiente de validación manual: RLS de las tablas de 013 (implementada en `0002_rls.py`) e
-integración futura de `validar_periodo_abierto` en una pantalla de despachos.
+Concurrencia cubierta por `test_dos_usos_simultaneos_no_superan_el_disponible`,
+`test_dos_cargas_simultaneas_crean_una_sola_orden`,
+`test_dos_cierres_simultaneos_cierran_una_sola_vez` y
+`test_dos_reaperturas_simultaneas_reabren_una_sola_vez`. Rendimiento cubierto por
+`test_exportacion_de_mil_ordenes_en_menos_de_diez_segundos` y
+`test_dashboard_con_cien_materiales_mil_ordenes_y_cinco_mil_usos`. RLS verificada por
+`test_rls_activa_en_tablas_de_registro`. Aislamiento por tenant en
+`test_otro_tenant_no_ve_ordenes_ni_dashboard`.
+
+Pendiente: recorrido manual de los escenarios de este quickstart. La integración de
+`validar_periodo_abierto` en una pantalla de despachos sigue sin aplicarse porque el repositorio no
+tiene una pantalla de alta/edición de `DespachoAlmacen`; el servicio expone la guarda
+`validar_periodo_abierto` para cuando exista.
 

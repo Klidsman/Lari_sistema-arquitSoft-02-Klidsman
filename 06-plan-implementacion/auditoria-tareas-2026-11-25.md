@@ -15,10 +15,10 @@ Este documento contrasta los `tasks.md` con el código y las pruebas reales del 
 | 007 Almacén | `asignaciones` | `test_almacen_*`, `test_almacen_notificaciones`, `test_almacen_tiempo_real*` | Completo | T120, T123, T125, T126, T130 |
 | 008 Stock | `stock` | `test_stock_*`, `test_traspaso_movimientos` | Completo con libro de movimientos | T003 fixtures, T062 rendimiento, T068 cobertura, T069 manual |
 | 009 Traspasos | `traspasos` | `test_traspaso*` | Completo; T001–T082 son históricas y fueron sustituidas por la ampliación T083–T118 | T080 manual |
-| 010 Conciliación | `conciliaciones` | `test_conciliacion_*` | Completo | Cobertura fina y quickstart |
+| 010 Conciliación | `conciliaciones` | 63 pruebas `test_conciliacion_*`, 90 % de cobertura | Completo | T003, T076 y T085 |
 | 011 Logística inversa | `logistica_inversa` | `test_devolucion*`, `test_baja*`, `test_logistica_inversa*` | Completo, incluida selección por técnico | Cobertura fina y quickstart |
 | 012 Reportes | `reportes` | `test_reportes*` | Completo | Cobertura fina y quickstart |
-| 013 Registro de materiales | `registro_materiales` | `test_registro_materiales*` | Completo | Cobertura fina y quickstart |
+| 013 Registro de materiales | `registro_materiales` | 51 pruebas de registro, 77 % de cobertura | Completo | T004, T069 y T078 |
 
 ## Por qué hay tareas sin marcar
 
@@ -38,4 +38,4 @@ Para dar una spec por cerrada:
 3. `python manage.py check`, `makemigrations --check` y la suite completa están en verde.
 4. Se recorrió el `quickstart.md` o se documentó la deuda.
 
-La suite actual tiene **766 pruebas en verde**.
+La suite actual tiene **827 pruebas en verde**.
